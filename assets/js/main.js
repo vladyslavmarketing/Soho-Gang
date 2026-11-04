@@ -605,7 +605,7 @@
     var canvas = $('[data-snake-canvas]');
     var gauge = $('[data-gauge]');
     var everWritten = false;
-    function markWritten() { everWritten = true; hero.classList.add('is-written'); }
+    function markWritten() { everWritten = true; hero.classList.add('is-written', 'was-written'); }
     function markUnwritten() { hero.classList.remove('is-written'); }
 
     var engine = win.SohoSnake;
@@ -625,6 +625,8 @@
           pointerTarget: hero,
           reducedMotion: state.reduced
         });
+        // the plush snake replaces the flat SVG head on the income ring
+        if (!state.reduced) doc.documentElement.classList.add('has-journey');
         setTimeout(function () { if (!everWritten) markWritten(); }, 4000);   // safety net
       } catch (e) {
         warn('hero snake', e);
@@ -857,146 +859,6 @@
       shown = { m: target.m, w: target.w };
       render(shown);
     }
-  }
-
-  /* ================================================================== ROOMS RAIL */
-  function initRooms() {
-    var rail = $('[data-rail]');
-    var prev = $('[data-rail-prev]');
-    var next = $('[data-rail-next]');
-    var bar = $('[data-rail-progress]');
-
-    /* light switches work even without the rail */
-    $$('[data-room-switch]').forEach(function (btn) {
-      var room = btn.closest('[data-room]') || btn.closest('.room');
-      btn.addEventListener('click', function () {
-        var on = btn.getAttribute('aria-pressed') !== 'true';
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        btn.textContent = on ? 'Выключить свет' : 'Включить свет';
-        if (room) room.classList.toggle('is-lit', on);
-      });
-    });
-
-    if (!rail) return;
-    var maxScroll = 0;
-
-    function measure() { maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth); }
-    function setDisabled(btn, off) {
-      if (!btn) return;
-      if (off) btn.setAttribute('aria-disabled', 'true'); else btn.removeAttribute('aria-disabled');
-    }
-    var queued = false;
-    function sync() {
-      queued = false;
-      var x = rail.scrollLeft;
-      var ratio = maxScroll > 0 ? clamp(x / maxScroll, 0, 1) : 1;
-      if (bar) bar.style.transform = 'scaleX(' + Math.max(0.15, ratio).toFixed(4) + ')';
-      setDisabled(prev, x <= 2);
-      setDisabled(next, x >= maxScroll - 2);
-    }
-    function queue() { if (!queued) { queued = true; raf(sync); } }
-    rail.addEventListener('scroll', queue, { passive: true });
-    onLayout(function () { measure(); queue(); });
-    measure(); sync();
-
-    /* snap positions in scroll coordinates (respecting scroll-padding) */
-    function snapPoints() {
-      var rr = rail.getBoundingClientRect();
-      var cs = getComputedStyle(rail);
-      /* scroll-padding may come back unresolved (e.g. "max(48px, 50% - 592px)");
-         the rail's padding-left uses the same --rail-pad and is always resolved */
-      var pad = parseFloat(cs.scrollPaddingLeft);
-      if (!isFinite(pad) || !/^-?[\d.]+px$/.test(cs.scrollPaddingLeft.trim())) pad = parseFloat(cs.paddingLeft) || 0;
-      return $$('[data-room]', rail).map(function (card) {
-        return clamp(card.getBoundingClientRect().left - rr.left + rail.scrollLeft - pad, 0, maxScroll);
-      });
-    }
-    function stepSize() {
-      var cards = $$('[data-room]', rail);
-      if (cards.length > 1) return cards[1].getBoundingClientRect().left - cards[0].getBoundingClientRect().left;
-      return rail.clientWidth * 0.8;
-    }
-    function go(dir) {
-      measure();
-      var pts = snapPoints();
-      var x = rail.scrollLeft;
-      var targetX = clamp(x + dir * stepSize(), 0, maxScroll);
-      if (pts.length) {
-        var ahead = pts.filter(function (p) { return dir > 0 ? p > x + 4 : p < x - 4; });
-        targetX = ahead.length ? (dir > 0 ? ahead[0] : ahead[ahead.length - 1]) : (dir > 0 ? maxScroll : 0);
-      }
-      rail.scrollTo({ left: targetX, behavior: state.reduced ? 'auto' : 'smooth' });
-    }
-    if (prev) prev.addEventListener('click', function () { if (prev.getAttribute('aria-disabled') !== 'true') go(-1); });
-    if (next) next.addEventListener('click', function () { if (next.getAttribute('aria-disabled') !== 'true') go(1); });
-
-    /* mouse drag-to-scroll (touch & trackpads scroll natively) */
-    var down = false, dragging = false, suppress = false;
-    var startX = 0, startLeft = 0, lastX = 0, lastT = 0, vel = 0, pid = null, settleTimer = 0;
-
-    rail.addEventListener('pointerdown', function (e) {
-      if (e.pointerType !== 'mouse' || e.button !== 0) return;
-      down = true; dragging = false;
-      startX = lastX = e.clientX; lastT = e.timeStamp || now();
-      startLeft = rail.scrollLeft; vel = 0; pid = e.pointerId;
-      measure();
-    });
-    rail.addEventListener('pointermove', function (e) {
-      if (!down || e.pointerId !== pid) return;
-      var dx = e.clientX - startX;
-      if (!dragging) {
-        if (Math.abs(dx) < 6) return;
-        dragging = true;
-        clearTimeout(settleTimer);
-        rail.classList.add('is-dragging');
-        rail.style.scrollBehavior = 'auto';
-        rail.style.scrollSnapType = 'none';
-        try { rail.setPointerCapture(pid); } catch (err) { /* ignore */ }
-      }
-      var t = e.timeStamp || now();
-      var dt = Math.max(1, t - lastT);
-      vel = vel * 0.6 + ((e.clientX - lastX) / dt) * 0.4;   // px/ms, smoothed
-      lastX = e.clientX; lastT = t;
-      rail.scrollLeft = clamp(startLeft - dx, 0, maxScroll);
-      e.preventDefault();
-    });
-    function release(e) {
-      if (!down || (e && e.pointerId !== pid)) return;
-      down = false;
-      if (!dragging) return;
-      dragging = false;
-      suppress = true;
-      setTimeout(function () { suppress = false; }, 60);
-      try { rail.releasePointerCapture(pid); } catch (err) { /* ignore */ }
-      rail.classList.remove('is-dragging');
-      /* glide to the nearest card in the throw direction, then restore snapping */
-      var projected = rail.scrollLeft - vel * 220;
-      var pts = snapPoints();
-      var best = projected, bestD = Infinity;
-      pts.concat([maxScroll]).forEach(function (p) {
-        var d = Math.abs(p - projected);
-        if (d < bestD) { bestD = d; best = p; }
-      });
-      rail.scrollTo({ left: best, behavior: state.reduced ? 'auto' : 'smooth' });
-      var restored = false;
-      var restore = function () {
-        if (restored || dragging) return;
-        restored = true;
-        clearTimeout(settleTimer);
-        rail.removeEventListener('scrollend', restore);
-        rail.style.scrollSnapType = '';
-        rail.style.scrollBehavior = '';
-      };
-      if ('onscrollend' in win) rail.addEventListener('scrollend', restore);
-      settleTimer = setTimeout(restore, state.reduced ? 0 : 900);
-    }
-    rail.addEventListener('pointerup', release);
-    rail.addEventListener('pointercancel', release);
-    rail.addEventListener('lostpointercapture', function (e) { if (dragging) release(e); });
-    rail.addEventListener('click', function (e) {
-      if (suppress) { e.preventDefault(); e.stopPropagation(); suppress = false; }
-    }, true);
-    rail.addEventListener('dragstart', function (e) { e.preventDefault(); });
   }
 
   /* ================================================================== PATH (snake crawls the 5 steps) */
@@ -1880,7 +1742,7 @@
   var inits = [
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['tags', initTags],
-    ['hero', initHero], ['calculator', initCalculator], ['rooms', initRooms], ['path', initPath],
+    ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
     ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill]
   ];
   function boot() {
