@@ -45,7 +45,7 @@
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
   var BLOB = [1.06, 0.92, 0.8, 0.69, 0.59, 0.5, 0.42, 0.35];
   var Z_FREE = 10;            // layer tag for trail laid while chasing / wandering (on top)
-  var PERIOD = 2.16;          // band period in body widths: pink 1.7 | black .11 | cream .24 | black .11
+  var PERIOD = 2.16;          // band period in body widths: black .125 | cream .25 | black .125 | pink 1.66
   var VARIANTS = [3, 2, 2];   // pink, cream, black
   var WRITE_T = 2.8;          // seconds for the first writing
   var CHASE_IDLE = 2.5;       // seconds without pointer movement before returning
@@ -58,8 +58,8 @@
 
   // Colour ramps indexed by lighting 0..1 (pink #D7899A base / #F0B3C1 light / #B85F75 deep, etc.)
   var RAMP = [
-    ramp([[0, '#9C4961'], [0.34, '#B85F75'], [0.6, '#D7899A'], [0.83, '#EAA8B7'], [1, '#F6C6D1']]),
-    ramp([[0, '#B59D7D'], [0.38, '#D9C7AE'], [0.66, '#EDE1CE'], [0.9, '#F4EADB'], [1, '#FFFBF3']]),
+    ramp([[0, '#923B55'], [0.3, '#AE5068'], [0.55, '#C77187'], [0.76, '#D7899A'], [0.92, '#E7A2B2'], [1, '#F0B3C1']]),
+    ramp([[0, '#A88E6C'], [0.36, '#CDB896'], [0.62, '#D9C7AE'], [0.82, '#EEE2CF'], [0.94, '#F4EADB'], [1, '#FFF9EE']]),
     ramp([[0, '#070405'], [0.5, '#1E1618'], [0.8, '#33262B'], [1, '#4A3A3E']])
   ];
   // Fur strand tints: light tips / dark roots per colour
@@ -365,45 +365,36 @@
   }
   function headInside(x, y) { return Math.abs(y) < headRho(x); }
 
-  // Head sprite for one lighting bucket (drawn rotated to the exact heading at runtime).
-  function headSprite(rh, b, furDev) {
-    var th = b / HB * TAU, fx = Math.cos(th), fy = Math.sin(th);
-    var lx = L3[0] * fx + L3[1] * fy, ly = -L3[0] * fy + L3[1] * fx, lz = L3[2];
+  // Lighting-independent head data (once per bank): normal field, alpha, fur layer, fuzz strands.
+  function headBase(rh, furDev) {
     var ox = Math.ceil(1.5 * rh) + 2, W = ox + Math.ceil(1.86 * rh) + 2, oy = Math.ceil(1.32 * rh) + 2, H = oy * 2;
     W += W & 1;
-    var c = canvasEl(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
-    var col = [0, 0, 0], muz = [249, 210, 220], px, py;
+    var n = W * H, NX = new Float32Array(n), NY = new Float32Array(n), NZ = new Float32Array(n);
+    var AL = new Float32Array(n), MU = new Float32Array(n), SH = new Float32Array(n), px, py;
     for (py = 0; py < H; py++) {
       var y = (py + 0.5 - oy) / rh, ay = Math.abs(y);
       for (px = 0; px < W; px++) {
-        var x = (px + 0.5 - ox) / rh, rho = headRho(x), edge = (rho - ay) * rh;
+        var x = (px + 0.5 - ox) / rh, rho = headRho(x), edge = (rho - ay) * rh, i = py * W + px;
         if (edge <= -0.5) continue;
-        var dr = (headRho(x + 0.01) - headRho(x - 0.01)) / 0.02;
-        var z = Math.sqrt(Math.max(0, rho * rho - y * y));
+        var dr = (headRho(x + 0.01) - headRho(x - 0.01)) / 0.02, z = Math.sqrt(Math.max(0, rho * rho - y * y));
         var nx = -rho * dr, ny = y, nz = z, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-        var dif = (nx * lx + ny * ly + nz * lz) / nl;
-        var sh = (dif + WRAP) / (1 + WRAP) + 0.08 * smooth(0.72, 1, ay / Math.max(rho, 1e-3));
-        rampAt(RAMP[0], clamp(sh, 0, 1), col);
-        mixTo(col, muz, smooth(0.62, 1.5, x) * 0.32); // lighter muzzle
-        var i = (py * W + px) * 4;
-        d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = clamp(edge + 0.5, 0, 1) * 255;
+        NX[i] = nx / nl; NY[i] = ny / nl; NZ[i] = nz / nl; AL[i] = clamp(edge + 0.5, 0, 1);
+        MU[i] = smooth(0.62, 1.5, x) * 0.32;                         // lighter muzzle
+        SH[i] = 0.08 * smooth(0.72, 1, ay / Math.max(rho, 1e-3));   // fuzzy sheen at the outline
       }
     }
-    g.putImageData(img, 0, 0);
+    // fur detail (fixed tints): photo modulation + strands combed back, fanning out at the sides
+    var det = canvasEl(W, H), g = det.getContext('2d'), rnd = rng(4242), st = STRAND[0], k, m;
     g.translate(ox, oy); g.lineCap = 'round';
-    var rnd = rng(4242), st = STRAND[0], n, k;
-    g.globalCompositeOperation = 'source-atop';
     if (furDev) {
       g.globalAlpha = 0.8;
       g.drawImage(furDev, 40, 60, Math.min(furDev.width - 40, rh * 4), Math.min(furDev.height - 60, rh * 3), -1.5 * rh, -1.32 * rh, 3.4 * rh, 2.64 * rh);
       g.globalAlpha = 1;
     }
-    // interior strands: combed back toward the neck, fanning out at the sides
-    n = Math.round(150 + rh * 7);
-    for (k = 0; k < n; k++) {
+    m = Math.round(150 + rh * 7);
+    for (k = 0; k < m; k++) {
       var sx = -1.15 + rnd() * 2.6, r0 = headRho(sx); if (r0 < 0.06) continue;
-      var sy = (rnd() * 2 - 1) * r0 * 0.97, f = sy / r0;
-      var ang = PI - f * 1.05 + (rnd() - 0.5) * 0.6;
+      var sy = (rnd() * 2 - 1) * r0 * 0.97, f = sy / r0, ang = PI - f * 1.05 + (rnd() - 0.5) * 0.6;
       var len = (0.08 + rnd() * 0.16) * rh * (sx > 0.85 ? 0.55 : 1), light = rnd() < 0.55;
       var a = light ? st.la[0] + rnd() * (st.la[1] - st.la[0]) : st.da[0] + rnd() * (st.da[1] - st.da[0]);
       var ca = Math.cos(ang), sa = Math.sin(ang), x0 = sx * rh, y0 = sy * rh;
@@ -411,67 +402,103 @@
       g.strokeStyle = rgba(light ? st.lo : st.dk, a);
       g.beginPath(); g.moveTo(x0 - ca * len * 0.3, y0 - sa * len * 0.3); g.lineTo(x0 + ca * len, y0 + sa * len); g.stroke();
     }
-    // fuzzy silhouette: march rays from the head centre to the outline, strands poke outward
-    g.globalCompositeOperation = 'source-over';
-    n = Math.round(90 + rh * 3);
-    for (k = 0; k < n; k++) {
-      var phi = rnd() * TAU, cx0 = 0.25, dxr = Math.cos(phi), dyr = Math.sin(phi), lo = 0, hi = 2.2;
-      for (var it = 0; it < 18; it++) { var mid = (lo + hi) / 2; if (headInside(cx0 + dxr * mid, dyr * mid)) lo = mid; else hi = mid; }
-      var bx = cx0 + dxr * lo, by = dyr * lo, sg = by < 0 ? -1 : 1;
-      var g1 = -(headRho(bx + 0.01) - headRho(bx - 0.01)) / 0.02, g2 = sg, gl = Math.sqrt(g1 * g1 + g2 * g2) || 1;
-      var ex = g1 / gl, ey = g2 / gl;
+    // fuzzy outline: rays from the head centre to the silhouette; strands poke outward
+    m = Math.round(90 + rh * 3);
+    var fz = new Float32Array(m * 9);
+    for (k = 0; k < m; k++) {
+      var phi = rnd() * TAU, dxr = Math.cos(phi), dyr = Math.sin(phi), lo = 0, hi = 2.2;
+      for (var it = 0; it < 18; it++) { var mid = (lo + hi) / 2; if (headInside(0.25 + dxr * mid, dyr * mid)) lo = mid; else hi = mid; }
+      var bx = 0.25 + dxr * lo, by = dyr * lo, sg = by < 0 ? -1 : 1;
+      var g1 = -(headRho(bx + 0.01) - headRho(bx - 0.01)) / 0.02, gl = Math.sqrt(g1 * g1 + 1) || 1, ex = g1 / gl, ey = sg / gl;
       var j = (rnd() - 0.5) * 0.8 - 0.25 * sg * (bx > 0 ? 1 : 0), cj = Math.cos(j), sj = Math.sin(j);
-      var ddx = ex * cj - ey * sj, ddy = ex * sj + ey * cj;
-      var dif2 = ex * lx + ey * ly + 0.2 * lz;
-      rampAt(RAMP[0], clamp((dif2 + WRAP) / (1 + WRAP) + 0.12, 0, 1), col); mixTo(col, [255, 240, 244], 0.16);
-      var L = rh * (0.05 + rnd() * 0.09), X0 = bx * rh - ex * rh * 0.04, Y0 = by * rh - ey * rh * 0.04;
-      g.lineWidth = Math.max(0.7, rh * 0.014);
-      g.strokeStyle = rgba(col, 0.45 + rnd() * 0.3);
-      g.beginPath(); g.moveTo(X0, Y0); g.lineTo(X0 + ddx * L * 0.55, Y0 + ddy * L * 0.55); g.stroke();
-      g.strokeStyle = rgba(col, 0.15 + rnd() * 0.2);
-      g.beginPath(); g.moveTo(X0 + ddx * L * 0.5, Y0 + ddy * L * 0.5); g.lineTo(X0 + ddx * L, Y0 + ddy * L); g.stroke();
+      var o = k * 9;
+      fz[o] = bx * rh - ex * rh * 0.04; fz[o + 1] = by * rh - ey * rh * 0.04;
+      fz[o + 2] = ex * cj - ey * sj; fz[o + 3] = ex * sj + ey * cj;
+      fz[o + 4] = rh * (0.05 + rnd() * 0.09); fz[o + 5] = 0.45 + rnd() * 0.3; fz[o + 6] = 0.15 + rnd() * 0.2;
+      fz[o + 7] = ex; fz[o + 8] = ey;
     }
-    // melt the back of the head into the neck (keeps the bulging outline above / below it)
-    g.globalCompositeOperation = 'destination-out';
-    g.setTransform(1, 0, 0, 0.62, ox, oy);
-    var fo = g.createRadialGradient(-1.55 * rh, 0, 0, -1.55 * rh, 0, 1.25 * rh);
+    // back of the head melts into the neck (keeps the bulging outline above / below it)
+    var fade = canvasEl(W, H), fg = fade.getContext('2d');
+    fg.setTransform(1, 0, 0, 0.62, ox, oy);
+    var fo = fg.createRadialGradient(-1.55 * rh, 0, 0, -1.55 * rh, 0, 1.25 * rh);
     fo.addColorStop(0, 'rgba(0,0,0,1)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.85)'); fo.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = fo; g.fillRect(-3 * rh, -3 * rh, 3 * rh, 6 * rh);
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over';
-    return { c: c, ox: ox, oy: oy };
+    fg.fillStyle = fo; fg.fillRect(-3 * rh, -3 * rh, 3 * rh, 6 * rh);
+    return { W: W, H: H, ox: ox, oy: oy, rh: rh, NX: NX, NY: NY, NZ: NZ, AL: AL, MU: MU, SH: SH, det: det, fz: fz, nf: m, fade: fade };
   }
 
-  // All sprites for one body radius (device px).
-  function buildBank(R, furDev) {
-    var t0 = now(), kind, v, b;
-    var bank = { R: R, RH: R * HEAD, fur: furDev, big: [], small: [], floor: [], occl: [], head: new Array(HB) };
-    for (kind = 0; kind < 3; kind++) {
-      bank.big[kind] = [];
-      for (v = 0; v < VARIANTS[kind]; v++) {
-        var seed = 1000 + kind * 97 + v * 13, mask = stampMask(R, seed), det = stampDetail(R, seed + 7, kind, furDev), arr = [];
-        for (b = 0; b < NB; b++) arr.push(stampSprite(R, b / NB * PI, kind, mask, det));
-        bank.big[kind].push(arr);
-      }
-      bank.small[kind] = [];
-      for (v = 0; v < (kind === 0 ? 3 : 1); v++) {
-        var rs = R * SMALL, ms = stampMask(rs, 500 + kind * 31 + v * 7), ds = stampDetail(rs, 600 + kind * 31 + v * 7, kind, furDev), arr2 = [];
-        for (b = 0; b < NB; b++) arr2.push(stampSprite(rs, b / NB * PI, kind, ms, ds));
-        bank.small[kind].push(arr2);
-      }
+  // Head sprite for one lighting bucket (~1 ms; drawn rotated to the exact heading at runtime).
+  function headSprite(B, b) {
+    var th = b / HB * TAU, fx = Math.cos(th), fy = Math.sin(th);
+    var lx = L3[0] * fx + L3[1] * fy, ly = -L3[0] * fy + L3[1] * fx, lz = L3[2];
+    var W = B.W, H = B.H, c = canvasEl(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
+    var col = [0, 0, 0], muz = [249, 210, 220], n = W * H, i, k;
+    for (i = 0; i < n; i++) {
+      var a = B.AL[i]; if (a <= 0) continue;
+      var sh = (B.NX[i] * lx + B.NY[i] * ly + B.NZ[i] * lz + WRAP) / (1 + WRAP) + B.SH[i];
+      rampAt(RAMP[0], clamp(sh, 0, 1), col); mixTo(col, muz, B.MU[i]);
+      var j = i * 4; d[j] = col[0]; d[j + 1] = col[1]; d[j + 2] = col[2]; d[j + 3] = a * 255;
     }
-    for (var i = 0; i < BLOB.length; i++) {
-      bank.floor.push(blobSprite(R * 1.2 * BLOB[i], [140, 60, 80]));
-      bank.occl.push(blobSprite(R * 1.05 * BLOB[i], [84, 22, 42]));
+    g.putImageData(img, 0, 0);
+    g.globalCompositeOperation = 'source-atop'; g.drawImage(B.det, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.translate(B.ox, B.oy); g.lineCap = 'round'; g.lineWidth = Math.max(0.7, B.rh * 0.014);
+    var tint = [255, 240, 244], fz = B.fz;
+    for (k = 0; k < B.nf; k++) {
+      var o = k * 9, X0 = fz[o], Y0 = fz[o + 1], dx = fz[o + 2], dy = fz[o + 3], L = fz[o + 4];
+      rampAt(RAMP[0], clamp((fz[o + 7] * lx + fz[o + 8] * ly + 0.2 * lz + WRAP) / (1 + WRAP) + 0.12, 0, 1), col); mixTo(col, tint, 0.16);
+      g.strokeStyle = rgba(col, fz[o + 5]);
+      g.beginPath(); g.moveTo(X0, Y0); g.lineTo(X0 + dx * L * 0.55, Y0 + dy * L * 0.55); g.stroke();
+      g.strokeStyle = rgba(col, fz[o + 6]);
+      g.beginPath(); g.moveTo(X0 + dx * L * 0.5, Y0 + dy * L * 0.5); g.lineTo(X0 + dx * L, Y0 + dy * L); g.stroke();
     }
-    bank.headShadow = blobSprite(R * HEAD * 1.55, [140, 60, 80]);
-    bank.cap = capSprite(R * TIP, furDev);
-    bank.eye = eyeSprite(Math.max(1.6, R * HEAD * 0.13));
-    bank.ms = now() - t0;
-    return bank;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(B.fade, 0, 0);
+    return { c: c, ox: B.ox, oy: B.oy };
+  }
+
+  // All sprites for one body radius (device px), built as a queue of small tasks so the work can be
+  // spread over frames (no long main-thread task at load). job.step(ms) returns true when complete.
+  function bankJob(R, furDev) {
+    var bank = { R: R, RH: R * HEAD, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null };
+    var tasks = [], t0 = 0, spent = 0;
+    function set(kind, v, small) { // one colour variant: mask + detail, then the 32 angle sprites in 4 slices
+      var rs = small ? R * SMALL : R, seed = small ? 500 + kind * 31 + v * 7 : 1000 + kind * 97 + v * 13, mask, det, arr = [];
+      (small ? bank.small : bank.big)[kind][v] = arr;
+      tasks.push(function () { mask = stampMask(rs, seed); det = stampDetail(rs, seed + (small ? 100 : 7), kind, furDev); });
+      for (var q = 0; q < 4; q++) (function (q) {
+        tasks.push(function () { for (var b = q * NB / 4; b < (q + 1) * NB / 4; b++) arr[b] = stampSprite(rs, b / NB * PI, kind, mask, det); });
+      })(q);
+    }
+    for (var kind = 0; kind < 3; kind++) {
+      for (var v = 0; v < VARIANTS[kind]; v++) set(kind, v, false);
+      for (v = 0; v < (kind === 0 ? 3 : 1); v++) set(kind, v, true);
+    }
+    tasks.push(function () {
+      for (var i = 0; i < BLOB.length; i++) {
+        bank.floor.push(blobSprite(R * 1.2 * BLOB[i], [140, 60, 80]));
+        bank.occl.push(blobSprite(R * 1.05 * BLOB[i], [84, 22, 42]));
+      }
+      bank.headShadow = blobSprite(R * HEAD * 1.55, [140, 60, 80]);
+      bank.cap = capSprite(R * TIP, furDev);
+      bank.eye = eyeSprite(Math.max(1.6, R * HEAD * 0.13));
+    });
+    tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
+    for (var h = 0; h < HB; h += 4) (function (h) {
+      tasks.push(function () { for (var b = h; b < h + 4; b++) bank.head[b] = headSprite(bank.headBase, b); });
+    })(h);
+    var job = { bank: bank, tasks: tasks, i: 0 };
+    job.step = function (budget) {
+      t0 = now();
+      while (job.i < tasks.length) { tasks[job.i++](); if (now() - t0 > budget) break; }
+      spent += now() - t0; bank.ms = spent;
+      return job.i >= tasks.length;
+    };
+    return job;
   }
   function getHead(bank, ang) {
     var b = Math.round((ang / TAU) * HB) % HB; if (b < 0) b += HB;
-    return bank.head[b] || (bank.head[b] = headSprite(bank.RH, b, bank.fur));
+    if (!bank.headBase) bank.headBase = headBase(bank.RH, bank.fur);
+    return bank.head[b] || (bank.head[b] = headSprite(bank.headBase, b)); // fallback (normally prebuilt)
   }
 
   /* ------------------------------------------------------------------ trail (ring buffer) */
@@ -537,7 +564,7 @@
     var rank, ov, gcell, gnext, cellHead = null, gridW = 0, gridH = 0, gridCell = 1;
     var runA = new Int32Array(64), runB = new Int32Array(64), runZ = new Int32Array(64);
     // rest cache (progressive rebuild for breathing)
-    var cacheA = null, cacheB = null, cacheValid = false, cacheCursor = 0, cacheBreath = 1;
+    var cacheA = null, cacheB = null, cacheX = 0, cacheY = 0, restReady = false, cacheReady = false, cacheCursor = 0, cacheBreath = 1, restT0 = 0, job = null;
     // look / head / tongue
     var lookA = 0, lookDX = 0, lookDY = 0, eyeX = 0, eyeY = 0, bobT = 0;
     var tongueT = -1, nextFlick = 2.5, lastFlickEnd = -9;
@@ -548,7 +575,7 @@
     var ptr = { cx: 0, cy: 0, x: 0, y: 0, inside: false, t: -99, type: 'mouse', dirty: false };
     // loop
     var raf = 0, lastT = 0, visible = true, userPaused = false, pendingLayout = 0, furWaitTimer = 0;
-    var headState = { x: 0, y: 0, a: 0, tongue: 0, breath: 1 }, wTmp = [0, 0];
+    var headState = { x: 0, y: 0, a: 0, tongue: 0, breath: 1 }, wTmp = [0, 0], bankScale = 1;
 
     /* ---------------- layout ---------------- */
     function writeVars() {
@@ -621,19 +648,19 @@
       function sAtU(u) { var lo = 0, hi = NI - 1; while (hi - lo > 1) { var m = (lo + hi) >> 1; if (uTab[m] < u) lo = m; else hi = m; } return lo + (u - uTab[lo]) / Math.max(1e-9, uTab[hi] - uTab[lo]); }
       // band layout: first band ~0.7w behind the head, whole periods, pink tail tip
       var uStart = uAt(1.22 * rh + 0.7 * w), uEnd = uAt(L), tipU = 1.5;
-      var nb = Math.floor((uEnd - tipU - uStart - 0.46) / PERIOD) + 1, kS = 1;
-      if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + 0.46);
+      var nb = Math.floor((uEnd - tipU - uStart - 0.5) / PERIOD) + 1, kS = 1;
+      if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + 0.5);
       function colorAtU(u) {
         if (!nb) return 0;
         var rel = (u - uStart) / kS; if (rel < 0) return 0;
         var p = Math.floor(rel / PERIOD); if (p >= nb) return 0;
-        var f = rel - p * PERIOD; return f < 0.11 ? 2 : f < 0.35 ? 1 : f < 0.46 ? 2 : 0;
+        var f = rel - p * PERIOD; return f < 0.125 ? 2 : f < 0.375 ? 1 : f < 0.5 ? 2 : 0;
       }
       bodyColorAt = function (s) { return colorAtU(uAt(s)); };
       var list = [];
       for (var s = s0; s < L; s += step * clamp(profile(s), 0.42, 1)) list.push(s);
       list.push(L);
-      var edges = [0, 0.11, 0.35, 0.46];
+      var edges = [0, 0.125, 0.375, 0.5];
       for (i = 0; i < nb; i++) for (k = 0; k < 4; k++) {
         var sb = sAtU(uStart + kS * (i * PERIOD + edges[k])), sp = sb - ALONG * r * profile(sb);
         if (sp > s0 && sp < L) list.push(sp);
@@ -690,13 +717,17 @@
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
       canvas.width = cw; canvas.height = ch;
       rDev = r * dpr;
-      if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) { bank = buildBank(rDev, FUR.dev); api.stats.bankMs = bank.ms; }
+      if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
+        if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
+      }
       if (mode === 'logo') buildLogoGeometry();
       else Lbody = clamp(22 * 2 * r, 260, 1.3 * W + H);
       buildBodyTables();
       if (mode === 'logo') placeSeams();
       buildRouteBuffers();
-      cacheA = canvasEl(cw, ch); cacheB = canvasEl(cw, ch); cacheValid = false;
+      sizeCaches();
+      if (job && (reduced || !window.requestAnimationFrame)) finishJob(Infinity);   // static render needs it now
+      bankScale = bank ? rDev / bank.R : 1;
       gridCell = 2.3 * rDev; gridW = Math.ceil(cw / gridCell) + 1; gridH = Math.ceil(ch / gridCell) + 1;
       cellHead = new Int32Array(gridW * gridH);
       sized = true;
@@ -711,9 +742,10 @@
           var sc = box.h / (oldBox.h || box.h);
           var fx = function (x) { return box.x + (x - oldBox.x) * sc; }, fy = function (y) { return box.y + (y - oldBox.y) * sc; };
           trail.remap(fx, fy);
+          vCruise *= sc;
           if (state === ST_ROUTE) {
             for (var i = 0; i < rN; i++) { rX[i] = fx(rX[i]); rY[i] = fy(rY[i]); }
-            recomputeRoute(); rq *= sc; rv *= sc; vCruise *= sc;
+            recomputeRoute(); rq *= sc; rv *= sc;
             if (rq > rQ) rq = rQ;
             ri = 0; while (ri < rN - 1 && rC[ri + 1] <= rq) ri++;
           } else if (state === ST_REST) { snapRest(); }
@@ -728,6 +760,32 @@
       }
       kick();
     }
+    // Rest cache: only as big as the resting "ae" (+ fuzz / shadow margin), not the whole canvas.
+    function sizeCaches() {
+      var x0 = 0, y0 = 0, x1 = cw, y1 = ch;
+      if (mode === 'logo') {
+        var m = 1.9 * rh;
+        x0 = Math.max(0, Math.floor((box.x - m) * dpr)); y0 = Math.max(0, Math.floor((box.y - m) * dpr));
+        x1 = Math.min(cw, Math.ceil((box.x + box.w + m) * dpr)); y1 = Math.min(ch, Math.ceil((box.y + box.h + m) * dpr));
+      }
+      cacheX = x0; cacheY = y0;
+      cacheA = canvasEl(Math.max(1, x1 - x0), Math.max(1, y1 - y0)); cacheB = canvasEl(Math.max(1, x1 - x0), Math.max(1, y1 - y0)); restReady = false;
+      if (job) job.tasks.push(function () { warmCanvas(cacheA); warmCanvas(cacheB); }); // allocate backing stores early
+      else { warmCanvas(cacheA); warmCanvas(cacheB); }
+    }
+    // allocate a cache's backing store and exercise it as a draw source once (first use is slow in software raster)
+    function warmCanvas(cv) {
+      var g = cv && cv.getContext('2d'); if (!g) return;
+      g.fillRect(0, 0, 1, 1); g.clearRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(cv, 0, 0); ctx.clearRect(0, 0, cw, ch);
+    }
+    function finishJob(budget) {
+      if (!job) return true;
+      if (!job.step(budget)) return false;
+      bank = job.bank; job = null; api.stats.bankMs = bank.ms; restReady = false; bankScale = 1;
+      return true;
+    }
+
     function scheduleLayout() {
       if (pendingLayout) return;
       // first layout immediately; later ones debounced (sprite rebuilds are not free)
@@ -736,9 +794,11 @@
     }
 
     /* ---------------- routes (writing / returning) ---------------- */
-    function buildRouteBuffers() {
+    function buildRouteBuffers() { // grow-only; keeps the current route so a resize can remap it
       var cap = (mode === 'logo' ? pN + eX.length : 0) + Math.ceil(3 * (W + H)) + 64;
-      rX = new Float64Array(cap); rY = new Float64Array(cap); rZ = new Uint8Array(cap); rC = new Float64Array(cap); rK = new Float32Array(cap);
+      if (rX && rX.length >= cap) return;
+      function grow(old, T) { var a = new T(cap); if (old) a.set(old.subarray(0, Math.min(rN, old.length))); return a; }
+      rX = grow(rX, Float64Array); rY = grow(rY, Float64Array); rZ = grow(rZ, Uint8Array); rC = grow(rC, Float64Array); rK = grow(rK, Float32Array);
     }
     function routePush(x, y, z, k) {
       if (rN >= rX.length) return;
@@ -786,7 +846,7 @@
       vCruise = solveCruise();
       rq = 0; ri = 0; rv = vCruise;
       trail.push(rX[0], rY[0], rZ[0]);
-      state = ST_ROUTE; initialWrite = true; cacheValid = false;
+      state = ST_ROUTE; initialWrite = true; restReady = false;
     }
 
     function startReturn() {
@@ -805,7 +865,7 @@
       appendPathReversed();
       recomputeRoute();
       rq = 0; ri = 0; rv = Math.max(speed, 0.2 * vCruise);
-      state = ST_ROUTE; initialWrite = false; cacheValid = false; chaseLeft = false;
+      state = ST_ROUTE; initialWrite = false; restReady = false; chaseLeft = false;
     }
 
     function stepRoute(dt) { // returns true when the head reaches the rest point
@@ -853,7 +913,7 @@
       if (state !== ST_CHASE) {
         heading = headAng;
         speed = state === ST_ROUTE ? rv : 0.12 * 1.5 * box.h;
-        state = ST_CHASE; cacheValid = false;
+        state = ST_CHASE; restReady = false;
         flick();
         emit(canvas, 'snake:chase');
       }
@@ -976,19 +1036,19 @@
     /* ---------------- drawing primitives ---------------- */
     function blobIndex(f) { var b = 0, bd = 9; for (var i = 0; i < BLOB.length; i++) { var d = Math.abs(BLOB[i] - f); if (d < bd) { bd = d; b = i; } } return b; }
     function drawBlob(c, set, x, y, f, alpha) {
-      var s = set[blobIndex(f)];
+      var s = set[blobIndex(f * bankScale)];
       if (c.globalAlpha !== alpha) c.globalAlpha = alpha;
       c.drawImage(s, Math.round(x - s.width * 0.5), Math.round(y - s.height * 0.5));
     }
     function drawStamp(c, P, k, breath) {
-      var f = stF[k] * breath, kind = stCol[k], spr, sc;
+      var f = stF[k] * breath * bankScale, kind = stCol[k], spr, sc;
       if (f >= 0.62) { spr = bank.big[kind][stVar[k] % bank.big[kind].length][P.bk[k]]; sc = f; }
       else { spr = bank.small[kind][stVar[k] % bank.small[kind].length][P.bk[k]]; sc = f / SMALL; }
       var w2 = spr.width * 0.5, h2 = spr.height * 0.5;
       if (sc > 0.996 && sc < 1.004) c.drawImage(spr, Math.round(P.x[k] - w2), Math.round(P.y[k] - h2));
       else c.drawImage(spr, P.x[k] - w2 * sc, P.y[k] - h2 * sc, w2 * 2 * sc, h2 * 2 * sc);
     }
-    var FLOOR_A = 0.1;
+    var FLOOR_A = 0.12;
     function execPlan(c, PL, P, from, to, breath) {
       var R = rDev;
       for (var i = from; i < to; i++) {
@@ -1004,7 +1064,7 @@
           f = stF[k] * breath; drawBlob(c, bank.occl, P.x[k] + 0.08 * R * f, P.y[k] + 0.4 * R * f, f, Math.min(1, PL.a[i] * 2.4) * 0.42);
         } else if (kind === OP_CAP) {
           c.globalAlpha = 1;
-          var cs = bank.cap, sc = breath;
+          var cs = bank.cap, sc = breath * bankScale;
           c.drawImage(cs, P.x[k] - cs.width * 0.5 * sc, P.y[k] - cs.height * 0.5 * sc, cs.width * sc, cs.height * sc);
         } else if (kind === OP_HEADSH) {
           var hs = bank.headShadow; c.globalAlpha = 0.13;
@@ -1036,7 +1096,7 @@
       }
     }
     function drawHead(c, x, y, ang, tongue, breath) {
-      var hs = getHead(bank, ang), co = Math.cos(ang), si = Math.sin(ang), k = 1 + (breath - 1) * 0.5;
+      var hs = getHead(bank, ang), co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
       var up = co < 0 ? 1 : -1;                     // local y sign that points up on screen
       c.setTransform(co * k, si * k, -si * k, co * k, x, y);
       c.lineCap = 'round'; c.lineJoin = 'round';
@@ -1070,7 +1130,7 @@
       clear();
       execPlan(ctx, planF, P, 0, planF.n, 1);
     }
-    function copyPose(D, S) { D.x.set(S.x); D.y.set(S.y); D.z.set(S.z); D.hx = S.hx; D.hy = S.hy; D.ha = S.ha; }
+    function copyPose(D, S) { D.x.set(S.x); D.y.set(S.y); D.z.set(S.z); D.bk.set(S.bk); D.hx = S.hx; D.hy = S.hy; D.ha = S.ha; }
 
     function enterRest() {
       buildRestTrail();
@@ -1094,33 +1154,39 @@
       sMaxLook = Math.max(stS[Math.max(0, kLive - 1)], 1);
       buildPlan(planR, poseR, kLive, false);
       copyPose(poseL, poseR);
-      cacheBreath = breathNow();
-      var g = cacheA.getContext('2d');
-      g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch);
-      execPlan(g, planR, poseR, 0, planR.n, cacheBreath);
-      cacheValid = true; cacheCursor = planR.n; startCacheRebuild();
+      restT0 = clock;
+      // the first cache image is built progressively too; until then the pose is drawn directly
+      restReady = true; cacheReady = false; startCacheRebuild();
       state = ST_REST;
     }
     function snapRest() { enterRest(); }
-    function breathNow() { return 1 + 0.03 * Math.sin(clock * TAU / 4.6); }
+    function breathNow() { return 1 + 0.03 * Math.sin(Math.max(0, clock - restT0) * TAU / 4.6); }
     function startCacheRebuild() {
-      var g = cacheB.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, cw, ch);
+      var g = cacheB.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, cacheB.width, cacheB.height);
+      g.setTransform(1, 0, 0, 1, -cacheX, -cacheY);
       cacheCursor = 0; cacheBreath = breathNow();
     }
     function stepCache() { // progressive rebuild of the resting body so it can breathe
       var per = Math.ceil(planR.n / 9), g = cacheB.getContext('2d'), to = Math.min(planR.n, cacheCursor + per);
       execPlan(g, planR, poseR, cacheCursor, to, cacheBreath);
       cacheCursor = to;
-      if (cacheCursor >= planR.n) { var t = cacheA; cacheA = cacheB; cacheB = t; startCacheRebuild(); }
+      if (cacheCursor >= planR.n) { var t = cacheA; cacheA = cacheB; cacheB = t; cacheReady = true; startCacheRebuild(); }
     }
     function renderRest() {
-      if (!cacheValid) { enterRest(); }
-      clear();
-      ctx.drawImage(cacheA, 0, 0);
-      stepCache();
+      if (!restReady) enterRest();
       var b = breathNow();
       applyLook(poseL, poseR);
       tangents(poseL, 0, Math.min(nSt, kLive + 1));
+      clear();
+      if (!cacheReady) {            // first ~150 ms of rest: direct render while the cache builds
+        stepCache();
+        buildPlan(planF, poseL, 0, true);
+        headState.breath = b;
+        execPlan(ctx, planF, poseL, 0, planF.n, 1);
+        return;
+      }
+      ctx.drawImage(cacheA, cacheX, cacheY);
+      stepCache();
       for (var k = kLive - 1; k >= 0; k--) drawStamp(ctx, poseL, k, b);
       ctx.globalAlpha = 1;
       drawHead(ctx, poseL.hx, poseL.hy, poseL.ha, headState.tongue, b);
@@ -1221,6 +1287,8 @@
       var dt = lastT ? Math.min(0.05, Math.max(0, (t - lastT) / 1000)) : 1 / 60;
       lastT = t;
       var t0 = now();
+      if (job && !finishJob(8) && !bank) { lastT = 0; raf = requestAnimationFrame(frame); return; }
+      if (!bank) return;
       update(dt);
       if (state === ST_REST) renderRest(); else renderMoving();
       if (debug) drawDebug();
@@ -1267,7 +1335,7 @@
       }, { rootMargin: '80px' });
       io.observe(canvas);
     }
-    function onFur() { if (sized && bank && bank.fur !== FUR.dev) { bank = null; layout(true); } else if (!sized) layout(); }
+    function onFur() { if (sized) layout(true); else layout(); }
     FUR.subs.push(onFur);
     loadFur();
 
@@ -1294,7 +1362,7 @@
       if (ro) ro.disconnect(); else window.removeEventListener('resize', scheduleLayout);
       if (io) io.disconnect();
       var i = FUR.subs.indexOf(onFur); if (i >= 0) FUR.subs.splice(i, 1);
-      bank = null; cacheA = cacheB = null;
+      bank = null; job = null; cacheA = cacheB = null;
     };
 
     layout();
