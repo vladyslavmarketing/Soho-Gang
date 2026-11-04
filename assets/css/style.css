@@ -127,7 +127,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--fur) var(--paper-2); }
   box-shadow: 0 0 0 3px var(--cream);
   border-radius: 6px;
 }
-.btn:focus-visible, .icon-btn:focus-visible, .room__switch:focus-visible { border-radius: 999px; }
+.btn:focus-visible, .icon-btn:focus-visible { border-radius: 999px; }
 .income :focus-visible { outline-color: var(--cream); box-shadow: 0 0 0 3px var(--ink); }
 
 /* 2 ── UTILITIES & SNAKE BAND -------------------------------------------- */
@@ -675,7 +675,7 @@ body.menu-open .nav { background: transparent; box-shadow: none; -webkit-backdro
 .hero.is-written .hero__studio,
 html:not(.js) .hero__studio { opacity: 1; transform: none; }
 /* safety net: if main.js never reports 'written', reveal the caption anyway */
-html.is-loaded .hero:not(.is-written) .hero__studio { animation: studio-in 1.2s var(--ease-out) 6s forwards; }
+html.is-loaded .hero:not(.is-written):not(.was-written) .hero__studio { animation: studio-in 1.2s var(--ease-out) 6s forwards; }
 @keyframes studio-in { to { opacity: 1; transform: none; } }
 
 /* Viewfinder overlay */
@@ -1350,7 +1350,7 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   background: radial-gradient(circle, rgba(215, 137, 154, .2) 0%, rgba(215, 137, 154, .07) 45%, rgba(215, 137, 154, 0) 70%);
   pointer-events: none;
 }
-/* stream HUD: viewfinder brackets on the corners, LIVE / CAM above, tip menu below */
+/* stream HUD: viewfinder brackets on the corners, LIVE / CAM above them */
 .gauge__hud {
   position: absolute;
   inset: 0;
@@ -1372,12 +1372,11 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
     linear-gradient(currentColor, currentColor) bottom right / 18px 1.5px no-repeat,
     linear-gradient(currentColor, currentColor) bottom right / 1.5px 18px no-repeat;
 }
+/* labels hug the corners: the coiled snake fills the sides of the box */
 .gauge__hud > span { position: absolute; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .gauge__live { top: -30px; left: 0; color: var(--cream); }
 .gauge__live .rec-dot { width: 7px; height: 7px; }
 .gauge__cam { top: -30px; right: 0; }
-.gauge__tipline { bottom: -30px; right: 0; }
-.gauge__tipline::before { content: ""; width: 14px; height: 6px; border-radius: 1px; background: var(--band); }
 
 .gauge__svg {
   position: relative;
@@ -1553,376 +1552,6 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 /* 10 ── ROOMS ------------------------------------------------------------ */
 .rooms { background: var(--cream); padding-bottom: clamp(72px, 8vw, 120px); }
 .rooms .section-head { margin-bottom: clamp(32px, 4.5vw, 56px); }
-.rooms__rail {
-  --rail-pad: max(max(var(--gutter), env(safe-area-inset-left, 0px)), calc((100% - var(--container)) / 2 + var(--gutter)));
-  display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: var(--rail-pad);
-  padding: 4px var(--rail-pad) 24px;
-  scrollbar-width: none;
-  cursor: grab;
-  -webkit-overflow-scrolling: touch;
-}
-.rooms__rail::-webkit-scrollbar { display: none; }
-.rooms__rail.is-dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
-.rooms__rail.is-dragging .room { pointer-events: none; }
-.rooms__rail:focus-visible { outline-offset: -4px; box-shadow: none; border-radius: 0; }
-
-.room {
-  flex: 0 0 min(78vw, 440px);
-  scroll-snap-align: start;
-  min-width: 0;
-}
-.room__frame {
-  position: relative;
-  container-type: inline-size;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: var(--radius);
-  background: #2a2023;
-  box-shadow: 0 30px 50px -34px rgba(60, 20, 30, .75), inset 0 0 0 1px rgba(30, 22, 24, .1);
-  isolation: isolate;
-}
-.room__scene {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  filter: brightness(.42) saturate(.55) contrast(1.06);
-  transition: filter .8s var(--ease-out);
-}
-/* floor plane */
-.room__scene::before {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 27%;
-  background: var(--floor, #d9a3b0);
-  box-shadow: 0 -1px 0 rgba(0, 0, 0, .12), 0 -14px 26px -8px rgba(60, 20, 30, .28);
-}
-/* lens vignette + light falloff */
-.room__scene::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: radial-gradient(120% 90% at 50% 38%, rgba(0, 0, 0, 0) 55%, rgba(30, 10, 18, .42) 100%);
-  pointer-events: none;
-}
-/* ring light (each room positions it) */
-.room__lamp {
-  position: absolute;
-  z-index: 1;
-  top: 9%; right: 10%;
-  width: 30%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 2.6cqw solid #9b888d;
-  box-shadow: inset 0 0 0 .5cqw rgba(0, 0, 0, .15);
-  transition: border-color .5s, box-shadow .6s var(--ease-out);
-}
-.room__lamp::after { /* stand */
-  content: "";
-  position: absolute;
-  left: 50%; top: 100%;
-  width: 1.2cqw; height: var(--stand, 58cqw);
-  margin-left: -.6cqw;
-  background: linear-gradient(90deg, #2a2023, #4a3c40, #2a2023);
-}
-.room__lamp::before { /* tripod foot + contact shadow */
-  content: "";
-  position: absolute;
-  left: 50%; top: calc(100% + var(--stand, 58cqw) - 1.4cqw);
-  width: 14cqw; height: 2.8cqw;
-  margin-left: -7cqw;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(30, 14, 20, .55), rgba(30, 14, 20, 0) 70%);
-}
-.room__glow {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  background: radial-gradient(circle at var(--lx, 75%) var(--ly, 24%), var(--temp, rgba(255, 244, 238, .85)) 0%, rgba(255, 236, 236, .22) 32%, rgba(255, 255, 255, 0) 62%);
-  mix-blend-mode: screen;
-  opacity: 0;
-  transition: opacity .8s var(--ease-out);
-  pointer-events: none;
-}
-.room__prop { position: absolute; z-index: 2; }
-
-/* lit state + flicker-on */
-.room.is-lit .room__scene { filter: none; animation: flicker-on 1s linear both; }
-.room.is-lit .room__glow { opacity: 1; }
-.room.is-lit .room__lamp {
-  border-color: #FFFBF7;
-  box-shadow: inset 0 0 1.4cqw .4cqw rgba(255, 255, 255, .9), 0 0 3cqw 1cqw var(--temp, rgba(255, 244, 238, .9)), 0 0 12cqw 4cqw rgba(255, 228, 236, .45);
-}
-@keyframes flicker-on {
-  0% { filter: brightness(.42) saturate(.55); }
-  7% { filter: brightness(1.05) saturate(1); }
-  11% { filter: brightness(.5) saturate(.6); }
-  18% { filter: brightness(1.08) saturate(1); }
-  23% { filter: brightness(.72) saturate(.8); }
-  32%, 100% { filter: brightness(1) saturate(1); }
-}
-@media (hover: hover) and (pointer: fine) {
-  .room:not(.is-lit) .room__frame:hover .room__scene { filter: brightness(.7) saturate(.82); }
-  .room:not(.is-lit) .room__frame:hover .room__glow { opacity: .35; }
-}
-
-/* Marshmallow — pink fur wall + plush pouf, 4300K */
-.room--marshmallow { --floor: linear-gradient(180deg, #E9AEBB, #D58C9D); --temp: rgba(255, 242, 236, .9); --lx: 72%; --ly: 26%; }
-.room--marshmallow .room__scene {
-  background:
-    linear-gradient(180deg, rgba(255, 220, 228, .18), rgba(150, 60, 80, .22)),
-    url("../img/fur-small.jpg") center / 70cqw auto,
-    #E3A0B0;
-}
-.room--marshmallow .room__prop { /* pouf */
-  left: 50%; bottom: 7%;
-  width: 62%;
-  aspect-ratio: 2 / 1.05;
-  translate: -50% 0;
-  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
-  background:
-    radial-gradient(ellipse 70% 60% at 38% 26%, rgba(255, 236, 241, .85) 0%, rgba(255, 236, 241, 0) 70%),
-    radial-gradient(ellipse at 50% 60%, rgba(0, 0, 0, 0) 40%, rgba(120, 40, 60, .4) 100%),
-    url("../img/fur-small.jpg") center / 46cqw auto,
-    #E7A3B3;
-  box-shadow: 0 5cqw 6cqw -3cqw rgba(90, 25, 45, .55), inset -2cqw -3cqw 6cqw rgba(140, 50, 70, .3);
-}
-.room--marshmallow .room__prop::before { /* button tuft */
-  content: "";
-  position: absolute;
-  left: 50%; top: 22%;
-  width: 6%; aspect-ratio: 1;
-  translate: -50% 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #f6c4cf, #b9667b);
-  box-shadow: 0 .4cqw .8cqw rgba(90, 25, 45, .5);
-}
-
-/* Silk — cream silk drape + round mirror, 3800K */
-.room--silk { --floor: linear-gradient(180deg, #E9DAC4, #D9C4A6); --temp: rgba(255, 232, 205, .9); --lx: 26%; --ly: 22%; }
-.room--silk .room__scene {
-  background:
-    radial-gradient(120% 30% at 50% 0%, rgba(120, 90, 60, .22), rgba(120, 90, 60, 0) 70%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, .55) 3.5%, rgba(255, 255, 255, 0) 6%, rgba(150, 115, 80, .16) 8.5%, rgba(255, 255, 255, 0) 11%),
-    repeating-linear-gradient(90deg, rgba(150, 115, 80, 0) 0, rgba(150, 115, 80, .12) 4%, rgba(150, 115, 80, 0) 9%, rgba(255, 255, 255, .3) 13%, rgba(150, 115, 80, 0) 17%),
-    linear-gradient(180deg, #F8F0E3, #E9D9C1);
-}
-.room--silk .room__lamp { left: 9%; right: auto; top: 8%; width: 24%; --stand: 66cqw; }
-.room--silk .room__prop { /* round mirror with brass rim */
-  right: 12%; top: 18%;
-  width: 46%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 2.4cqw solid transparent;
-  background:
-    linear-gradient(125deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .7) 38%, rgba(255, 255, 255, 0) 46%, rgba(255, 255, 255, 0) 56%, rgba(255, 255, 255, .45) 60%, rgba(255, 255, 255, 0) 66%) padding-box,
-    radial-gradient(circle at 40% 35%, #FBEFF1 0%, #EBC9D0 45%, #D7A6B1 100%) padding-box,
-    linear-gradient(135deg, #F0D9AA, #B98E52 45%, #EFD7A6 70%, #A47B43) border-box;
-  box-shadow: 0 4cqw 7cqw -3cqw rgba(90, 60, 30, .5);
-}
-.room--silk .room__prop::after { /* slipper chair hint below the mirror */
-  content: "";
-  position: absolute;
-  left: -38%; top: 118%;
-  width: 70%; height: 36%;
-  border-radius: 46% 46% 18% 18%;
-  background: radial-gradient(ellipse at 40% 25%, #FBF3E8, #E6D2B6 70%, #CDB28E);
-  box-shadow: 0 3cqw 4cqw -2cqw rgba(90, 60, 30, .55);
-}
-
-/* Midnight — black velvet + pink neon, 6500K */
-.room--midnight { --floor: linear-gradient(180deg, #171012, #0B0708); --temp: rgba(240, 242, 255, .7); --lx: 50%; --ly: 36%; }
-.room--midnight .room__frame { background: #120d0f; }
-.room--midnight .room__scene {
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 34%, rgba(255, 120, 160, .2) 0%, rgba(255, 120, 160, 0) 70%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1.5%, rgba(255, 255, 255, 0) 1.5% 4%, rgba(0, 0, 0, .18) 4% 6%),
-    radial-gradient(ellipse 80% 60% at 50% 30%, #3A2930 0%, #1E1618 60%, #120D0F 100%);
-}
-.room--midnight .room__scene::before { /* glossy floor with neon reflection */
-  background:
-    radial-gradient(ellipse 40% 50% at 50% 0%, rgba(255, 110, 150, .32), rgba(255, 110, 150, 0) 80%),
-    linear-gradient(180deg, #1a1214, #0b0708);
-}
-.room--midnight .room__lamp { width: 20%; top: 11%; right: 8%; border-width: 1.8cqw; --stand: 64cqw; }
-.room--midnight .room__prop { /* neon "ae" sign */
-  left: 50%; top: 27%;
-  translate: -50% 0;
-}
-.room--midnight .room__prop::before {
-  content: "ae";
-  display: block;
-  font-family: var(--font-body);
-  font-size: 40cqw;
-  font-weight: 400;
-  line-height: .8;
-  letter-spacing: -.06em;
-  color: #5a3a44;
-  transition: color .4s, text-shadow .6s;
-}
-.room--midnight.is-lit .room__prop::before {
-  color: #FFE6EC;
-  text-shadow: 0 0 .6cqw #fff, 0 0 2cqw #FF8FB0, 0 0 5cqw #FF5C8E, 0 0 12cqw rgba(255, 70, 130, .65);
-  animation: neon 4s linear infinite 1s;
-}
-@keyframes neon { 0%, 92%, 100% { opacity: 1; } 93% { opacity: .6; } 95% { opacity: 1; } 96% { opacity: .7; } }
-
-/* Caramel — velour sofa + warm wood, 3200K */
-.room--caramel { --floor: linear-gradient(180deg, #7A5238, #5E3D29); --temp: rgba(255, 214, 160, .9); --lx: 22%; --ly: 22%; }
-.room--caramel .room__scene {
-  background:
-    linear-gradient(180deg, rgba(255, 210, 160, .16), rgba(40, 20, 10, .3)),
-    repeating-linear-gradient(90deg, #A06B47 0 5.5%, #865535 5.5% 6.1%, #AE7852 6.1% 11.5%, #8A5838 11.5% 12.1%);
-}
-.room--caramel .room__lamp { left: 8%; right: auto; top: 8%; width: 26%; --stand: 64cqw; }
-.room--caramel .room__prop { /* sofa back */
-  left: 9%; right: 9%; bottom: 15%;
-  height: 26%;
-  border-radius: 5cqw 5cqw 2cqw 2cqw;
-  background:
-    radial-gradient(ellipse 60% 70% at 30% 20%, rgba(255, 220, 180, .45), rgba(255, 220, 180, 0) 70%),
-    linear-gradient(180deg, #D79E66, #B37543);
-  box-shadow: inset 0 -1.5cqw 2cqw rgba(90, 45, 15, .3);
-}
-.room--caramel .room__prop::before { /* seat + arms */
-  content: "";
-  position: absolute;
-  left: -7%; right: -7%; bottom: -26%;
-  height: 62%;
-  border-radius: 4cqw;
-  background:
-    radial-gradient(ellipse 30% 80% at 6% 50%, #C48550 0 60%, rgba(0, 0, 0, 0) 61%),
-    radial-gradient(ellipse 30% 80% at 94% 50%, #C48550 0 60%, rgba(0, 0, 0, 0) 61%),
-    linear-gradient(180deg, #CE915A, #A9693A);
-  box-shadow: 0 4cqw 5cqw -2cqw rgba(40, 18, 6, .65), inset 0 1cqw 1.5cqw rgba(255, 220, 180, .25);
-}
-.room--caramel .room__prop::after { /* plush pink throw pillow — the brand, sneaking in */
-  content: "";
-  position: absolute;
-  left: 14%; top: 18%;
-  width: 26%; aspect-ratio: 1.15;
-  border-radius: 34%;
-  rotate: -8deg;
-  background: radial-gradient(circle at 36% 30%, rgba(255, 230, 236, .8), rgba(255, 230, 236, 0) 60%), url("../img/fur-small.jpg") center / 30cqw auto, #E3A0B0;
-  box-shadow: 0 2cqw 3cqw -1cqw rgba(60, 25, 10, .55);
-}
-
-/* viewfinder overlay on each frame */
-.room__vf {
-  position: absolute;
-  inset: 14px;
-  z-index: 6;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px 14px;
-  pointer-events: none;
-  color: var(--cream);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(30, 22, 24, .6), 0 0 12px rgba(30, 22, 24, .45);
-  background:
-    linear-gradient(var(--cream), var(--cream)) top left / 20px 1.5px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) top left / 1.5px 20px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) top right / 20px 1.5px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) top right / 1.5px 20px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) bottom left / 20px 1.5px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) bottom left / 1.5px 20px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) bottom right / 20px 1.5px no-repeat,
-    linear-gradient(var(--cream), var(--cream)) bottom right / 1.5px 20px no-repeat;
-  opacity: .9;
-}
-.room__rec { display: inline-flex; align-items: center; gap: 7px; }
-.room__rec .rec-dot { width: 7px; height: 7px; background: #8d7f83; box-shadow: none; animation: none; }
-.room.is-lit .room__rec .rec-dot { background: var(--rec); animation: rec-pulse 1.6s ease-in-out infinite; }
-
-/* light switch pill */
-.room__switch {
-  position: absolute;
-  z-index: 7;
-  left: 22px; bottom: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 18px 0 14px;
-  border-radius: 999px;
-  background: var(--cream);
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .6);
-  transition: background-color .35s, color .35s, scale .4s var(--ease-soft), box-shadow .4s;
-  -webkit-tap-highlight-color: transparent;
-}
-.room__switch::before {
-  content: "";
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  background: #b9aaa6;
-  box-shadow: inset 0 0 0 2px rgba(30, 22, 24, .2);
-  transition: background-color .3s, box-shadow .5s;
-}
-.room__switch:active { scale: .95; }
-.room__switch[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
-.room__switch[aria-pressed="true"]::before { background: #FFF1E6; box-shadow: 0 0 0 3px rgba(255, 220, 230, .25), 0 0 12px 3px rgba(255, 200, 215, .9); }
-@media (hover: hover) and (pointer: fine) {
-  .room__switch:hover { box-shadow: 0 0 0 5px rgba(215, 137, 154, .45), 0 10px 24px -12px rgba(0, 0, 0, .6); }
-}
-
-.room__info { padding: 22px 4px 0; }
-.room__name { font-size: clamp(26px, 2.4vw, 34px); font-weight: 800; letter-spacing: -.035em; }
-.room__text { margin-top: 10px; min-height: 3em; font-size: 16px; line-height: 1.5; color: var(--ink-2); max-width: 36ch; }
-.room__specs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-.room__specs dt {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-}
-.room__specs dd { margin: 4px 0 0; font-size: 14px; font-weight: 600; line-height: 1.3; }
-
-.rooms__controls {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 18px;
-}
-.rooms__progress {
-  position: relative;
-  flex: 1;
-  height: 8px;
-  border-radius: 2px;
-  background: linear-gradient(var(--line), var(--line)) center / 100% 1px no-repeat;
-}
-.rooms__progress span {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--band);
-  transform: scaleX(.15);
-  transform-origin: 0 50%;
-  transition: transform .25s linear;
-}
-
 /* 11 ── PATH: instant photos of the first week -----------------------------
    Five polaroids taped to the pink paper with snake-band washi tape. A plush
    snake (main.js initPath) crawls down the stitched guide with scroll; every photo
@@ -3399,7 +3028,6 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
   .section-head--split { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: end; gap: 48px; }
   .section-head--split .section-lead { justify-self: end; }
 
-  .room { flex-basis: min(36vw, 440px); }
 
   .privacy__grid { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(48px, 6vw, 96px); align-items: center; }
 
@@ -3494,6 +3122,11 @@ html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
   height: 100%;
   pointer-events: none;
 }
-.section > .container,
-.section > .rooms__rail,
-.section > .rooms__controls { position: relative; z-index: 4; }
+.section > .container { position: relative; z-index: 4; }
+
+/* With the travelling plush snake on the page, the flat SVG snake on the income
+   ring would read as a second snake: hide it. Progress stays visible in the goal bar. */
+html.has-journey .gauge__head,
+html.has-journey .gauge__fill,
+html.has-journey .gauge__scales { opacity: 0; transition: opacity .3s; }
+html.has-journey .gauge__cam { visibility: hidden; } /* sits under the coil */

@@ -581,7 +581,7 @@
     // route (writing / return)
     var rX, rY, rZ, rC, rK, rN = 0, rQ = 0, rq = 0, rv = 0, ri = 0, vCruise = 600, vRoute = 600;
     // body tables (ascending s; index 0 sits under the head)
-    var bodyColorAt = null, nSt = 0, stS, stF, stCol, stVar, stDith, kHead = 0, chunkN = 40, shStep = 4, ovStep = 3, sMaxLook = 0, sLookMax = 0;
+    var bodyColorAt = null, nSt = 0, stS, stF, stCol, stVar, stDith, stJx, stJy, kHead = 0, chunkN = 40, shStep = 4, ovStep = 3, sMaxLook = 0, sLookMax = 0;
     // poses (device px) and plans
     var poseF = null, poseR = null, poseL = null, planF = null, planR = null, kLive = 0;
     var rank, ov, gcell, gnext, cellHead = null, gridW = 0, gridH = 0, gridCell = 1;
@@ -606,7 +606,7 @@
     var jX = null, jY = null, jZ = null, jC = null, jK = null, jN = 0, iRest = 0, iQ = 0, uRest = 0, uEnd = 0;
     var mapS = null, mapU = null, mapN = 0, meas = null, measSig = '', measureTimer = 0;
     var viewY = 0, oyDev = 0, baseX = 0, baseY = 0, Hview = 0, Hmax = 0, inZone = true, drawn = false, zoneTop = 0, zoneBot = 0;
-    var uJ = 0, vJ = 0, restAt = 0, atLogo = false, atEnd = false, routeEndU = -1, gaugeC = null, coil = null;
+    var uJ = 0, vJ = 0, vTs = 0, uTprev = -1, restAt = 0, atLogo = false, atEnd = false, routeEndU = -1, gaugeC = null, coil = null;
     var cullY0 = -1e9, cullY1 = 1e9, gridOY = 0, staticRaf = 0, tap = null, chaseIdle = CHASE_IDLE;
     var jTmp = [0, 0, 0, 0];
 
@@ -787,12 +787,12 @@
       if (g) {
         var cx = g.x + g.w / 2, cy = g.y + g.h / 2, ringR = 0.4 * g.w, R = ringR + 0.75 * bw;
         var turns = clamp(Lbody * 0.96 / (TAU * (R + 0.25 * bw)), 0.62, 1.08), Phi = turns * TAU;
-        var thE = 262 / 180 * PI, thS = thE + Phi, dR = 0.5 * bw / TAU;
+        var thE = 262 / 180 * PI, thS = thE + Phi, dR = 0.22 * bw / TAU;
         var mx = cx + R * Math.cos(thS), my = cy + R * Math.sin(thS);
         var yq = Math.max(last.y + 3 * bw, my - 0.65 * Math.abs(xr - mx) - bw);
         wps.push({ x: xr, y: yq, a: PI / 2, t: 1, col: true });
         wps.push({ x: mx, y: my, a: thS - PI / 2, t: 1, coil: true });
-        coil = { cx: cx, cy: cy, R: R, thS: thS, Phi: Phi, dR: dR };
+        coil = { cx: cx, cy: cy, R: R, thS: thS, Phi: Phi, dR: dR, lift: 0.78 * bw };
         gaugeC = { x: cx, y: cy, r: ringR };
       } else {
         wps.push({ x: xr, y: Math.max(last.y + 3 * bw, m.zone.y + m.zone.h - 3 * bw), a: PI / 2, t: 1, col: true });
@@ -814,7 +814,9 @@
       if (coil) {
         var csteps = Math.ceil(coil.Phi * (coil.R + 0.3 * bw) / 2);
         for (q = 1; q <= csteps; q++) {
-          var ph = coil.Phi * q / csteps, th = coil.thS - ph, rr = coil.R + coil.dR * ph;
+          // slow outward spiral; the last stretch rides up and over the first turn so the head rests
+          // half on its own body with its silhouette against the background
+          var ph = coil.Phi * q / csteps, th = coil.thS - ph, rr = coil.R + coil.dR * ph + coil.lift * smooth(TAU - 1.5, TAU + 0.15, ph);
           add(coil.cx + rr * Math.cos(th), coil.cy + rr * Math.sin(th), Z_DESC);
         }
       }
@@ -928,6 +930,7 @@
       for (i = 1; i < list.length; i++) if (list[i] - out[out.length - 1] > 0.25) out.push(list[i]);
       nSt = out.length;
       stS = new Float64Array(out); stF = new Float32Array(nSt); stCol = new Uint8Array(nSt); stVar = new Uint8Array(nSt); stDith = new Float32Array(nSt);
+      stJx = new Float32Array(nSt); stJy = new Float32Array(nSt);
       kHead = 0;
       for (k = 0; k < nSt; k++) {
         var sk = stS[k], f = profile(sk);
@@ -935,6 +938,8 @@
         stCol[k] = colorAtU(uAt(sk + ALONG * r * f) - 1e-7);
         stVar[k] = Math.floor(hash(k * 7 + 3) * VARIANTS[stCol[k]]);
         stDith[k] = hash(k * 13 + 5);
+        // sub-2px fixed jitter: on straight vertical / horizontal runs, integer blits would align the fur strands into stripes
+        stJx[k] = (hash(k * 29 + 17) - 0.5) * 1.5; stJy[k] = (hash(k * 31 + 7) - 0.5) * 1.5;
         if (sk < 1.1 * rh) kHead = k + 1;
       }
       if (kHead >= nSt) kHead = nSt - 1;
@@ -1035,7 +1040,7 @@
       else if (state === ST_ROUTE && !initialWrite) startReturnJ();
     }
     function placeAt(u) {
-      uJ = clamp(u, uRest, uEnd); vJ = 0; restAt = 0;
+      uJ = clamp(u, uRest, uEnd); vJ = 0; uTprev = -1; restAt = 0;
       if (uJ <= uRest + 0.5) enterRestJ(REST_LOGO);
       else if (uJ >= uEnd - 0.5) enterRestJ(REST_END);
       else { state = ST_JOURNEY; restReady = false; }
@@ -1050,13 +1055,17 @@
       if (restAt === REST_LOGO) setLogo(false); else if (restAt === REST_END) setEnd(false);
       restAt = 0; restReady = false;
     }
-    // critically damped spring toward the scroll target (faster when far behind, e.g. after an anchor jump)
+    // critically damped spring toward the scroll target, with a light feed-forward of the (smoothed) target
+    // velocity so the head keeps up with continuous scrolling without overshooting wheel notches; faster when
+    // far behind (e.g. after an anchor jump)
     function follow(dt, uT) {
-      var lag = Math.abs(uT - uJ), w = 6.2, vmax = 5 * Hview;
+      if (uTprev < 0 || dt <= 0) { uTprev = uT; vTs = 0; }
+      vTs += ((uT - uTprev) / Math.max(dt, 1e-3) - vTs) * (1 - Math.exp(-dt / 0.15)); uTprev = uT;
+      var lag = Math.abs(uT - uJ), w = 8, vmax = 5 * Hview, ff = 0.3 * vTs;
       if (lag > 1.5 * Hview) w *= Math.min(3, lag / (1.5 * Hview));
       var n = Math.max(1, Math.ceil(w * dt / 0.12)), h = dt / n;
       for (var i = 0; i < n; i++) {
-        vJ += (w * w * (uT - uJ) - 2 * w * vJ) * h;
+        vJ += (w * w * (uT - uJ) + 2 * w * (ff - vJ)) * h;
         if (vJ > vmax) vJ = vmax; else if (vJ < -vmax) vJ = -vmax;
         uJ += vJ * h;
       }
@@ -1088,7 +1097,7 @@
     function arriveJ(u) {
       if (u <= uRest + 0.5) enterRestJ(REST_LOGO);
       else if (u >= uEnd - 0.5) enterRestJ(REST_END);
-      else { uJ = u; vJ = 0; restAt = 0; state = ST_JOURNEY; restReady = false; }
+      else { uJ = u; vJ = 0; uTprev = -1; restAt = 0; state = ST_JOURNEY; restReady = false; }
     }
     // rest cache placed on the resting pose (document dev px); grows if a pose needs more room
     function placeCache() {
@@ -1485,7 +1494,7 @@
       if (f >= 0.62) { spr = bank.big[kind][stVar[k] % bank.big[kind].length][P.bk[k]]; sc = f; }
       else { spr = bank.small[kind][stVar[k] % bank.small[kind].length][P.bk[k]]; sc = f / SMALL; }
       var w2 = spr.width * 0.5, h2 = spr.height * 0.5;
-      if (sc > 0.996 && sc < 1.004) c.drawImage(spr, Math.round(P.x[k] - w2), Math.round(P.y[k] - h2));
+      if (sc > 0.996 && sc < 1.004) c.drawImage(spr, Math.round(P.x[k] - w2 + stJx[k]), Math.round(P.y[k] - h2 + stJy[k]));
       else c.drawImage(spr, P.x[k] - w2 * sc, P.y[k] - h2 * sc, w2 * 2 * sc, h2 * 2 * sc);
     }
     var FLOOR_A = 0.12;
@@ -1733,7 +1742,7 @@
       var lkX = NaN, lkY = NaN, lkMax = 0.5;
       if (state === ST_REST && poseR) {
         if (pointerActive && (!jm || Math.abs(ptr.y - poseR.hy / dpr) < 1.2 * Hview)) { lkX = ptr.x; lkY = ptr.y; }
-        else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.75; }
+        else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.55; }
       }
       if (lkX === lkX) {
         var hx = poseR.hx / dpr, hy = poseR.hy / dpr, dx = lkX - hx, dy = lkY - hy, d = Math.hypot(dx, dy) || 1;
@@ -1776,19 +1785,19 @@
         setLogo(true); setLogo(false); placeAt(uT); return;
       }
       if (state === ST_REST && ((restAt === REST_LOGO && uT > uRest + 0.5) || (restAt === REST_END && uT < uEnd - 0.5))) {
-        uJ = restAt === REST_END ? uEnd : uRest; vJ = 0;
+        uJ = restAt === REST_END ? uEnd : uRest; vJ = 0; uTprev = -1;
         leaveRestJ(); state = ST_JOURNEY;
       }
       if (state !== ST_JOURNEY) return;
       follow(dt, uT);
-      if (Math.abs(uT - uJ) < 0.6 && Math.abs(vJ) < 40) {
+      if (Math.abs(uT - uJ) < 2 && Math.abs(vJ) < 60) {   // settle: a <2px snap is invisible
         if (uT <= uRest + 0.5) enterRestJ(REST_LOGO);
         else if (uT >= uEnd - 0.5) enterRestJ(REST_END);
       }
     }
     function animatingJ() {
       return state === ST_ROUTE || state === ST_CHASE ||
-        (state === ST_JOURNEY && (Math.abs(uAtScroll(viewY) - uJ) > 0.6 || Math.abs(vJ) > 40));
+        (state === ST_JOURNEY && (Math.abs(uAtScroll(viewY) - uJ) > 2 || Math.abs(vJ) > 60));
     }
 
     /* ---------------- loop ---------------- */
