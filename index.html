@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700;800;900&display=swap">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/blocks.css">
 <script>
   /* Mark JS as available before first paint; force the intro to finish even if main.js never loads. */
   document.documentElement.classList.add('js');
@@ -72,9 +73,12 @@
 
 <main id="main">
 
+  <!-- Page-level snake layer: fixed canvas between section backgrounds and content.
+       The snake writes the logo in the hero, then travels down the page with scroll to the income gauge. -->
+  <canvas class="snake-layer" data-snake-canvas aria-hidden="true"></canvas>
+
   <!-- ============ HERO: ring light + snake ============ -->
   <section class="hero" id="top" data-hero aria-labelledby="hero-title">
-    <canvas class="hero__canvas" data-snake-canvas aria-hidden="true"></canvas>
     <div class="hero__vignette" aria-hidden="true"></div>
     <p class="hero__studio" aria-hidden="true">studio</p>
 
@@ -678,5 +682,6 @@
 
 <script src="assets/js/snake.js" defer></script>
 <script src="assets/js/main.js" defer></script>
+<script src="assets/js/blocks.js" defer></script>
 </body>
 </html>

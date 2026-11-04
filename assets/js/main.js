@@ -447,20 +447,30 @@
   function initHero() {
     var hero = $('[data-hero]');
     if (!hero) return;
-    var canvas = $('[data-snake-canvas]', hero);
-    var written = false;
-    function markWritten() {
-      if (written) return;
-      written = true;
-      hero.classList.add('is-written');
-    }
+    var canvas = $('[data-snake-canvas]');
+    var gauge = $('[data-gauge]');
+    var everWritten = false;
+    function markWritten() { everWritten = true; hero.classList.add('is-written'); }
+    function markUnwritten() { hero.classList.remove('is-written'); }
 
     var engine = win.SohoSnake;
     if (canvas && engine && typeof engine.mount === 'function') {
+      /* 'journey': writes "ae" in the hero, then travels down the page with scroll
+         and coils around the income gauge (see snake.js). */
       canvas.addEventListener('snake:written', markWritten);
+      canvas.addEventListener('snake:unwritten', markUnwritten);   // left the logo pose
+      canvas.addEventListener('snake:arrived', function () { if (gauge) gauge.classList.add('has-snake'); });
+      canvas.addEventListener('snake:departed', function () { if (gauge) gauge.classList.remove('has-snake'); });
       try {
-        engine.mount(canvas, { mode: 'logo', pointerTarget: hero, reducedMotion: state.reduced });
-        setTimeout(markWritten, 4000);                 // safety net
+        engine.mount(canvas, {
+          mode: 'journey',
+          hero: hero,
+          end: gauge,
+          zoneEnd: $('#income'),
+          pointerTarget: hero,
+          reducedMotion: state.reduced
+        });
+        setTimeout(function () { if (!everWritten) markWritten(); }, 4000);   // safety net
       } catch (e) {
         warn('hero snake', e);
         markWritten();

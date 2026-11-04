@@ -611,7 +611,6 @@ body.menu-open .nav { background: transparent; box-shadow: none; -webkit-backdro
 /* 6 ── HERO -------------------------------------------------------------- */
 .hero {
   position: relative;
-  isolation: isolate;
   min-height: 100vh;
   min-height: 100svh;
   overflow: hidden;
@@ -626,13 +625,6 @@ body.menu-open .nav { background: transparent; box-shadow: none; -webkit-backdro
   --logo-h: calc(var(--logo-w) / 1.85);
   --logo-x: 16px;
   --logo-y: calc(var(--nav-h) + 20px);
-}
-.hero__canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
 }
 .hero__vignette {
   position: absolute;
@@ -942,7 +934,7 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 /* 7 ── MARQUEE (ink band with triad edges, fur caps) --------------------- */
 .marquee {
   position: relative;
-  z-index: 2;
+  z-index: 4; /* the snake tunnels under the band */
   overflow: hidden;
   padding: 26px 0;
   color: var(--cream);
@@ -2726,3 +2718,22 @@ html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
   font-weight: 500;
 }
 .form__error:empty { display: none; }
+
+/* ── SNAKE LAYER ──────────────────────────────────────────────────────────
+   One fixed, viewport-sized canvas (snake.js 'journey' mode) sits ABOVE section
+   backgrounds and BELOW content, so the snake crawls under the blocks and shows
+   in margins and gaps. Rules that keep this working:
+   - sections in the snake's zone (hero → income) must NOT create a stacking
+     context (no isolation/transform/filter/opacity/z-index on the section itself);
+   - content wrappers sit at z-index ≥ 4. */
+.snake-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.section > .container,
+.section > .rooms__rail,
+.section > .rooms__controls { position: relative; z-index: 4; }
