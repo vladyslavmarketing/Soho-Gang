@@ -443,6 +443,161 @@
     });
   }
 
+  /* ================================================================== CARE TAGS (studio)
+     Six satin labels hang from the seam and swing like pendulums around their sewn top edge.
+     Damped spring per tag: a = offset from the CSS resting tilt (deg), v = angular velocity (deg/s).
+     Drive: a mouse brushing across the labels (velocity-weighted, stronger lower down the label),
+     a press (squish + poke), a gentle sway with scroll on touch devices, and a drop-in on first view.
+     Only `transform` on the tag is written; reduced motion → static labels at their resting tilt. */
+  function initTags() {
+    var rack = $('[data-tags]');
+    if (!rack) return;
+    var els = $$('[data-tag]', rack);
+    if (!els.length) return;
+
+    var K = 46;            // stiffness (1/s²) → period ≈ 0.93s
+    var DAMP = 2.4;        // damping (1/s)  → settles in ~2s
+    var MAX = 12;          // hard limit away from rest (deg)
+    var tags = els.map(function (el, i) {
+      el.style.setProperty('--i', i);
+      return {
+        el: el, slot: el.parentElement || el,
+        a: 0, v: 0, css: '',
+        x0: 0, x1: 0, y0: 0, y1: 0,
+        /* each label answers a scroll sway a little differently */
+        sway: (i % 2 ? 1 : -1) * (0.7 + ((i * 37) % 10) / 22)
+      };
+    });
+
+    var id = 0, last = 0, inView = !win.IntersectionObserver;
+
+    function measure() {
+      var sx = win.pageXOffset || 0, sy = win.pageYOffset || 0;
+      tags.forEach(function (t) {
+        var r = t.slot.getBoundingClientRect();     // the slot never rotates
+        t.x0 = r.left + sx; t.x1 = r.right + sx;
+        t.y0 = r.top + sy; t.y1 = r.bottom + sy;
+      });
+    }
+    function paint(t) {
+      var css = Math.abs(t.a) < 0.01 ? '' : 'rotate(' + t.a.toFixed(3) + 'deg)';
+      if (css !== t.css) { t.el.style.transform = css; t.css = css; }
+    }
+    function frame(time) {
+      var dt = last ? clamp((time - last) / 1000, 0, 0.034) : 0.016;
+      last = time;
+      var busy = false;
+      for (var i = 0; i < tags.length; i++) {
+        var t = tags[i];
+        /* two semi-implicit Euler substeps keep the spring stable on slow frames */
+        for (var s = 0; s < 2; s++) {
+          var h = dt / 2;
+          t.v += (-K * t.a - DAMP * t.v) * h;
+          t.a += t.v * h;
+        }
+        if (t.a > MAX) { t.a = MAX; t.v *= -0.35; }
+        else if (t.a < -MAX) { t.a = -MAX; t.v *= -0.35; }
+        if (Math.abs(t.v) < 0.06 && Math.abs(t.a) < 0.02) { t.v = 0; t.a = 0; }
+        else busy = true;
+        paint(t);
+      }
+      if (busy && !state.reduced) id = raf(frame);
+      else { id = 0; last = 0; }
+    }
+    function kick() { if (!id && !state.reduced) id = raf(frame); }
+    function push(t, dv) { t.v = clamp(t.v + dv, -220, 220); }
+    function rest() {
+      caf(id); id = 0; last = 0;
+      tags.forEach(function (t) { t.a = 0; t.v = 0; paint(t); });
+    }
+
+    /* mouse brushing through the bundle */
+    var px = 0, pt = 0, pvx = 0, hasP = false;
+    rack.addEventListener('pointerenter', function () { measure(); hasP = false; });
+    rack.addEventListener('pointermove', function (e) {
+      if (e.pointerType !== 'mouse' || state.reduced) return;
+      var x = e.clientX + (win.pageXOffset || 0);
+      var y = e.clientY + (win.pageYOffset || 0);
+      var tnow = e.timeStamp || now();
+      if (hasP) {
+        var dt = clamp(tnow - pt, 1, 80);
+        pvx = pvx * 0.45 + ((x - px) / dt) * 0.55;               // px/ms, smoothed
+        var gain = Math.min(1, Math.abs(pvx) / 1.1) * (dt / 16.667);
+        var lo = Math.min(px, x), hi = Math.max(px, x);
+        var any = false;
+        for (var i = 0; i < tags.length; i++) {
+          var t = tags[i];
+          if (y < t.y0 || y > t.y1 + 8 || hi < t.x0 - 4 || lo > t.x1 + 4) continue;
+          var lever = clamp((y - t.y0) / ((t.y1 - t.y0) || 1), 0.2, 1);
+          push(t, -pvx * 11 * gain * lever);                      // a push to the right swings the hem right
+          any = true;
+        }
+        if (any) kick();
+      }
+      px = x; pt = tnow; hasP = true;
+    });
+    rack.addEventListener('pointerleave', function () { hasP = false; pvx = 0; });
+
+    /* press: squish (CSS .is-pressed) + a poke away from the finger */
+    tags.forEach(function (t) {
+      function release() { t.el.classList.remove('is-pressed'); }
+      t.el.addEventListener('pointerdown', function (e) {
+        t.el.classList.add('is-pressed');
+        if (state.reduced) return;
+        var r = t.slot.getBoundingClientRect();
+        push(t, (e.clientX < r.left + r.width / 2 ? -1 : 1) * 46);
+        kick();
+      });
+      t.el.addEventListener('pointerup', release);
+      t.el.addEventListener('pointercancel', release);
+      t.el.addEventListener('pointerleave', release);
+    });
+
+    /* touch devices: the bundle sways a little with the scroll */
+    var lastY = win.pageYOffset || 0, lastT = 0;
+    onScroll(function (y) {
+      var tnow = now();
+      var dy = y - lastY, dt = lastT ? clamp(tnow - lastT, 8, 120) : 16.667;
+      lastY = y; lastT = tnow;
+      if (state.reduced || state.hover || !inView) return;
+      var vy = clamp(dy / dt, -2.5, 2.5);                          // px/ms
+      if (Math.abs(vy) < 0.04) return;
+      for (var i = 0; i < tags.length; i++) push(tags[i], vy * 1.5 * tags[i].sway * (dt / 16.667));
+      kick();
+    });
+
+    /* first view: labels drop out of the seam and swing in, one after another */
+    var dropped = false;
+    function dropIn() {
+      if (dropped) return;
+      dropped = true;
+      if (state.reduced) { rack.classList.remove('is-waiting'); return; }
+      rack.classList.add('is-dropping');
+      rack.classList.remove('is-waiting');
+      tags.forEach(function (t, i) {
+        setTimeout(function () { push(t, (i % 2 ? 1 : -1) * (54 + (i % 3) * 10)); kick(); }, 120 + i * 80);
+      });
+      setTimeout(function () { rack.classList.remove('is-dropping'); }, 2200);
+    }
+
+    if (win.IntersectionObserver) {
+      var below = rack.getBoundingClientRect().top > (win.innerHeight || root.clientHeight);
+      if (below && !state.reduced) rack.classList.add('is-waiting');
+      else dropped = true;
+      new IntersectionObserver(function (entries) {
+        var e = entries[entries.length - 1];
+        inView = e.isIntersecting;
+        if (inView) { measure(); dropIn(); }
+      }, { rootMargin: '0px 0px -12% 0px', threshold: 0 }).observe(rack);
+    }
+
+    onLayout(measure);
+    onMotionChange(function (reduced) {
+      if (reduced) { rest(); rack.classList.remove('is-waiting', 'is-dropping'); dropped = true; }
+    });
+    measure();
+  }
+
   /* ================================================================== HERO (snake + viewfinder) */
   function initHero() {
     var hero = $('[data-hero]');
@@ -551,6 +706,15 @@
     var scales = $('[data-gauge-scales]');
     var head = $('[data-gauge-head]');
     var readout = incomeEl ? incomeEl.closest('[aria-live]') : null;
+    var tipsBox = $('[data-gauge-tips]');
+    var goalLabel = gauge ? $('.gauge__label', gauge) : null;
+
+    /* each level shows its hourly rate, read from the radio value so they never disagree */
+    $$('input[name="level"]', form).forEach(function (r) {
+      var lab = r.parentNode ? $('[data-rate]', r.parentNode) : null;
+      var v = parseFloat(r.value);
+      if (lab && isFinite(v)) lab.textContent = '$' + groupNum(v) + '/ч';
+    });
 
     var MAX = 12000;
     var R = 160;
@@ -577,6 +741,7 @@
     var shown = { m: 0, w: 0 };
     function renderGauge(m) {
       var p = clamp(m / MAX, 0, 1);
+      if (gauge) gauge.style.setProperty('--p', p.toFixed(4));
       var L = p * C;
       var off = (C - L).toFixed(2);
       if (fill) fill.style.strokeDashoffset = off;
@@ -616,12 +781,41 @@
       })();
     }
 
+    /* tip alerts: when the goal grows, a «+$…» chip pops above the readout and floats away
+       (debounced so a slider drag adds up to one alert) */
+    var pendingTip = 0, tipTimer = 0;
+    function spawnTip(amount) {
+      if (!tipsBox || state.reduced || amount < 10) return;
+      while (tipsBox.children.length >= 3) tipsBox.removeChild(tipsBox.firstChild);
+      var tip = doc.createElement('span');
+      tip.className = 'tip';
+      tip.textContent = '+$' + groupNum(Math.round(amount / 10) * 10);
+      var y = goalLabel ? goalLabel.offsetTop - 22 : (gauge ? gauge.offsetHeight * 0.26 : 0);
+      tip.style.setProperty('--x', (50 + (Math.random() - 0.5) * 14).toFixed(1) + '%');
+      tip.style.setProperty('--y', Math.max(0, y).toFixed(0) + 'px');
+      tip.style.setProperty('--dx', ((Math.random() - 0.5) * 34).toFixed(0) + 'px');
+      function drop() { if (tip.parentNode) tip.parentNode.removeChild(tip); }
+      tip.addEventListener('animationend', drop);
+      setTimeout(drop, 2600);
+      tipsBox.appendChild(tip);
+    }
+    function queueTip(amount) {
+      if (!tipsBox || state.reduced) return;
+      pendingTip += amount;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(function () { var a = pendingTip; pendingTip = 0; spawnTip(a); }, 200);
+    }
+
     var introDone = false;
+    var lastTarget = compute();
     function update() {
       if (outHours && hoursIn) outHours.textContent = hoursIn.value;
       if (outDays && daysIn) outDays.textContent = daysIn.value;
       introDone = true;
-      animateTo(compute(), 600);
+      var next = compute();
+      if (next.m > lastTarget.m) queueTip(next.m - lastTarget.m);
+      lastTarget = next;
+      animateTo(next, 600);
     }
     form.addEventListener('input', update);
     form.addEventListener('change', update);
@@ -648,7 +842,14 @@
           if (!e.isIntersecting) return;
           io.disconnect();
           if (introDone) return;
-          setTimeout(function () { if (!introDone) { introDone = true; animateTo(compute(), 1500); } }, 220);
+          setTimeout(function () {
+            if (introDone) return;
+            introDone = true;
+            var goal = compute();
+            animateTo(goal, 1500);
+            /* one alert while the ring fills: roughly what a single shift brings */
+            setTimeout(function () { spawnTip(goal.w / Math.max(1, num(daysIn, 5))); }, 900);
+          }, 220);
         });
       }, { threshold: 0.35 });
       io.observe(gauge);
@@ -807,6 +1008,8 @@
     var bg = $('[data-path-bg]', track);
     var scales = $('[data-path-scales]', track);
     var head = $('[data-path-head]', track);
+    var shade = $('[data-path-shade]', track);      // soft contact shadow under the body
+    var sheen = $('[data-path-sheen]', track);      // fur highlight along the top
     var steps = $$('[data-step]', track);
     if (!svg || !line || !line.getTotalLength || !steps.length) return;
 
@@ -908,7 +1111,7 @@
 
       svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
       var d = buildD(centres(), W, desktop);
-      [bg, line, ink, scales].forEach(function (p) { if (p) p.setAttribute('d', d); });
+      [bg, shade, line, sheen, ink, scales].forEach(function (p) { if (p) p.setAttribute('d', d); });
 
       T = line.getTotalLength();
       if (!(T > 0)) return;
@@ -926,7 +1129,7 @@
 
       /* plush band pattern scaled to the stroke width */
       var sw = parseFloat(getComputedStyle(line).strokeWidth) || 16;
-      line.style.strokeDasharray = T.toFixed(2) + ' ' + T.toFixed(2);
+      [line, shade, sheen].forEach(function (p) { if (p) p.style.strokeDasharray = T.toFixed(2) + ' ' + T.toFixed(2); });
       var cream = Math.max(4, sw * 0.34), edge = Math.max(1.6, sw * 0.11);
       var period = Math.round(sw * 2.25), clear = 14 + sw * 0.5;
       if (scales) scales.style.strokeDasharray = bandDashArray(T, cream, period, clear);
@@ -934,8 +1137,8 @@
         ink.style.strokeWidth = sw + 'px';
         ink.style.strokeDasharray = bandDashArray(T, cream + edge * 2, period, clear - edge);
       }
-      /* head: ~1.25× the body on desktop, a touch smaller on the slim mobile line */
-      headScale = clamp((sw * 1.3) / 30, 0.88, 1.2);
+      /* head: ~1.35× the body width (the head shape is 32 units tall) */
+      headScale = clamp((sw * 1.36) / 32, 0.66, 1.1);
 
       ready = true;
       measureTop();
@@ -968,6 +1171,8 @@
       if (!ready) return;
       var off = (T - cur).toFixed(2);
       line.style.strokeDashoffset = off;
+      if (shade) shade.style.strokeDashoffset = off;
+      if (sheen) sheen.style.strokeDashoffset = off;
       if (scales) scales.style.strokeDashoffset = off;
       if (ink) ink.style.strokeDashoffset = off;
       if (head) {
@@ -977,6 +1182,7 @@
       for (var i = 0; i < steps.length; i++) {
         var on = cur >= (stepLen[i] || 0) - 14;
         if (on !== steps[i].classList.contains('is-active')) steps[i].classList.toggle('is-active', on);
+        if (on && !steps[i].classList.contains('is-developed')) steps[i].classList.add('is-developed');   // photos never un-develop
       }
     }
 
@@ -1673,7 +1879,7 @@
   /* ================================================================== BOOT */
   var inits = [
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
-    ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt],
+    ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['tags', initTags],
     ['hero', initHero], ['calculator', initCalculator], ['rooms', initRooms], ['path', initPath],
     ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill]
   ];
