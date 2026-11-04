@@ -1683,6 +1683,7 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 }
 .step {
   position: relative;
+  z-index: 2; /* stays above the drawn path; reveal transforms make each step its own stacking context */
   padding-left: 64px;
 }
 .step__num {
@@ -2513,7 +2514,8 @@ html.has-hover body:hover .cursor { opacity: 1; }
 .cursor.is-hover .cursor__dot { scale: .7; }
 .cursor.is-down .cursor__ring { scale: .82 .74; }
 .cursor.is-down .cursor__dot { scale: 1.35 .8; }
-.cursor.is-hidden { opacity: 0; }
+.cursor.is-hidden,
+html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
 
 /* 17 ── SCROLL REVEAL ---------------------------------------------------- */
 [data-reveal].is-pending { opacity: 0; translate: 0 28px; }
@@ -2715,3 +2717,12 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
 }
 html.reduced-motion .marquee__track { animation: none !important; }
 html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
+
+/* Network error slot for the application form (only used when data-endpoint is set) */
+.form__error {
+  margin: 0;
+  color: var(--rec);
+  font-size: .9375rem;
+  font-weight: 500;
+}
+.form__error:empty { display: none; }

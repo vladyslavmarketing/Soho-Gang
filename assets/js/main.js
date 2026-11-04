@@ -1644,12 +1644,28 @@
     });
   }
 
+  /* ============================================================ RANGE FILL */
+  /* Range inputs show their filled part through --fill (WebKit has no native progress pseudo-element). */
+  function initRangeFill() {
+    var inputs = document.querySelectorAll('input[type="range"]');
+    Array.prototype.forEach.call(inputs, function (input) {
+      var update = function () {
+        var min = parseFloat(input.min) || 0, max = parseFloat(input.max) || 100;
+        var pct = max > min ? ((parseFloat(input.value) - min) / (max - min)) * 100 : 0;
+        input.style.setProperty('--fill', pct.toFixed(2) + '%');
+      };
+      input.addEventListener('input', update);
+      input.addEventListener('change', update);
+      update();
+    });
+  }
+
   /* ================================================================== BOOT */
   var inits = [
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt],
     ['hero', initHero], ['calculator', initCalculator], ['rooms', initRooms], ['path', initPath],
-    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy]
+    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill]
   ];
   function boot() {
     for (var i = 0; i < inits.length; i++) {
