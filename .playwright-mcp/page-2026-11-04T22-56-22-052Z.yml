@@ -1,0 +1,313 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e5]:
+      - paragraph [ref=f1e8]:
+        - link " webmodelsdp@gmail.com" [ref=f1e9] [cursor=pointer]:
+          - /url: mailto:webmodelsdp@gmail.com
+          - generic [ref=f1e10]: 
+          - text: webmodelsdp@gmail.com
+        - generic [ref=f1e11]:
+          - generic [ref=f1e12]: 
+          - text: г. Днепр, пр. Д. Яворницкого
+        - link " +38 068 496 7777" [ref=f1e13] [cursor=pointer]:
+          - /url: tel:+380684967777
+          - generic [ref=f1e14]: 
+          - text: +38 068 496 7777
+      - list [ref=f1e17]:
+        - listitem [ref=f1e18]:
+          - link "" [ref=f1e19] [cursor=pointer]:
+            - /url: "#"
+        - listitem [ref=f1e21]:
+          - link "" [ref=f1e22] [cursor=pointer]:
+            - /url: https://instagram.com/
+    - link [ref=f1e29] [cursor=pointer]:
+      - /url: /
+      - img "GoldenGirls" [ref=f1e30]
+    - generic [ref=f1e31]:
+      - text: GoldenGirls
+      - link "Написать в TG " [ref=f1e32] [cursor=pointer]:
+        - /url: https://t.me/goldengirls_studio
+      - link [ref=f1e33] [cursor=pointer]:
+        - /url: "#nav"
+      - navigation
+  - generic [ref=f1e37]:
+    - button "Previous" [ref=f1e38] [cursor=pointer]: Previous
+    - generic [ref=f1e40]:
+      - generic [ref=f1e45]:
+        - heading [level=1] [ref=f1e46]: Вебкам студия Днепр
+        - heading [level=2] [ref=f1e47]:
+          - generic [ref=f1e48]:
+            - generic [ref=f1e49]: без опыта работы
+            - generic [ref=f1e50]: без образования
+        - paragraph [ref=f1e51]: Всему научим, а если есть сомнения, пройди наш онлайн-тест и узнай, на сколько работа вебкам-моделью подойдет Тебе.
+        - link [ref=f1e53] [cursor=pointer]:
+          - /url: "#online-test"
+          - text: Пройти тест
+          - generic [ref=f1e54]: 
+      - generic [ref=f1e56]:
+        - heading [level=4]
+        - heading "Зарабатывай веб моделью" [level=1] [ref=f1e57]
+        - heading "от $2000 в Днепре" [level=2] [ref=f1e58]
+        - heading [level=3]
+        - paragraph [ref=f1e59]: Воплощение любой мечты и финансовая независимость — в твоих руках.
+        - link "Отправить заявку " [ref=f1e61] [cursor=pointer]:
+          - /url: "#contact"
+          - text: Отправить заявку
+          - generic [ref=f1e62]: 
+        - link "Посчитать доход " [ref=f1e64] [cursor=pointer]:
+          - /url: webcam-studiya-v-dnepres/#calculator
+          - text: Посчитать доход
+          - generic [ref=f1e65]: 
+      - generic [ref=f1e70]:
+        - heading [level=1] [ref=f1e71]: Вебкам модель
+        - heading [level=2] [ref=f1e72]:
+          - generic [ref=f1e73]:
+            - generic [ref=f1e74]: гибкий график
+            - generic [ref=f1e75]: выбирай время
+        - paragraph [ref=f1e76]: Выходные или отпуск в любое время, составляй рабочий график на свой вкус.
+        - link [ref=f1e78] [cursor=pointer]:
+          - /url: "#contact"
+          - text: Отправить заявку
+          - generic [ref=f1e79]: 
+      - generic [ref=f1e84]:
+        - heading [level=1] [ref=f1e85]: Вебкам студия Днепр
+        - heading [level=2] [ref=f1e86]:
+          - generic [ref=f1e87]:
+            - generic [ref=f1e88]: без опыта работы
+            - generic [ref=f1e89]: без образования
+        - paragraph [ref=f1e90]: Всему научим, а если есть сомнения, пройди наш онлайн-тест и узнай, на сколько работа вебкам-моделью подойдет Тебе.
+        - link [ref=f1e92] [cursor=pointer]:
+          - /url: "#online-test"
+          - text: Пройти тест
+          - generic [ref=f1e93]: 
+      - generic [ref=f1e95]:
+        - heading [level=1] [ref=f1e96]: Зарабатывай веб моделью
+        - heading [level=2] [ref=f1e97]: от $2000 в Днепре
+        - paragraph [ref=f1e98]: Воплощение любой мечты и финансовая независимость — в твоих руках.
+        - link [ref=f1e100] [cursor=pointer]:
+          - /url: "#contact"
+          - text: Отправить заявку
+          - generic [ref=f1e101]: 
+        - link [ref=f1e103] [cursor=pointer]:
+          - /url: webcam-studiya-v-dnepres/#calculator
+          - text: Посчитать доход
+          - generic [ref=f1e104]: 
+      - generic [ref=f1e109]:
+        - heading [level=1] [ref=f1e110]: Вебкам модель
+        - heading [level=2] [ref=f1e111]:
+          - generic [ref=f1e112]:
+            - generic [ref=f1e113]: гибкий график
+            - generic [ref=f1e114]: выбирай время
+        - paragraph [ref=f1e115]: Выходные или отпуск в любое время, составляй рабочий график на свой вкус.
+        - link [ref=f1e117] [cursor=pointer]:
+          - /url: "#contact"
+          - text: Отправить заявку
+          - generic [ref=f1e118]: 
+      - generic [ref=f1e123]:
+        - heading [level=1] [ref=f1e124]: Вебкам студия Днепр
+        - heading [level=2] [ref=f1e125]:
+          - generic [ref=f1e126]:
+            - generic [ref=f1e127]: без опыта работы
+            - generic [ref=f1e128]: без образования
+        - paragraph [ref=f1e129]: Всему научим, а если есть сомнения, пройди наш онлайн-тест и узнай, на сколько работа вебкам-моделью подойдет Тебе.
+        - link [ref=f1e131] [cursor=pointer]:
+          - /url: "#online-test"
+          - text: Пройти тест
+          - generic [ref=f1e132]: 
+    - button "Next" [ref=f1e133] [cursor=pointer]: Next
+  - generic [ref=f1e136]:
+    - generic [ref=f1e138]:
+      - heading "Для студентов" [level=3] [ref=f1e139]
+      - paragraph [ref=f1e140]: Веб модель - легко совмещай работу и учебу. Отпуск на время экзаменов или защиты диплома — без проблем.
+    - generic [ref=f1e142]:
+      - heading "Для родителей" [level=3] [ref=f1e143]
+      - paragraph [ref=f1e144]: Веб модель - проводи время с ребенком и работай в свободное время, а не наоборот.
+    - generic [ref=f1e146]:
+      - heading "Для подработки" [level=3] [ref=f1e147]
+      - paragraph [ref=f1e148]: Вебкам модель - дополни основную работу прибыльным источником дохода или заработай капитал для своего бизнеса.
+  - generic [ref=f1e150]:
+    - img "Работа вебкам-моделью в Днепре. Что важно знать о работе" [ref=f1e154]
+    - generic [ref=f1e156]:
+      - generic [ref=f1e158]:
+        - heading [level=5]
+        - heading [level=3]
+        - heading "Работа вебкам Днепр" [level=2] [ref=f1e159]
+        - paragraph [ref=f1e160]: Это общение с людьми по всему миру
+        - generic [ref=f1e161]:
+          - paragraph [ref=f1e162]
+          - paragraph [ref=f1e163]: Развивай уверенность в себе, навыки общения, заводи новых друзей, прокачай английский.
+      - generic [ref=f1e164]:
+        - generic [ref=f1e166]:
+          - img "Работа вебкам-моделью в Днепре. Вебкам-студия это" [ref=f1e168]
+          - heading "Вебкам студия" [level=4] [ref=f1e170]
+          - generic [ref=f1e171]:
+            - paragraph
+            - paragraph [ref=f1e172]: Современный офис и личное пространство для твоей комфортной работы.
+        - generic [ref=f1e174]:
+          - img "Работа вебкам Днепр" [ref=f1e176]
+          - heading "Задача модели" [level=4] [ref=f1e178]
+          - generic [ref=f1e179]:
+            - paragraph
+            - paragraph [ref=f1e180]: Будь собой, знакомься, общайся, наслаждайся вниманием и флиртом с мужчинами из разных стран.
+        - generic [ref=f1e182]:
+          - img "Работа вебкам моделью в Днепре" [ref=f1e184]
+          - heading "Оплата" [level=4] [ref=f1e186]
+          - generic [ref=f1e187]:
+            - paragraph
+            - paragraph [ref=f1e188]: Время работает на тебя. Ты онлайн — и с каждой минутой зарабатываешь все больше.
+        - link "О нас" [ref=f1e190] [cursor=pointer]:
+          - /url: webcam-studiya-v-dnepres/
+  - generic [ref=f1e193]:
+    - generic [ref=f1e195]:
+      - heading [level=3]
+      - heading "Онлайн-тест" [level=2] [ref=f1e196]
+      - paragraph [ref=f1e197]: Узнай, на сколько работа вебкам-моделью подойдет именно Тебе. Выбери свой тип темперамента и нажми на него. Скучно не будет! Готовься улыбаться.
+    - generic [ref=f1e199]:
+      - generic [ref=f1e200]:
+        - img "Работа вебкам-моделью в Днепре. Онлайн-тест Сангвиник" [ref=f1e202]
+        - generic [ref=f1e203]:
+          - heading "Сангвиник" [level=4] [ref=f1e205]
+          - generic [ref=f1e206]: Общение — твое хобби. Обожаешь знакомиться и легко заводишь новых друзей.
+      - generic [ref=f1e207]:
+        - img "Работа вебкам-моделью в Днепре. Онлайн-тест Холерик" [ref=f1e209]
+        - generic [ref=f1e210]:
+          - heading "Холерик" [level=4] [ref=f1e212]
+          - generic [ref=f1e213]: Темпераментная, горячая, «с перчинкой». С тобой никогда не соскучишься.
+      - generic [ref=f1e214]:
+        - img "Работа вебкам-моделью в Днепре. Онлайн-тест Флегматик" [ref=f1e216]
+        - generic [ref=f1e217]:
+          - heading "Флегматик" [level=4] [ref=f1e219]
+          - generic [ref=f1e220]: Вдумчивая и рациональная. Всегда находишь решение и правильный подход к людям.
+      - generic [ref=f1e221]:
+        - img "Работа вебкам-моделью в Днепре. Онлайн-тест Меланхолик" [ref=f1e223]
+        - generic [ref=f1e224]:
+          - heading "Меланхолик" [level=4] [ref=f1e226]
+          - generic [ref=f1e227]: Романтичная натура. Легко влюбляешься и вызываешь у людей сильные эмоции.
+  - generic [ref=f1e229]:
+    - generic [ref=f1e230]:
+      - generic [ref=f1e231]:
+        - heading [level=5]
+        - heading "Высокий доход" [level=3] [ref=f1e232]
+        - heading "Гибкий график вебкам модели" [level=2] [ref=f1e233]
+        - paragraph [ref=f1e234]: Честные и прозрачные условия, от графика до зарплаты. Ты сама контролируешь свою занятость и доход.
+      - generic [ref=f1e235]:
+        - paragraph
+        - paragraph [ref=f1e236]: "Достаточно работать вебкам-моделью в Днепре по 6 часов в день в удобное время суток: с 09:00 до 15:00, с 15:00 до 21:00, с 21:00 до 03:00, с 03:00 до 09:00."
+      - link "Заполнить заявку" [ref=f1e237] [cursor=pointer]:
+        - /url: "#contact"
+      - generic [ref=f1e238]:
+        - generic [ref=f1e242]:
+          - img "Работа вебкам-моделью в Днепре. Заработок в месяц" [ref=f1e244]
+          - generic [ref=f1e245]:
+            - generic [ref=f1e246]: "70000"
+            - generic [ref=f1e247]: +
+          - generic [ref=f1e248]: грн. в месяц
+        - generic [ref=f1e252]:
+          - img "Работа вебкам-моделью в Днепре. Заработок в неделю" [ref=f1e254]
+          - generic [ref=f1e255]:
+            - generic [ref=f1e256]: "20000"
+            - generic [ref=f1e257]: +
+          - generic [ref=f1e258]: грн. в неделю
+        - generic [ref=f1e262]:
+          - img "Работа вебкам-моделью в Днепре. Заработок в час" [ref=f1e264]
+          - generic [ref=f1e265]:
+            - generic [ref=f1e266]: "500"
+            - generic [ref=f1e267]: +
+          - generic [ref=f1e268]: грн. в час
+    - generic [ref=f1e269]:
+      - img "Работа вебкам-моделью в Днепре. Большие деньги"
+  - generic [ref=f1e272]:
+    - generic [ref=f1e274]:
+      - heading [level=5]
+      - heading "Вебкам отзывы" [level=3] [ref=f1e275]
+      - heading "О нашей студии" [level=2] [ref=f1e276]
+    - generic [ref=f1e280]:
+      - generic [ref=f1e282]:
+        - img [ref=f1e285] [cursor=pointer]
+        - img [ref=f1e288] [cursor=pointer]
+        - img [ref=f1e291] [cursor=pointer]
+        - tabpanel [ref=f1e292]:
+          - img "Отзывы о работе вебкам-моделью в Днепре. Лена" [ref=f1e294] [cursor=pointer]
+        - tabpanel [ref=f1e295]:
+          - img "Отзывы о работе вебкам-моделью в Днепре. Саша" [ref=f1e297] [cursor=pointer]
+        - tabpanel [ref=f1e298]:
+          - img "Отзывы о работе вебкам-моделью в Днепре. Candy" [ref=f1e300] [cursor=pointer]
+        - tabpanel [aria-hidden] [ref=f1e301]:
+          - img [ref=f1e303] [cursor=pointer]
+        - tabpanel [aria-hidden] [ref=f1e304]:
+          - img [ref=f1e306] [cursor=pointer]
+        - tabpanel [aria-hidden] [ref=f1e307]:
+          - img [ref=f1e309] [cursor=pointer]
+        - img [ref=f1e312] [cursor=pointer]
+        - img [ref=f1e315] [cursor=pointer]
+        - img [ref=f1e318] [cursor=pointer]
+        - img [ref=f1e321] [cursor=pointer]
+        - img [ref=f1e324] [cursor=pointer]
+        - img [ref=f1e327] [cursor=pointer]
+      - tablist [ref=f1e328]:
+        - tab "1 of 2" [selected] [ref=f1e329] [cursor=pointer]: "1"
+        - tab "2 of 2" [ref=f1e330] [cursor=pointer]: "2"
+    - link "Все отзывы" [ref=f1e332] [cursor=pointer]:
+      - /url: otzyvy-o-rabote-webcam-modelyu-v-dnepre/
+  - generic [ref=f1e337]:
+    - generic [ref=f1e338]:
+      - heading [level=5]
+      - heading "Скорее отправляй заявку" [level=3] [ref=f1e339]
+      - heading "Присоединяйся к нашей дружной команде" [level=2] [ref=f1e340]
+    - generic [ref=f1e346]:
+      - heading "Форма обратной связи" [level=2] [ref=f1e348]
+      - form [ref=f1e350]:
+        - generic [ref=f1e354]:
+          - textbox "Имя" [ref=f1e358]
+          - textbox "Номер телефона" [ref=f1e362]
+          - textbox "Твой вопрос или комментарий (не обязательно)" [ref=f1e366]
+          - paragraph [ref=f1e368]:
+            - checkbox "Тебе есть 18 лет?" [ref=f1e369]
+            - generic [ref=f1e370] [cursor=pointer]: Тебе есть 18 лет?
+          - button "Отправить" [ref=f1e374] [cursor=pointer]
+  - contentinfo [ref=f1e375]:
+    - generic [ref=f1e378]:
+      - generic [ref=f1e382]:
+        - generic [ref=f1e383]:
+          - paragraph
+          - paragraph [ref=f1e384]: Golden Girls - это дружный коллектив самых ярких вебкам-моделей Днепра собранных в одной вебкам-студии.
+          - paragraph
+        - paragraph [ref=f1e386]: © GoldenGirls Studio
+      - generic [ref=f1e389]:
+        - heading "Узнай больше" [level=3] [ref=f1e390]
+        - list [ref=f1e393]:
+          - listitem [ref=f1e394]:
+            - link "" [ref=f1e395] [cursor=pointer]:
+              - /url: https://instagram.com/
+          - listitem [ref=f1e397]:
+            - link "" [ref=f1e398] [cursor=pointer]:
+              - /url: https://wa.me/380684967777
+          - listitem [ref=f1e400]:
+            - link "" [ref=f1e401] [cursor=pointer]:
+              - /url: https://t.me/goldengirls_studio
+          - listitem [ref=f1e403]:
+            - link "" [ref=f1e404] [cursor=pointer]:
+              - /url: viber://add?number=380684967777
+      - generic [ref=f1e407]:
+        - heading "Контакты" [level=3] [ref=f1e408]
+        - generic [ref=f1e411]:
+          - generic [ref=f1e412]:
+            - generic [ref=f1e413]: 
+            - paragraph [ref=f1e416]: "Адрес: г.Днепр,пр. Дмитрия Яворницкого"
+          - generic [ref=f1e417]:
+            - generic [ref=f1e418]: 
+            - paragraph [ref=f1e421]:
+              - text: "Телефон:"
+              - link "+38 068 496 7777" [ref=f1e422] [cursor=pointer]:
+                - /url: tel:+380684967777
+          - generic [ref=f1e423]:
+            - generic [ref=f1e424]: 
+            - paragraph [ref=f1e427]:
+              - text: "Email:"
+              - link "webmodelsdp@gmail.com" [ref=f1e428] [cursor=pointer]:
+                - /url: mailto:webmodelsdp@gmail.com
+  - text:  
+  - iframe [ref=f1e431]:
+    - generic [ref=f2e6]:
+      - text: защита от спама
+      - strong [ref=f2e7]: reCAPTCHA
