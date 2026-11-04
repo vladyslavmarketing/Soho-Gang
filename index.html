@@ -3,16 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SOHO GANG — вебкам-студия</title>
-<meta name="description" content="SOHO GANG — вебкам-студия для девушек 18+. Оборудованные комнаты, обучение с нуля, выплаты каждую неделю и полная анонимность.">
-<meta name="theme-color" content="#0E0609">
-<meta property="og:title" content="SOHO GANG — Сбрось кожу. Выйди в свет.">
+<title>ae studio — вебкам-студия</title>
+<meta name="description" content="ae studio — вебкам-студия для девушек 18+. Уютные комнаты, обучение с нуля, выплаты каждую неделю и полная анонимность.">
+<meta name="theme-color" content="#F1D6DA">
+<meta property="og:title" content="ae studio — Мягкий старт. Большой доход.">
 <meta property="og:description" content="Вебкам-студия для девушек 18+. Обучение с нуля, выплаты каждую неделю, полная анонимность.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="assets/img/snake-ae.jpg">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700&family=Prata&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700;800;900&display=swap">
 <link rel="stylesheet" href="assets/css/style.css">
 <script>
   /* Mark JS as available before first paint; force the intro to finish even if main.js never loads. */
@@ -23,18 +24,22 @@
 <body>
 <a class="skip-link" href="#main">Перейти к содержанию</a>
 
+<!-- "Plush" filter: gives white type the fuzzy fur edge of the ae studio logo (used via CSS filter:url(#plush)) -->
+<svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="plush" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
 <!-- Soft "ring light" halo that trails the pointer (desktop only, decorative) -->
 <div class="cursor" aria-hidden="true"><span class="cursor__ring"></span><span class="cursor__dot"></span></div>
 
 <header class="nav" data-nav>
   <div class="nav__inner container">
-    <a class="logo" href="#top" aria-label="SOHO GANG — на главную">
-      <svg class="logo__mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-        <path d="M23 8.5c-2.6-2.7-11.5-3-11.5 2.6 0 5.8 11.8 3.6 11.8 10 0 5.3-8.4 5.9-12.3 2.4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-        <circle cx="23.4" cy="8.6" r="2.4" fill="currentColor"/>
-        <circle cx="24.1" cy="8.1" r="0.7" class="logo__eye"/>
-      </svg>
-      <span class="logo__word">SOHO GANG</span>
+    <a class="logo" href="#top" aria-label="ae studio — на главную">
+      <span class="logo__ae" aria-hidden="true">ae</span>
+      <span class="logo__studio" aria-hidden="true">studio</span>
     </a>
     <nav class="nav__links" aria-label="Основная навигация">
       <a href="#studio" data-nav-link>Студия</a>
@@ -71,6 +76,7 @@
   <section class="hero" id="top" data-hero aria-labelledby="hero-title">
     <canvas class="hero__canvas" data-snake-canvas aria-hidden="true"></canvas>
     <div class="hero__vignette" aria-hidden="true"></div>
+    <p class="hero__studio" aria-hidden="true">studio</p>
 
     <div class="viewfinder" aria-hidden="true">
       <span class="vf-corner vf-corner--tl"></span>
@@ -84,7 +90,7 @@
       <div class="vf-bottom">
         <span>4K · 60 FPS</span>
         <span>ISO 320</span>
-        <span data-kelvin-readout>5600K</span>
+        <span>5600K</span>
         <span class="vf-battery"><i></i></span>
       </div>
     </div>
@@ -92,10 +98,10 @@
     <div class="hero__content container">
       <p class="eyebrow hero__eyebrow"><span class="rec-dot"></span>Вебкам-студия · только 18+</p>
       <h1 class="hero__title" id="hero-title">
-        <span class="line"><span>Сбрось кожу.</span></span>
-        <span class="line line--accent"><span>Выйди в&nbsp;свет.</span></span>
+        <span class="line"><span>Мягкий старт.</span></span>
+        <span class="line line--accent"><span>Большой доход.</span></span>
       </h1>
-      <p class="hero__lead">SOHO GANG — студия, где девушки зарабатывают на&nbsp;стримах. Оборудованные комнаты, обучение с&nbsp;нуля, выплаты каждую неделю и&nbsp;полная анонимность.</p>
+      <p class="hero__lead">ae studio — вебкам-студия, где девушки зарабатывают на&nbsp;стримах. Уютные комнаты, обучение с&nbsp;нуля, выплаты каждую неделю и&nbsp;полная анонимность.</p>
       <div class="hero__actions">
         <a class="btn btn--light" href="#apply" data-magnetic>Заполнить анкету</a>
         <a class="btn btn--ghost" href="#income" data-magnetic>Посчитать доход</a>
@@ -107,21 +113,8 @@
       </ul>
     </div>
 
-    <div class="light-remote" data-light-remote>
-      <p class="light-remote__title"><span class="rec-dot rec-dot--light"></span>Пульт кольцевой лампы</p>
-      <div class="light-remote__row">
-        <label for="kelvin">Температура</label>
-        <output for="kelvin" data-kelvin-out>5600K</output>
-        <input type="range" id="kelvin" min="2700" max="7500" step="100" value="5600" data-kelvin>
-      </div>
-      <div class="light-remote__row">
-        <label for="intensity">Яркость</label>
-        <output for="intensity" data-intensity-out>80%</output>
-        <input type="range" id="intensity" min="20" max="100" step="1" value="80" data-intensity>
-      </div>
-    </div>
 
-    <p class="hero__hint" data-hero-hint aria-hidden="true">Веди курсором — она следит. Клик — бросок.</p>
+    <p class="hero__hint" data-hero-hint aria-hidden="true">Наведи курсор — она смотрит. Кликни — поползёт за&nbsp;тобой.</p>
     <a class="scroll-cue" href="#studio" aria-label="Листать к разделу «Студия»"><span></span></a>
   </section>
 
@@ -251,9 +244,9 @@
           <circle class="gauge__fill" cx="200" cy="200" r="160" data-gauge-fill/>
           <circle class="gauge__scales" cx="200" cy="200" r="160" data-gauge-scales/>
           <g class="gauge__head" data-gauge-head>
-            <ellipse cx="0" cy="0" rx="17" ry="11"/>
-            <circle class="gauge__eye" cx="7" cy="-5" r="2.2"/>
-            <circle class="gauge__eye" cx="7" cy="5" r="2.2"/>
+            <ellipse class="gauge__head-shape" cx="0" cy="0" rx="20" ry="15"/>
+            <circle class="gauge__eye" cx="8" cy="-5" r="2.6"/>
+            <circle class="gauge__eye-glint" cx="8.8" cy="-5.8" r="0.8"/>
           </g>
         </svg>
         <div class="gauge__readout" aria-live="polite">
@@ -278,32 +271,32 @@
     </div>
 
     <div class="rooms__rail" data-rail tabindex="0" role="region" aria-label="Комнаты студии, листайте горизонтально">
-      <article class="room room--emerald" data-room>
+      <article class="room room--marshmallow" data-room>
         <div class="room__frame">
           <div class="room__scene" aria-hidden="true"><span class="room__lamp"></span><span class="room__glow"></span><span class="room__prop"></span></div>
-          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 01</span><span class="room__k">3200K</span></div>
+          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 01</span><span class="room__k">4300K</span></div>
           <button class="room__switch" type="button" aria-pressed="false" data-room-switch>Включить свет</button>
         </div>
         <div class="room__info">
-          <h3 class="room__name">Изумруд</h3>
-          <p class="room__text">Бархат, тёплый контровой свет и&nbsp;кресло-трон.</p>
+          <h3 class="room__name">Зефир</h3>
+          <p class="room__text">Розовый мех, мягкий рассеянный свет и&nbsp;пуфы.</p>
           <dl class="room__specs">
-            <div><dt>Площадь</dt><dd>14 м²</dd></div>
-            <div><dt>Свет</dt><dd>Кольцо + 2 софтбокса</dd></div>
+            <div><dt>Площадь</dt><dd>15 м²</dd></div>
+            <div><dt>Свет</dt><dd>Кольцо + октобокс</dd></div>
             <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
           </dl>
         </div>
       </article>
 
-      <article class="room room--brass" data-room>
+      <article class="room room--silk" data-room>
         <div class="room__frame">
           <div class="room__scene" aria-hidden="true"><span class="room__lamp"></span><span class="room__glow"></span><span class="room__prop"></span></div>
-          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 02</span><span class="room__k">4300K</span></div>
+          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 02</span><span class="room__k">3800K</span></div>
           <button class="room__switch" type="button" aria-pressed="false" data-room-switch>Включить свет</button>
         </div>
         <div class="room__info">
-          <h3 class="room__name">Латунь</h3>
-          <p class="room__text">Золото, зеркала и&nbsp;мягкий заполняющий свет.</p>
+          <h3 class="room__name">Шёлк</h3>
+          <p class="room__text">Сливочный шёлк, зеркала и&nbsp;тёплый заполняющий свет.</p>
           <dl class="room__specs">
             <div><dt>Площадь</dt><dd>16 м²</dd></div>
             <div><dt>Свет</dt><dd>Кольцо + LED-панель</dd></div>
@@ -320,7 +313,7 @@
         </div>
         <div class="room__info">
           <h3 class="room__name">Полночь</h3>
-          <p class="room__text">Холодный неон, чёрный шёлк и&nbsp;глубокие тени.</p>
+          <p class="room__text">Чёрный бархат, розовый неон и&nbsp;глубокие тени.</p>
           <dl class="room__specs">
             <div><dt>Площадь</dt><dd>12 м²</dd></div>
             <div><dt>Свет</dt><dd>RGB-трубки + кольцо</dd></div>
@@ -329,18 +322,18 @@
         </div>
       </article>
 
-      <article class="room room--powder" data-room>
+      <article class="room room--caramel" data-room>
         <div class="room__frame">
           <div class="room__scene" aria-hidden="true"><span class="room__lamp"></span><span class="room__glow"></span><span class="room__prop"></span></div>
-          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 04</span><span class="room__k">5000K</span></div>
+          <div class="room__vf" aria-hidden="true"><span class="room__rec"><span class="rec-dot"></span>CAM 04</span><span class="room__k">3200K</span></div>
           <button class="room__switch" type="button" aria-pressed="false" data-room-switch>Включить свет</button>
         </div>
         <div class="room__info">
-          <h3 class="room__name">Пудра</h3>
-          <p class="room__text">Розовый рассеянный свет, лёгкий и&nbsp;домашний.</p>
+          <h3 class="room__name">Карамель</h3>
+          <p class="room__text">Карамельный велюр, тёплое дерево и&nbsp;мягкий контровой свет.</p>
           <dl class="room__specs">
-            <div><dt>Площадь</dt><dd>15 м²</dd></div>
-            <div><dt>Свет</dt><dd>Кольцо + октобокс</dd></div>
+            <div><dt>Площадь</dt><dd>14 м²</dd></div>
+            <div><dt>Свет</dt><dd>Кольцо + 2 софтбокса</dd></div>
             <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
           </dl>
         </div>
@@ -372,9 +365,9 @@
           <path class="path__line" data-path-line/>
           <path class="path__scales" data-path-scales/>
           <g class="path__head" data-path-head>
-            <path d="M-14 -9 C 2 -12 16 -6 20 0 C 16 6 2 12 -14 9 Z"/>
-            <circle class="path__eye" cx="8" cy="-4.5" r="1.8"/>
-            <circle class="path__eye" cx="8" cy="4.5" r="1.8"/>
+            <ellipse class="path__head-shape" cx="4" cy="0" rx="20" ry="15"/>
+            <circle class="path__eye" cx="12" cy="-5" r="2.6"/>
+            <circle class="path__eye-glint" cx="12.8" cy="-5.8" r="0.8"/>
           </g>
         </svg>
 
@@ -467,8 +460,8 @@
           <svg class="stream__model" viewBox="0 0 300 300" aria-hidden="true" focusable="false">
             <defs>
               <radialGradient id="rim" cx="50%" cy="35%" r="65%">
-                <stop offset="0" stop-color="#5a2a33"/>
-                <stop offset="1" stop-color="#1c0b12"/>
+                <stop offset="0" stop-color="#c97a8b"/>
+                <stop offset="1" stop-color="#7a3c4b"/>
               </radialGradient>
             </defs>
             <circle class="stream__ring" cx="150" cy="120" r="112"/>
@@ -482,7 +475,7 @@
               <ellipse class="stream__mask-eye" cx="176" cy="108" rx="10" ry="6"/>
             </g>
           </svg>
-          <div class="stream__tag" data-alias-name data-real="Анна, 23 · Москва" data-alias="Velvet_Viper">Velvet_Viper</div>
+          <div class="stream__tag" data-alias-name data-real="Анна, 23 · Москва" data-alias="Pink_Python">Pink_Python</div>
         </div>
         <div class="stream__geo">
           <canvas class="stream__globe" data-globe aria-hidden="true"></canvas>
@@ -546,7 +539,7 @@
     <div class="container apply__grid">
       <div class="apply__copy" data-reveal>
         <p class="eyebrow">Анкета</p>
-        <h2 class="section-title" id="apply-title">Готова выйти в&nbsp;свет?</h2>
+        <h2 class="section-title" id="apply-title">Готова к&nbsp;мягкому старту?</h2>
         <p class="section-lead">Три коротких шага. Менеджер напишет в&nbsp;течение 24&nbsp;часов — и&nbsp;не&nbsp;будет звонить, если ты не&nbsp;попросишь.</p>
         <ul class="apply__notes">
           <li>Фото не&nbsp;нужны</li>
@@ -651,12 +644,12 @@
 <footer class="footer" data-footer>
   <canvas class="footer__canvas" data-footer-snake aria-hidden="true"></canvas>
   <div class="container footer__inner">
-    <p class="footer__word" aria-hidden="true"><span>SOHO</span><span>GANG</span></p>
+    <p class="footer__logo" aria-hidden="true"><span class="footer__ae">ae</span><span class="footer__studio">studio</span></p>
     <div class="footer__cols">
       <div class="footer__col">
         <h2 class="footer__h">Связаться</h2>
-        <p class="footer__contact">Telegram: <span class="mono" data-copy-text>@sohogang_studio</span></p>
-        <button class="btn btn--ghost btn--small" type="button" data-copy="@sohogang_studio">Скопировать ник</button>
+        <p class="footer__contact">Telegram: <span class="mono" data-copy-text>@ae_studio_cam</span></p>
+        <button class="btn btn--ghost btn--small" type="button" data-copy="@ae_studio_cam">Скопировать ник</button>
         <p class="footer__copied" data-copy-status aria-live="polite"></p>
       </div>
       <nav class="footer__col" aria-label="Разделы сайта">
@@ -674,7 +667,7 @@
       </div>
     </div>
     <div class="footer__bottom">
-      <span>© 2026 SOHO GANG</span>
+      <span>© 2026 ae studio</span>
       <span class="badge-18" aria-label="Только для лиц старше 18 лет">18+</span>
       <a href="#top">Наверх</a>
     </div>
