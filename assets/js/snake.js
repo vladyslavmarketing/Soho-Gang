@@ -3,16 +3,31 @@
  * Vanilla canvas-2D, zero dependencies, plain IIFE.
  *
  *   window.SohoSnake.mount(canvas, opts) -> controller
- *     opts.mode           'logo'  (hero: writes "ae", looks at / chases the pointer)
- *                         'wander' (footer: free crawl)
+ *     opts.mode           'logo'    (hero: writes "ae", looks at / chases the pointer)
+ *                         'wander'  (footer: free crawl)
+ *                         'journey' (page layer: writes "ae" in the hero, then travels down the page with the
+ *                                    scroll and coils around opts.end; see "Journey" below)
  *     opts.pointerTarget  element that receives pointer events and the --logo-x/-y/-w/-h CSS vars
- *                         (default: canvas.parentElement)
+ *                         (default: canvas.parentElement; in 'journey' only the CSS vars — pointer events
+ *                         are read on the document)
+ *     opts.hero           'journey': the hero section (logo box = hero formula on its rect; default pointerTarget)
+ *     opts.end            'journey': the element to coil around (a square gauge whose ring r = 0.4 x width)
+ *     opts.zoneEnd        'journey': the last section of the snake's zone (default: end's section)
  *     opts.reducedMotion  boolean (default: matchMedia('(prefers-reduced-motion: reduce)'))
  *     opts.ignoreSelector pointerdown on these never starts a chase
  *   controller = { replay(), chase(x, y), pause(), resume(), destroy(), getLogoBox() }
  *     chase(x, y)   x/y in CSS px relative to the canvas' top-left corner
  *     getLogoBox()  {x, y, w, h} in CSS px relative to pointerTarget (same numbers as the CSS vars)
- *   canvas events (bubbling CustomEvents): 'snake:written', 'snake:chase'
+ *   canvas events (bubbling CustomEvents): 'snake:written', 'snake:chase',
+ *     journey only: 'snake:unwritten' (head left the logo pose), 'snake:arrived' / 'snake:departed' (coil at opts.end)
+ *
+ * Journey
+ *   The canvas is fixed and viewport-sized; the world is the document. The path J (document px) is the logo
+ *   in writing order (so the body on [uRest - L, uRest] is exactly the "ae") followed by a descent measured
+ *   from the DOM (curl out of the logo, under the marquee, down the right margin with S-wiggles and a lazy S
+ *   into open space beside section heads) and a coil around opts.end. Scroll maps monotonically to the head's
+ *   arc position u = f(scrollY); the head follows f with a critically damped spring and the body is the J
+ *   segment [u - L, u]. Chases run in document space; the return re-forms the pose on J.
  *
  * How it works
  *   Body   A ring buffer of head positions (the trail). Body stamps sit at fixed arc-length offsets
@@ -50,8 +65,13 @@
   var WRITE_T = 2.8;          // seconds for the first writing
   var CHASE_IDLE = 2.5;       // seconds without pointer movement before returning
   var DEFAULT_IGNORE = 'a,button,input,label,select,textarea,[data-no-chase]';
+  var JOURNEY_IGNORE = 'a,button,input,label,select,textarea,summary,[role=button],[data-no-chase],[data-nav],[data-menu]';
   var OP_FLOOR = 1, OP_OCCL = 2, OP_BODY = 3, OP_CAP = 4, OP_HEAD = 5, OP_HEADSH = 6;
-  var ST_BOOT = 0, ST_ROUTE = 1, ST_REST = 2, ST_CHASE = 3, ST_WANDER = 4, ST_STATIC = 5;
+  var ST_BOOT = 0, ST_ROUTE = 1, ST_REST = 2, ST_CHASE = 3, ST_WANDER = 4, ST_STATIC = 5, ST_JOURNEY = 6;
+  var Z_DESC = 3;             // layer tag of the journey descent (over every part of the logo)
+  var REST_LOGO = 1, REST_END = 2;
+  var S0_REST = 24;           // scroll (px) up to which the snake stays in the logo
+  var CHASE_IDLE_TOUCH = 1.4; // a tap only starts a short chase
 
   var L3 = norm3(-0.42, -0.58, 0.7);  // key light: upper-left, toward the viewer
   var WRAP = 0.45;                    // wrap-diffuse: plush scatters light softly
@@ -541,12 +561,15 @@
     var ctx = canvas.getContext('2d');
     if (!ctx) return api;
 
-    var mode = opts.mode === 'wander' ? 'wander' : 'logo';
-    var target = opts.pointerTarget || canvas.parentElement || canvas;
+    var jm = opts.mode === 'journey';     // journey: document-space world on a fixed canvas
+    var mode = opts.mode === 'wander' ? 'wander' : 'logo';   // journey shares every 'logo' behaviour
+    var heroEl = jm ? (opts.hero || opts.pointerTarget || canvas.parentElement) : null;
+    var target = opts.pointerTarget || heroEl || canvas.parentElement || canvas;
     var reduced = typeof opts.reducedMotion === 'boolean' ? opts.reducedMotion : prefersReduced();
-    var ignoreSel = opts.ignoreSelector || DEFAULT_IGNORE;
+    var ignoreSel = jm ? JOURNEY_IGNORE + (opts.ignoreSelector ? ',' + opts.ignoreSelector : '') : (opts.ignoreSelector || DEFAULT_IGNORE);
     var debug = !!opts.debug;
-    canvas.style.touchAction = 'pan-y';
+    if (!jm) canvas.style.touchAction = 'pan-y';
+    if (jm && !heroEl) return api;
 
     // ---- geometry / state
     var W = 0, H = 0, dprRaw = 0, dpr = 1, cw = 0, ch = 0, sized = false, destroyed = false;
@@ -556,7 +579,7 @@
     // path in px
     var pX = null, pY = null, pZ = null, pK = null, pN = 0, eX = [], eY = [];
     // route (writing / return)
-    var rX, rY, rZ, rC, rK, rN = 0, rQ = 0, rq = 0, rv = 0, ri = 0, vCruise = 600;
+    var rX, rY, rZ, rC, rK, rN = 0, rQ = 0, rq = 0, rv = 0, ri = 0, vCruise = 600, vRoute = 600;
     // body tables (ascending s; index 0 sits under the head)
     var bodyColorAt = null, nSt = 0, stS, stF, stCol, stVar, stDith, kHead = 0, chunkN = 40, shStep = 4, ovStep = 3, sMaxLook = 0, sLookMax = 0;
     // poses (device px) and plans
@@ -576,6 +599,16 @@
     // loop
     var raf = 0, lastT = 0, visible = true, userPaused = false, pendingLayout = 0, furWaitTimer = 0;
     var headState = { x: 0, y: 0, a: 0, tongue: 0, breath: 1 }, wTmp = [0, 0], bankScale = 1;
+    // journey: the path J (css px, document space), scroll map and follower
+    var endEl = jm ? (opts.end || null) : null;
+    var zoneEl = jm ? (opts.zoneEnd || (endEl && endEl.closest ? endEl.closest('section') : null) || null) : null;
+    var marqEl = jm ? (opts.marquee || document.querySelector('.marquee')) : null;
+    var jX = null, jY = null, jZ = null, jC = null, jK = null, jN = 0, iRest = 0, iQ = 0, uRest = 0, uEnd = 0;
+    var mapS = null, mapU = null, mapN = 0, meas = null, measSig = '', measureTimer = 0;
+    var viewY = 0, oyDev = 0, baseX = 0, baseY = 0, Hview = 0, Hmax = 0, inZone = true, drawn = false, zoneTop = 0, zoneBot = 0;
+    var uJ = 0, vJ = 0, restAt = 0, atLogo = false, atEnd = false, routeEndU = -1, gaugeC = null, coil = null;
+    var cullY0 = -1e9, cullY1 = 1e9, gridOY = 0, staticRaf = 0, tap = null, chaseIdle = CHASE_IDLE;
+    var jTmp = [0, 0, 0, 0];
 
     /* ---------------- layout ---------------- */
     function writeVars() {
@@ -588,6 +621,7 @@
     }
     function getLogoBox() {
       var ox = 0, oy = 0;
+      if (jm) { var tb = docBox(target); return { x: box.x - tb.x, y: box.y - tb.y, w: box.w, h: box.h }; }
       if (target !== canvas) {
         var a = canvas.getBoundingClientRect(), t = target.getBoundingClientRect();
         ox = a.left - t.left - (target.clientLeft || 0); oy = a.top - t.top - (target.clientTop || 0);
@@ -631,6 +665,230 @@
       }
       pZ = z;
     }
+
+    /* ---------------- journey: DOM measurement (document px) ---------------- */
+    // Layout box from the offset chain: ignores transforms (reveal offsets, tilt), unlike getBoundingClientRect.
+    function docBox(el) {
+      var x = 0, y = 0, e = el;
+      while (e) {
+        x += (e.offsetLeft || 0) + (e !== el ? e.clientLeft || 0 : 0);
+        y += (e.offsetTop || 0) + (e !== el ? e.clientTop || 0 : 0);
+        e = e.offsetParent;
+      }
+      return { x: x, y: y, w: el.offsetWidth || 0, h: el.offsetHeight || 0 };
+    }
+    function measure() {
+      var m = { secs: [], colR: 0, contR: 0, marq: null }, i, b, e, guard = 0;
+      m.hero = docBox(heroEl);
+      // the hero's left text column (desktop: the snake leaves through the channel between it and the logo)
+      var cols = heroEl.querySelectorAll('h1, .hero__lead, .hero__actions');
+      for (i = 0; i < cols.length; i++) {
+        b = docBox(cols[i]);
+        if (b.w > 0 && b.x + b.w * 0.5 < m.hero.x + m.hero.w * 0.5) m.colR = Math.max(m.colR, b.x + b.w);
+      }
+      // blocks between the hero and the end of the zone
+      e = zoneEl ? heroEl.nextElementSibling : null;
+      while (e && guard++ < 40) {
+        if (e.offsetHeight > 0 && e.tagName !== 'SCRIPT' && e.tagName !== 'CANVAS') {
+          b = docBox(e);
+          if (marqEl && (e === marqEl || e.contains(marqEl))) m.marq = docBox(marqEl);
+          else {
+            var sec = { box: b, end: e === zoneEl, head: null, contR: 0 };
+            var cont = e.querySelector('.container');
+            if (cont) {
+              var cb = docBox(cont), cs = window.getComputedStyle(cont);
+              sec.contR = cb.x + cb.w - (parseFloat(cs.paddingRight) || 0);
+              m.contR = Math.max(m.contR, sec.contR);
+            }
+            var head = e.querySelector('.section-head') || e.querySelector('header');
+            if (head && head.offsetHeight) {
+              var hb = docBox(head), hr = head.children.length ? hb.x : hb.x + hb.w;
+              for (i = 0; i < head.children.length; i++) { var c = docBox(head.children[i]); if (c.w > 0) hr = Math.max(hr, c.x + c.w); }
+              sec.head = { x: hb.x, y: hb.y, w: hb.w, h: hb.h, r: hr };
+            }
+            m.secs.push(sec);
+          }
+        }
+        if (e === zoneEl) break;
+        e = e.nextElementSibling;
+      }
+      m.gauge = endEl && endEl.offsetWidth ? docBox(endEl) : null;
+      m.zone = zoneEl && zoneEl.offsetHeight ? docBox(zoneEl) : m.hero;
+      m.docH = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
+      var sig = [m.hero.x, m.hero.y, m.hero.w, m.hero.h, m.colR, m.contR, m.zone.y, m.zone.h, m.docH];
+      if (m.marq) sig.push(m.marq.y, m.marq.h);
+      if (m.gauge) sig.push(m.gauge.x, m.gauge.y, m.gauge.w);
+      for (i = 0; i < m.secs.length; i++) { var s = m.secs[i]; sig.push(s.box.y, s.box.h); if (s.head) sig.push(s.head.y, s.head.h, s.head.r); }
+      m.sig = sig.map(function (v) { return Math.round(v); }).join(',');
+      return m;
+    }
+
+    /* ---------------- journey: the path J (logo in writing order + descent + coil) ---------------- */
+    function hermite(add, x0, y0, a0, x1, y1, a1, s0, s1, z) {
+      var chd = Math.hypot(x1 - x0, y1 - y0); if (chd < 1e-3) return;
+      var tx0 = Math.cos(a0) * chd * s0, ty0 = Math.sin(a0) * chd * s0, tx1 = Math.cos(a1) * chd * s1, ty1 = Math.sin(a1) * chd * s1;
+      var steps = Math.max(8, Math.ceil(chd * 0.9));
+      for (var i = 1; i <= steps; i++) {
+        var t = i / steps, t2 = t * t, t3 = t2 * t;
+        var h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+        add(h00 * x0 + h10 * tx0 + h01 * x1 + h11 * tx1, h00 * y0 + h10 * ty0 + h01 * y1 + h11 * ty1, z);
+      }
+    }
+    function buildJourney() {
+      var m = meas, bw = 2 * r, i, k, n;
+      var xs = [], ys = [], zs = [];
+      function add(x, y, z) {
+        var q = xs.length;
+        if (q && Math.abs(x - xs[q - 1]) < 0.05 && Math.abs(y - ys[q - 1]) < 0.05) return;
+        xs.push(x); ys.push(y); zs.push(z);
+      }
+      // (A) writing order: off-screen run-up, tail extension (reversed), then the logo from tail to head
+      n = eX.length;
+      var ex = eX[n - 1], ey = eY[n - 1], dx = ex - eX[Math.max(0, n - 6)], dy = ey - eY[Math.max(0, n - 6)], dl = Math.hypot(dx, dy) || 1;
+      dx /= dl; dy /= dl;
+      for (var s = Lbody + 12 * r; s > 0; s -= 3) add(ex + dx * s, ey + dy * s, 0);
+      for (i = n - 1; i >= 0; i--) add(eX[i], eY[i], 0);
+      for (i = pN - 1; i >= 0; i--) add(pX[i], pY[i], pZ[i]);
+      var iR = xs.length - 1;
+
+      // (B) descent waypoints: {x, y, a (heading), t (tangent scale), col (on the right column)}
+      var contR = m.contR || W - 16, margin = W - contR;
+      var xr = margin >= 1.3 * bw ? contR + margin / 2 : W - 0.45 * bw;
+      var logoMinX = 1e9, logoMaxY = -1e9;
+      for (i = 0; i < pN; i++) { if (pX[i] < logoMinX) logoMinX = pX[i]; if (pY[i] > logoMaxY) logoMaxY = pY[i]; }
+      var wide = W >= 960 && m.colR > 0 && box.x > m.colR;
+      var colAmp = margin >= 1.3 * bw ? Math.min(0.42 * bw, Math.max(4, (margin * 0.5 - r) * 0.85)) : 0.2 * bw;
+      var wps = [{ x: pX[0], y: pY[0], a: Math.atan2(pY[0] - pY[6], pX[0] - pX[6]), t: 1 }];
+      if (wide) {   // down the channel between the headline column and the logo
+        wps.push({ x: (m.colR + logoMinX - r) / 2, y: box.y + box.h * 0.82, a: PI / 2, t: 1 });
+      } else {      // curl under the logo, then into the right column
+        var yU = logoMaxY + r + 0.55 * bw;
+        wps.push({ x: box.x + box.w * 0.44, y: yU, a: 0.14, t: 1 });
+        wps.push({ x: xr, y: yU + 2.6 * bw, a: PI / 2, t: 1, col: true });
+      }
+      // a big lazy S into open space beside section heads, then back to the right column
+      for (k = 0; k < m.secs.length; k++) {
+        var sc = m.secs[k], hd = sc.head, cR = sc.contR || contR;
+        if (sc.end || !hd) continue;
+        var oL = hd.r + 0.6 * bw, oR = cR - 0.2 * bw, prev = wps[wps.length - 1];
+        if (oR - oL < 3 * bw || hd.y < prev.y + 2 * bw) continue;
+        wps.push({ x: (oL + oR) / 2, y: hd.y + hd.h * 0.55, a: PI / 2 - 0.12, t: 1.05 });
+        wps.push({ x: xr, y: hd.y + hd.h + 2.4 * bw, a: PI / 2, t: 1, col: true });
+      }
+      var last = wps[wps.length - 1];
+      if (!last.col) {
+        var yMin = (m.marq ? m.marq.y + m.marq.h : m.hero.y + m.hero.h) + 2 * bw;
+        last = { x: xr, y: Math.max(last.y + 4 * bw, yMin), a: PI / 2, t: 1, col: true };
+        wps.push(last);
+      }
+      // (C) approach + coil: counter-clockwise, entering from the right over the top, head ending near 12 o'clock
+      var g = m.gauge, coilStart = -1;
+      coil = null; gaugeC = null;
+      if (g) {
+        var cx = g.x + g.w / 2, cy = g.y + g.h / 2, ringR = 0.4 * g.w, R = ringR + 0.75 * bw;
+        var turns = clamp(Lbody * 0.96 / (TAU * (R + 0.25 * bw)), 0.62, 1.08), Phi = turns * TAU;
+        var thE = 262 / 180 * PI, thS = thE + Phi, dR = 0.5 * bw / TAU;
+        var mx = cx + R * Math.cos(thS), my = cy + R * Math.sin(thS);
+        var yq = Math.max(last.y + 3 * bw, my - 0.65 * Math.abs(xr - mx) - bw);
+        wps.push({ x: xr, y: yq, a: PI / 2, t: 1, col: true });
+        wps.push({ x: mx, y: my, a: thS - PI / 2, t: 1, coil: true });
+        coil = { cx: cx, cy: cy, R: R, thS: thS, Phi: Phi, dR: dR };
+        gaugeC = { x: cx, y: cy, r: ringR };
+      } else {
+        wps.push({ x: xr, y: Math.max(last.y + 3 * bw, m.zone.y + m.zone.h - 3 * bw), a: PI / 2, t: 1, col: true });
+      }
+      var iq = -1;
+      for (k = 1; k < wps.length; k++) {
+        var A = wps[k - 1], B = wps[k];
+        if (B.coil) iq = xs.length - 1;
+        if (A.col && B.col && B.y > A.y + bw) {   // right column: gentle S-wiggles, vertical at both ends
+          var len = B.y - A.y, lam = (wide ? 9 : 8) * bw, nW = Math.max(1, Math.round(len / lam));
+          lam = len / nW;
+          var steps = Math.ceil(len / 2), ramp = Math.min(lam * 0.6, len / 2);
+          for (var q = 1; q <= steps; q++) {
+            var tt = len * q / steps, env = smooth(0, ramp, tt) * smooth(0, ramp, len - tt);
+            add(A.x + (B.x - A.x) * q / steps + colAmp * env * Math.sin(TAU * tt / lam), A.y + tt, Z_DESC);
+          }
+        } else hermite(add, A.x, A.y, A.a, B.x, B.y, B.a, A.t, B.t, Z_DESC);
+      }
+      if (coil) {
+        var csteps = Math.ceil(coil.Phi * (coil.R + 0.3 * bw) / 2);
+        for (q = 1; q <= csteps; q++) {
+          var ph = coil.Phi * q / csteps, th = coil.thS - ph, rr = coil.R + coil.dR * ph;
+          add(coil.cx + rr * Math.cos(th), coil.cy + rr * Math.sin(th), Z_DESC);
+        }
+      }
+      // arrays + arc length + curvature (route speed control)
+      jN = xs.length;
+      jX = new Float64Array(xs); jY = new Float64Array(ys); jZ = new Uint8Array(zs);
+      jC = new Float64Array(jN); jK = new Float32Array(jN);
+      for (i = 1; i < jN; i++) jC[i] = jC[i - 1] + Math.hypot(jX[i] - jX[i - 1], jY[i] - jY[i - 1]);
+      var raw = new Float32Array(jN), acc = new Float64Array(jN + 1), win = 14;
+      for (i = 1; i < jN - 1; i++) {
+        var b0 = Math.atan2(jY[i] - jY[i - 1], jX[i] - jX[i - 1]), b1 = Math.atan2(jY[i + 1] - jY[i], jX[i + 1] - jX[i]);
+        raw[i] = Math.abs(wrapA(b1 - b0)) / Math.max(0.3, (jC[i + 1] - jC[i - 1]) * 0.5);
+      }
+      for (i = 0; i < jN; i++) acc[i + 1] = acc[i] + raw[i];
+      for (i = 0; i < jN; i++) { var lo = Math.max(0, i - win), hi = Math.min(jN, i + win + 1); jK[i] = (acc[hi] - acc[lo]) / (hi - lo); }
+      iRest = iR; uRest = jC[iR]; uEnd = jC[jN - 1];
+      iQ = iq >= 0 ? iq : jN - 1;
+      zoneTop = m.hero.y; zoneBot = m.zone.y + m.zone.h;
+      buildMap();
+    }
+
+    // Scroll -> head position: monotonic table (scroll px, arc px). During the descent the head leads at ~0.5 of
+    // the viewport (after a ramp from its rest height); the approach + coil are spread so that the head arrives
+    // (u = uEnd) exactly when the gauge centre is at the viewport centre.
+    function buildMap() {
+      var Hv = Hview || H, n = jN - iRest, i, k;
+      mapN = n; mapS = new Float64Array(n); mapU = new Float64Array(n);
+      var p0 = jY[iRest], a0 = clamp((p0 - zoneTop - S0_REST) / Hv, 0.04, 0.9), ramp = 0.8 * Hv, key = p0;
+      for (i = iRest; i < jN; i++) {
+        k = i - iRest; mapU[k] = jC[i];
+        if (i === iRest) { mapS[k] = zoneTop + S0_REST; continue; }
+        if (i > iQ) continue;
+        key = Math.max(jY[i], key + 0.3 * (jC[i] - jC[i - 1]));
+        mapS[k] = key - Hv * (a0 + (0.5 - a0) * smooth(0, ramp, key - p0));
+      }
+      var kq = iQ - iRest, sQ = mapS[kq], maxScroll = Math.max(0, meas.docH - Hv);
+      var sEnd = Math.min(gaugeC ? gaugeC.y - Hv / 2 : sQ, maxScroll);
+      for (i = iQ + 1; i < jN; i++) mapS[i - iRest] = sQ + (sEnd - sQ) * (jC[i] - jC[iQ]) / Math.max(1, uEnd - jC[iQ]);
+      mapS[n - 1] = sEnd;
+      for (k = n - 2; k >= 1; k--) mapS[k] = Math.min(mapS[k], mapS[k + 1] - 0.17 * (mapU[k + 1] - mapU[k]));
+      mapS[0] = zoneTop + S0_REST;
+      for (k = 1; k < n; k++) if (!(mapS[k] > mapS[k - 1])) mapS[k] = mapS[k - 1] + 1e-3 * Math.max(1e-3, mapU[k] - mapU[k - 1]);
+    }
+    function uAtScroll(s) {
+      if (!mapN) return uRest;
+      if (s <= mapS[0]) return mapU[0];
+      if (s >= mapS[mapN - 1]) return mapU[mapN - 1];
+      var lo = 0, hi = mapN - 1;
+      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (mapS[mid] <= s) lo = mid; else hi = mid; }
+      return mapU[lo] + (mapU[hi] - mapU[lo]) * (s - mapS[lo]) / (mapS[hi] - mapS[lo]);
+    }
+    function jIndex(u) { // largest i with jC[i] <= u (and i < jN - 1)
+      if (u <= 0) return 0;
+      if (u >= jC[jN - 1]) return jN - 2;
+      var lo = 0, hi = jN - 1;
+      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (jC[mid] <= u) lo = mid; else hi = mid; }
+      return lo;
+    }
+    function jAt(u, o) {
+      var i = jIndex(u), d = jC[i + 1] - jC[i], t = d > 0 ? clamp((u - jC[i]) / d, 0, 1) : 0;
+      o[0] = jX[i] + (jX[i + 1] - jX[i]) * t; o[1] = jY[i] + (jY[i + 1] - jY[i]) * t; o[2] = t < 0.5 ? jZ[i] : jZ[i + 1]; o[3] = i;
+      return o;
+    }
+    // body = J segment [u - L, u]: lay it into the trail so the regular pose sampling applies
+    function fillTrailJ(u) {
+      trail.reset();
+      var o = jAt(Math.max(0, u - Lbody - 4 * r), jTmp), i = o[3] + 1;
+      trail.push(o[0], o[1], o[2]);
+      for (; i < jN && jC[i] < u; i++) trail.push(jX[i], jY[i], jZ[i]);
+      o = jAt(u, jTmp); trail.push(o[0], o[1], o[2]);
+    }
+    function scrollNow() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
+    function setLogo(v) { if (atLogo === v) return; atLogo = v; if (v) written = true; emit(canvas, v ? 'snake:written' : 'snake:unwritten'); }
+    function setEnd(v) { if (atEnd === v) return; atEnd = v; emit(canvas, v ? 'snake:arrived' : 'snake:departed'); }
 
     function profile(s) { // radius factor along the body (s from head centre)
       var w = 2 * r, f = 1, nk = (s - rh * 1.1) / w;
@@ -692,7 +950,175 @@
     function makePose(n) { return { x: new Float32Array(n), y: new Float32Array(n), z: new Uint8Array(n), bk: new Uint8Array(n), hx: 0, hy: 0, ha: 0 }; }
     function makePlan(n) { return { k: new Uint8Array(n), i: new Int32Array(n), a: new Float32Array(n), n: 0 }; }
 
+    // Journey layout: canvas = viewport (buffer keeps the tallest height seen unless it shrinks by >= 140px or the
+    // width changes), logo box = hero formula on the hero's document rect, J + scroll map from DOM measurements.
+    function layoutJ(force) {
+      pendingLayout = 0;
+      if (destroyed) return;
+      var w = canvas.clientWidth || document.documentElement.clientWidth || 0;
+      var h = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (w < 2 || h < 2) { sized = false; stop(); return; }
+      var d = Math.min(window.devicePixelRatio || 1, 2);
+      if (!bank && FUR.state === 'loading' && now() - mountT < 800) {
+        if (!furWaitTimer) furWaitTimer = setTimeout(function () { furWaitTimer = 0; layoutJ(true); }, 820 - (now() - mountT));
+        return;
+      }
+      if (furWaitTimer) { clearTimeout(furWaitTimer); furWaitTimer = 0; }
+      var m = measure(), hb = m.hero, nb = logoBox(hb.w, hb.h);
+      nb.x += hb.x; nb.y += hb.y;
+      var hc = sized && w === W && d === dprRaw && h <= Hmax && Hmax - h < 140 ? Hmax : h;
+      var same = sized && !force && w === W && d === dprRaw && Math.abs(nb.x - box.x) < 0.5 && Math.abs(nb.y - box.y) < 0.5 && Math.abs(nb.w - box.w) < 0.5;
+      var oldHv = Hview;
+      Hview = h; meas = m; viewY = scrollNow();
+      if (same) {
+        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; }
+        if (m.sig !== measSig || Math.abs(oldHv - h) > 0.5) rebuildJourney();
+        if (reduced) renderStatic(); else kick();
+        return;
+      }
+      var oldBox = { x: box.x, y: box.y, h: box.h }, wasSized = sized;
+      W = w; H = Hmax = hc; dprRaw = d;
+      canvas.style.height = H + 'px';
+      box = nb; r = THICK * 0.5 * box.h; rh = r * HEAD;
+      dpr = Math.min(dprRaw, Math.max(1, MAX_RDEV / r));
+      cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
+      canvas.width = cw; canvas.height = ch; drawn = false;
+      rDev = r * dpr;
+      if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
+        if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
+      }
+      var oldRest = uRest, oldEnd = uEnd;
+      buildLogoGeometry();
+      buildBodyTables();
+      placeSeams();
+      buildJourney(); measSig = m.sig;
+      buildRouteBuffers();
+      sizeCaches();
+      if (job && (reduced || !window.requestAnimationFrame)) finishJob(Infinity);
+      bankScale = bank ? rDev / bank.R : 1;
+      sizeGrid();
+      sized = true;
+      writeVars();
+      if (reduced) { renderStatic(); return; }
+      if (!wasSized || state === ST_BOOT) {
+        var u0 = uAtScroll(viewY);
+        if (u0 > uRest + 1) { setLogo(true); setLogo(false); placeAt(u0); }   // loaded mid-page: skip the intro
+        else startWriting();
+      } else if (state === ST_ROUTE && initialWrite) {
+        var sc = box.h / (oldBox.h || box.h);
+        var fx = function (x) { return box.x + (x - oldBox.x) * sc; }, fy = function (y) { return box.y + (y - oldBox.y) * sc; };
+        trail.remap(fx, fy);
+        vCruise *= sc; vRoute *= sc;
+        for (var i = 0; i < rN; i++) { rX[i] = fx(rX[i]); rY[i] = fy(rY[i]); }
+        recomputeRoute(); rq *= sc; rv *= sc;
+        if (rq > rQ) rq = rQ;
+        ri = 0; while (ri < rN - 1 && rC[ri + 1] <= rq) ri++;
+      } else keepState(oldRest, oldEnd);
+      kick();
+    }
+    function sizeGrid() {
+      gridCell = 2.3 * rDev; gridW = Math.ceil(cw / gridCell) + 1; gridH = Math.ceil(ch * (jm ? 1.6 : 1) / gridCell) + 1;
+      cellHead = new Int32Array(gridW * gridH);
+    }
+    // the DOM moved (fonts, images, other blocks): new J, same state
+    function rebuildJourney() {
+      var oldRest = uRest, oldEnd = uEnd;
+      buildJourney(); measSig = meas.sig;
+      buildRouteBuffers();
+      if (!reduced) { sizeCaches(); keepState(oldRest, oldEnd); }
+    }
+    function keepState(oldRest, oldEnd) {
+      if (uJ > oldRest + 0.5) uJ = uRest + (uJ - oldRest) * (uEnd - uRest) / Math.max(1, oldEnd - oldRest);
+      else uJ = uRest;
+      uJ = clamp(uJ, uRest, uEnd);
+      if (state === ST_REST) { if (restAt === REST_END) uJ = uEnd; restReady = false; }
+      else if (state === ST_ROUTE && !initialWrite) startReturnJ();
+    }
+    function placeAt(u) {
+      uJ = clamp(u, uRest, uEnd); vJ = 0; restAt = 0;
+      if (uJ <= uRest + 0.5) enterRestJ(REST_LOGO);
+      else if (uJ >= uEnd - 0.5) enterRestJ(REST_END);
+      else { state = ST_JOURNEY; restReady = false; }
+    }
+    function enterRestJ(which) {
+      restAt = which; uJ = which === REST_END ? uEnd : uRest; vJ = 0;
+      enterRest();
+      lastFlickEnd = clock; tongueT = -1; nextFlick = clock + 0.35;
+      if (which === REST_LOGO) setLogo(true); else setEnd(true);
+    }
+    function leaveRestJ() {
+      if (restAt === REST_LOGO) setLogo(false); else if (restAt === REST_END) setEnd(false);
+      restAt = 0; restReady = false;
+    }
+    // critically damped spring toward the scroll target (faster when far behind, e.g. after an anchor jump)
+    function follow(dt, uT) {
+      var lag = Math.abs(uT - uJ), w = 6.2, vmax = 5 * Hview;
+      if (lag > 1.5 * Hview) w *= Math.min(3, lag / (1.5 * Hview));
+      var n = Math.max(1, Math.ceil(w * dt / 0.12)), h = dt / n;
+      for (var i = 0; i < n; i++) {
+        vJ += (w * w * (uT - uJ) - 2 * w * vJ) * h;
+        if (vJ > vmax) vJ = vmax; else if (vJ < -vmax) vJ = -vmax;
+        uJ += vJ * h;
+      }
+      if (uJ < uRest) { uJ = uRest; if (vJ < 0) vJ = 0; }
+      if (uJ > uEnd) { uJ = uEnd; if (vJ > 0) vJ = 0; }
+    }
+    // return from a chase: steer to J(u - L), then travel J forward to u = f(scroll), re-forming the pose
+    function startReturnJ() {
+      var uS = clamp(uAtScroll(viewY), uRest, uEnd), uA = Math.max(0, uS - Lbody);
+      var o = jAt(uA, jTmp), tx = o[0], ty = o[1], i0 = o[3], i1 = Math.min(jN - 1, i0 + 8);
+      var ax = jX[i1] - tx, ay = jY[i1] - ty, al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
+      var hx = trail.headX(), hy = trail.headY();
+      var D = Math.hypot(tx - hx, ty - hy), m = Math.max(D * 0.9, 5 * r);
+      var m0x = Math.cos(heading) * m, m0y = Math.sin(heading) * m, m1x = ax * m, m1y = ay * m;
+      var nJ = jIndex(uS) - i0 + 2, steps = Math.max(4, Math.min(Math.ceil((D + m) / 1.5) + 8, rX.length - nJ - 8));
+      rN = 0;
+      for (var i = 0; i <= steps; i++) {
+        var t = i / steps, t2 = t * t, t3 = t2 * t;
+        var h00 = 2 * t3 - 3 * t2 + 1, h10 = t3 - 2 * t2 + t, h01 = -2 * t3 + 3 * t2, h11 = t3 - t2;
+        routePush(h00 * hx + h10 * m0x + h01 * tx + h11 * m1x, h00 * hy + h10 * m0y + h01 * ty + h11 * m1y, Z_FREE, 0);
+      }
+      for (i = i0 + 1; i < jN && jC[i] < uS; i++) routePush(jX[i], jY[i], jZ[i], jK[i]);
+      o = jAt(uS, jTmp); routePush(o[0], o[1], o[2], jK[o[3]]);
+      recomputeRoute();
+      vRoute = vCruise * 1.35;
+      rq = 0; ri = 0; rv = Math.max(speed, 0.25 * vRoute); routeEndU = uS;
+      state = ST_ROUTE; initialWrite = false; restReady = false; chaseLeft = false;
+    }
+    function arriveJ(u) {
+      if (u <= uRest + 0.5) enterRestJ(REST_LOGO);
+      else if (u >= uEnd - 0.5) enterRestJ(REST_END);
+      else { uJ = u; vJ = 0; restAt = 0; state = ST_JOURNEY; restReady = false; }
+    }
+    // rest cache placed on the resting pose (document dev px); grows if a pose needs more room
+    function placeCache() {
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, P = poseR, k;
+      for (k = 0; k < nSt; k++) { var x = P.x[k], y = P.y[k]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      var mg = 1.9 * rh * dpr;
+      x0 = Math.max(0, Math.floor(x0 - mg)); x1 = Math.min(cw, Math.ceil(x1 + mg)); y0 = Math.floor(y0 - mg); y1 = Math.ceil(y1 + mg);
+      var w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+      if (!cacheA || cacheA.width < w || cacheA.height < h) {
+        var nw = Math.max(w, cacheA ? cacheA.width : 0), nh = Math.max(h, cacheA ? cacheA.height : 0);
+        cacheA = canvasEl(nw, nh); cacheB = canvasEl(nw, nh); warmCanvas(cacheA); warmCanvas(cacheB);
+      }
+      cacheX = x0; cacheY = y0; gridOY = y0;
+    }
+    function restDims(u) {
+      var a = jIndex(Math.max(0, u - Lbody)), b = Math.min(jN - 1, jIndex(u) + 1), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (var i = a; i <= b; i++) { if (jX[i] < x0) x0 = jX[i]; if (jX[i] > x1) x1 = jX[i]; if (jY[i] < y0) y0 = jY[i]; if (jY[i] > y1) y1 = jY[i]; }
+      var mg = 1.9 * rh + r;
+      return [Math.ceil(Math.min(W, x1 - x0 + 2 * mg) * dpr), Math.ceil((y1 - y0 + 2 * mg) * dpr)];
+    }
+    // reduced motion: the static logo scrolls with the page (blitted from its cache)
+    function blitStatic() {
+      if (!cacheA || state !== ST_STATIC) return;
+      viewY = scrollNow(); oyDev = Math.round(viewY * dpr);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, cw, ch);
+      if (cacheY - oyDev < ch && cacheY + cacheA.height - oyDev > 0) ctx.drawImage(cacheA, cacheX, cacheY - oyDev);
+    }
+
     function layout(force) {
+      if (jm) { layoutJ(force); return; }
       pendingLayout = 0;
       if (destroyed) return;
       var w = canvas.clientWidth, h = canvas.clientHeight;
@@ -728,8 +1154,7 @@
       sizeCaches();
       if (job && (reduced || !window.requestAnimationFrame)) finishJob(Infinity);   // static render needs it now
       bankScale = bank ? rDev / bank.R : 1;
-      gridCell = 2.3 * rDev; gridW = Math.ceil(cw / gridCell) + 1; gridH = Math.ceil(ch / gridCell) + 1;
-      cellHead = new Int32Array(gridW * gridH);
+      sizeGrid();
       sized = true;
       writeVars();
 
@@ -742,7 +1167,7 @@
           var sc = box.h / (oldBox.h || box.h);
           var fx = function (x) { return box.x + (x - oldBox.x) * sc; }, fy = function (y) { return box.y + (y - oldBox.y) * sc; };
           trail.remap(fx, fy);
-          vCruise *= sc;
+          vCruise *= sc; vRoute *= sc;
           if (state === ST_ROUTE) {
             for (var i = 0; i < rN; i++) { rX[i] = fx(rX[i]); rY[i] = fy(rY[i]); }
             recomputeRoute(); rq *= sc; rv *= sc;
@@ -763,6 +1188,14 @@
     // Rest cache: only as big as the resting "ae" (+ fuzz / shadow margin), not the whole canvas.
     function sizeCaches() {
       var x0 = 0, y0 = 0, x1 = cw, y1 = ch;
+      if (jm) { // one pair big enough for both resting poses (logo, coil); placed per rest
+        var a = restDims(uRest), b = restDims(uEnd), nw = Math.max(a[0], b[0]), nh = Math.max(a[1], b[1]);
+        if (cacheA && cacheA.width >= nw && cacheA.height >= nh) return;
+        cacheA = canvasEl(nw, nh); cacheB = canvasEl(nw, nh); restReady = false;
+        if (job) job.tasks.push(function () { warmCanvas(cacheA); warmCanvas(cacheB); });
+        else { warmCanvas(cacheA); warmCanvas(cacheB); }
+        return;
+      }
       if (mode === 'logo') {
         var m = 1.9 * rh;
         x0 = Math.max(0, Math.floor((box.x - m) * dpr)); y0 = Math.max(0, Math.floor((box.y - m) * dpr));
@@ -795,7 +1228,7 @@
 
     /* ---------------- routes (writing / returning) ---------------- */
     function buildRouteBuffers() { // grow-only; keeps the current route so a resize can remap it
-      var cap = (mode === 'logo' ? pN + eX.length : 0) + Math.ceil(3 * (W + H)) + 64;
+      var cap = (jm ? jN : mode === 'logo' ? pN + eX.length : 0) + Math.ceil(3 * (W + H)) + 64;
       if (rX && rX.length >= cap) return;
       function grow(old, T) { var a = new T(cap); if (old) a.set(old.subarray(0, Math.min(rN, old.length))); return a; }
       rX = grow(rX, Float64Array); rY = grow(rY, Float64Array); rZ = grow(rZ, Uint8Array); rC = grow(rC, Float64Array); rK = grow(rK, Float32Array);
@@ -843,10 +1276,10 @@
       for (var i = n - 1; i >= 0; i--) routePush(eX[i], eY[i], 0, 0);
       appendPathReversed();
       recomputeRoute();
-      vCruise = solveCruise();
+      vCruise = vRoute = solveCruise();
       rq = 0; ri = 0; rv = vCruise;
       trail.push(rX[0], rY[0], rZ[0]);
-      state = ST_ROUTE; initialWrite = true; restReady = false;
+      state = ST_ROUTE; initialWrite = true; restReady = false; restAt = 0; uJ = uRest; vJ = 0;
     }
 
     function startReturn() {
@@ -864,12 +1297,13 @@
       }
       appendPathReversed();
       recomputeRoute();
+      vRoute = vCruise;
       rq = 0; ri = 0; rv = Math.max(speed, 0.2 * vCruise);
       state = ST_ROUTE; initialWrite = false; restReady = false; chaseLeft = false;
     }
 
     function stepRoute(dt) { // returns true when the head reaches the rest point
-      rv = routeAccel(rv, routeTargetSpeed(vCruise, ri, rq), dt);
+      rv = routeAccel(rv, routeTargetSpeed(vRoute, ri, rq), dt);
       rq += Math.max(rv, 0.04 * box.h) * dt;
       if (rq > rQ) rq = rQ;
       while (ri < rN - 1 && rC[ri + 1] <= rq) { ri++; trail.push(rX[ri], rY[ri], rZ[ri]); }
@@ -881,6 +1315,7 @@
 
     // rest pose = head at the path start, body exactly on the path, tail on its extension
     function buildRestTrail() {
+      if (jm) { fillTrailJ(restAt === REST_END ? uEnd : uRest); return; }
       trail.reset();
       for (var i = eX.length - 1; i > 0; i--) trail.push(eX[i], eY[i], 0);
       for (i = pN - 1; i >= 0; i--) trail.push(pX[i], pY[i], pZ[i]);
@@ -908,11 +1343,16 @@
     function startChase(x, y) {
       if (mode !== 'logo' || reduced || !sized || destroyed) return;
       if (state === ST_ROUTE && initialWrite) return;     // let the first writing finish
-      if (state !== ST_REST && state !== ST_ROUTE && state !== ST_CHASE) return;
+      if (state !== ST_REST && state !== ST_ROUTE && state !== ST_CHASE && state !== ST_JOURNEY) return;
+      if (jm) { x = clamp(x, 0.6 * rh, W - 0.6 * rh); y = clamp(y, zoneTop + rh, zoneBot - rh); }
       chaseX = x; chaseY = y; lastChaseMove = clock; chaseLeft = false;
       if (state !== ST_CHASE) {
+        if (jm) {
+          if (state === ST_JOURNEY) fillTrailJ(uJ);
+          else if (state === ST_REST) leaveRestJ();
+        }
         heading = headAng;
-        speed = state === ST_ROUTE ? rv : 0.12 * 1.5 * box.h;
+        speed = state === ST_ROUTE ? rv : jm && state === ST_JOURNEY ? clamp(Math.abs(vJ), 0.18 * box.h, 1.5 * box.h) : 0.12 * 1.5 * box.h;
         state = ST_CHASE; restReady = false;
         flick();
         emit(canvas, 'snake:chase');
@@ -1010,13 +1450,13 @@
       cellHead.fill(-1);
       for (k = k0; k < n; k += ovStep) {
         ov[k] = 0;
-        var cx = Math.floor(P.x[k] / cell), cy = Math.floor(P.y[k] / cell);
+        var cx = Math.floor(P.x[k] / cell), cy = Math.floor((P.y[k] - gridOY) / cell);
         if (cx < 0 || cy < 0 || cx >= gridW || cy >= gridH) { gcell[k] = -1; continue; }
         var ci = cy * gridW + cx; gnext[k] = cellHead[ci]; cellHead[ci] = k; gcell[k] = ci;
       }
       for (k = k0; k < n; k += ovStep) {
         if (gcell[k] < 0) continue;
-        var gx0 = Math.floor(P.x[k] / cell), gy0 = Math.floor(P.y[k] / cell), best = 0, rkk = rank[k], xk = P.x[k], yk = P.y[k], rr = rDev * stF[k], sk = stS[k];
+        var gx0 = Math.floor(P.x[k] / cell), gy0 = Math.floor((P.y[k] - gridOY) / cell), best = 0, rkk = rank[k], xk = P.x[k], yk = P.y[k], rr = rDev * stF[k], sk = stS[k];
         for (var gy = gy0 - 1; gy <= gy0 + 1; gy++) {
           if (gy < 0 || gy >= gridH) continue;
           for (var gx = gx0 - 1; gx <= gx0 + 1; gx++) {
@@ -1050,9 +1490,10 @@
     }
     var FLOOR_A = 0.12;
     function execPlan(c, PL, P, from, to, breath) {
-      var R = rDev;
+      var R = rDev, cy0 = c === ctx ? cullY0 : -1e9, cy1 = c === ctx ? cullY1 : 1e9;
       for (var i = from; i < to; i++) {
         var k = PL.i[i], kind = PL.k[i], f;
+        if ((kind >= OP_HEAD ? P.hy : P.y[k]) < cy0 || (kind >= OP_HEAD ? P.hy : P.y[k]) > cy1) continue;
         if (kind === OP_BODY) {
           f = PL.a[i]; if (f < 0.01) continue;
           if (c.globalAlpha !== f) c.globalAlpha = f;
@@ -1098,11 +1539,11 @@
     function drawHead(c, x, y, ang, tongue, breath) {
       var hs = getHead(bank, ang), co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
       var up = co < 0 ? 1 : -1;                     // local y sign that points up on screen
-      c.setTransform(co * k, si * k, -si * k, co * k, x, y);
+      c.setTransform(co * k, si * k, -si * k, co * k, x + baseX, y + baseY);
       c.lineCap = 'round'; c.lineJoin = 'round';
       if (tongue > 0.01) drawTongue(c, tongue, up);
       c.drawImage(hs.c, -hs.ox, -hs.oy);
-      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.setTransform(1, 0, 0, 1, baseX, baseY);
       // eyes: one bead on the upper side; the second appears when the head points up/down (faces us)
       var R = rDev * HEAD, e = bank.eye, two = smooth(0.42, 0.12, Math.abs(co));
       for (var s = 0; s < 2; s++) {
@@ -1117,7 +1558,13 @@
     }
 
     /* ---------------- render paths ---------------- */
-    function clear() { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, cw, ch); }
+    function clear() {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, cw, ch);
+      if (jm) { // world = document: draw with an offset of -scrollY; skip stamps outside the viewport
+        baseX = 0; baseY = -oyDev; ctx.setTransform(1, 0, 0, 1, 0, baseY);
+        var pad = 2.6 * rDev * HEAD; cullY0 = oyDev - pad; cullY1 = oyDev + ch + pad; drawn = true;
+      }
+    }
 
     function renderMoving() {
       if (!samplePose(poseR)) return;
@@ -1125,6 +1572,7 @@
       var P = poseR;
       if (looking) { copyPose(poseF, poseR); applyLook(poseF, poseR); P = poseF; }
       tangents(P, 0, nSt);
+      if (jm) gridOY = oyDev - 0.3 * ch;
       buildPlan(planF, P, 0, true);
       headState.breath = 1;
       clear();
@@ -1133,8 +1581,10 @@
     function copyPose(D, S) { D.x.set(S.x); D.y.set(S.y); D.z.set(S.z); D.bk.set(S.bk); D.hx = S.hx; D.hy = S.hy; D.ha = S.ha; }
 
     function enterRest() {
+      if (jm && !restAt) restAt = REST_LOGO;
       buildRestTrail();
       samplePose(poseR); tangents(poseR, 0, nSt);
+      if (jm) placeCache();
       // live part = head + neck, as long as nothing drawn later overlaps it
       buildPlan(planR, poseR, 0, false);
       var margin = 0.35 * rh * dpr, k, j, hit = -1;
@@ -1180,6 +1630,7 @@
       clear();
       if (!cacheReady) {            // first ~150 ms of rest: direct render while the cache builds
         stepCache();
+        if (jm) gridOY = cacheY;
         buildPlan(planF, poseL, 0, true);
         headState.breath = b;
         execPlan(ctx, planF, poseL, 0, planF.n, 1);
@@ -1194,6 +1645,21 @@
 
     function renderStatic() {
       state = ST_STATIC;
+      if (jm) { // the "ae" in the hero only, rendered once into the cache and blitted at the scroll offset
+        restAt = REST_LOGO; buildRestTrail();
+        if (!samplePose(poseR)) return;
+        tangents(poseR, 0, nSt); placeCache();
+        buildPlan(planF, poseR, 0, true);
+        headState.tongue = 0.85; headState.breath = 1;
+        var g = cacheA.getContext('2d');
+        g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, cacheA.width, cacheA.height);
+        g.setTransform(1, 0, 0, 1, -cacheX, -cacheY); baseX = -cacheX; baseY = -cacheY;
+        execPlan(g, planF, poseR, 0, planF.n, 1);
+        g.setTransform(1, 0, 0, 1, 0, 0); baseX = baseY = 0;
+        blitStatic();
+        if (!written) { written = atLogo = true; setTimeout(function () { if (!destroyed) emit(canvas, 'snake:written'); }, 0); }
+        return;
+      }
       if (mode === 'logo') buildRestTrail();
       else {
         trail.reset();
@@ -1213,6 +1679,17 @@
     }
 
     function drawDebug() {
+      if (jm && jN) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, -oyDev);
+        ctx.strokeStyle = 'rgba(30,22,24,.4)'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]); ctx.beginPath();
+        for (var j = iRest; j < jN; j += 3) { if (j > iRest) ctx.lineTo(jX[j], jY[j]); else ctx.moveTo(jX[j], jY[j]); }
+        ctx.stroke(); ctx.setLineDash([]);
+        var o = jAt(uAtScroll(viewY), jTmp);
+        ctx.fillStyle = 'rgba(229,48,74,.8)'; ctx.beginPath(); ctx.arc(o[0], o[1], 5, 0, TAU); ctx.fill();
+        ctx.strokeRect(box.x, box.y, box.w, box.h);
+        ctx.setTransform(1, 0, 0, 1, 0, baseY);
+        return;
+      }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.strokeStyle = 'rgba(30,22,24,.35)'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
       if (mode === 'logo') { ctx.strokeRect(box.x, box.y, box.w, box.h); }
@@ -1232,6 +1709,7 @@
       return p(t / 0.24) + p((t - 0.32) / 0.24);
     }
     function updatePointer() {
+      if (jm) { ptr.x = ptr.cx; ptr.y = ptr.cy + viewY; ptr.dirty = false; return; }  // fixed canvas at the viewport origin
       if (!ptr.dirty && !ptr.inside) return;
       var rc = canvas.getBoundingClientRect();
       ptr.x = ptr.cx - rc.left; ptr.y = ptr.cy - rc.top; ptr.dirty = false;
@@ -1251,9 +1729,15 @@
       if (state === ST_REST) { // idle: gentle head bob
         tY = Math.sin(bobT * TAU / 3.4) * 0.06 * rh; tA = Math.sin(bobT * TAU / 3.4 + 0.9) * 0.03;
       }
-      if (state === ST_REST && pointerActive && poseR) {
-        var hx = poseR.hx / dpr, hy = poseR.hy / dpr, dx = ptr.x - hx, dy = ptr.y - hy, d = Math.hypot(dx, dy) || 1;
-        tA += clamp(wrapA(Math.atan2(dy, dx) - poseR.ha), -0.5, 0.5) * smooth(0.4 * rh, 3 * rh, d);
+      // look target: the pointer; coiled at the gauge with no pointer around -> the readout
+      var lkX = NaN, lkY = NaN, lkMax = 0.5;
+      if (state === ST_REST && poseR) {
+        if (pointerActive && (!jm || Math.abs(ptr.y - poseR.hy / dpr) < 1.2 * Hview)) { lkX = ptr.x; lkY = ptr.y; }
+        else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.75; }
+      }
+      if (lkX === lkX) {
+        var hx = poseR.hx / dpr, hy = poseR.hy / dpr, dx = lkX - hx, dy = lkY - hy, d = Math.hypot(dx, dy) || 1;
+        tA += clamp(wrapA(Math.atan2(dy, dx) - poseR.ha), -lkMax, lkMax) * smooth(0.4 * rh, 3 * rh, d);
         var reach = Math.min(d * 0.05, 0.3 * rh); tX = dx / d * reach; tY += dy / d * reach;
         var la = Math.atan2(dy, dx) - (poseR.ha + lookA); eX2 = Math.cos(la) * 0.04; eY2 = Math.sin(la) * 0.04;
       }
@@ -1261,20 +1745,50 @@
       lookA += (tA - lookA) * kl; lookDX += (tX - lookDX) * kl; lookDY += (tY - lookDY) * kl;
       eyeX += (eX2 - eyeX) * kl; eyeY += (eY2 - eyeY) * kl;
 
+      if (jm) updateJourney(dt);
       if (state === ST_ROUTE) {
         if (stepRoute(dt)) {
-          enterRest();
-          written = true; lastFlickEnd = clock; tongueT = -1; nextFlick = clock + 0.35;
-          emit(canvas, 'snake:written');
+          if (jm && !initialWrite) arriveJ(routeEndU);
+          else if (jm) enterRestJ(REST_LOGO);
+          else {
+            enterRest();
+            written = true; lastFlickEnd = clock; tongueT = -1; nextFlick = clock + 0.35;
+            emit(canvas, 'snake:written');
+          }
         }
       } else if (state === ST_CHASE) {
-        if (clock - lastChaseMove > CHASE_IDLE || chaseLeft) startReturn();
+        if (jm && ptr.type === 'mouse' && ptr.inside && clock - ptr.t < chaseIdle) {   // the page scrolls under a still mouse
+          chaseX = clamp(ptr.x, 0.6 * rh, W - 0.6 * rh); chaseY = clamp(ptr.y, zoneTop + rh, zoneBot - rh);
+        }
+        if (clock - lastChaseMove > chaseIdle || chaseLeft) { if (jm) startReturnJ(); else startReturn(); }
         else steer(dt, chaseX, chaseY, 1.5 * box.h, 4.2, 1.1, 0.38, 4.5);
       } else if (state === ST_WANDER) {
         var tw = wTmp, fast = pointerActive && clock - ptr.t < 3;
         if (fast) { tw[0] = ptr.x; tw[1] = ptr.y; } else wanderTarget(tw);
         steer(dt, tw[0], tw[1], (fast ? 5.5 : 3.2) * 2 * r, 2.6, 1.4, 0.42, 5);
       }
+    }
+
+    // journey: scroll target, leaving / reaching the two rests, spring follow
+    function updateJourney(dt) {
+      var uT = uAtScroll(viewY);
+      if (state === ST_ROUTE && initialWrite && clock < 1.5 && uT > uRest + Hview) {   // scroll restored mid-page
+        setLogo(true); setLogo(false); placeAt(uT); return;
+      }
+      if (state === ST_REST && ((restAt === REST_LOGO && uT > uRest + 0.5) || (restAt === REST_END && uT < uEnd - 0.5))) {
+        uJ = restAt === REST_END ? uEnd : uRest; vJ = 0;
+        leaveRestJ(); state = ST_JOURNEY;
+      }
+      if (state !== ST_JOURNEY) return;
+      follow(dt, uT);
+      if (Math.abs(uT - uJ) < 0.6 && Math.abs(vJ) < 40) {
+        if (uT <= uRest + 0.5) enterRestJ(REST_LOGO);
+        else if (uT >= uEnd - 0.5) enterRestJ(REST_END);
+      }
+    }
+    function animatingJ() {
+      return state === ST_ROUTE || state === ST_CHASE ||
+        (state === ST_JOURNEY && (Math.abs(uAtScroll(viewY) - uJ) > 0.6 || Math.abs(vJ) > 40));
     }
 
     /* ---------------- loop ---------------- */
@@ -1289,11 +1803,22 @@
       var t0 = now();
       if (job && !finishJob(8) && !bank) { lastT = 0; raf = requestAnimationFrame(frame); return; }
       if (!bank) return;
+      if (jm) {
+        viewY = scrollNow(); oyDev = Math.round(viewY * dpr);
+        inZone = viewY < zoneBot + 40 && viewY + Hview > zoneTop - 40;
+      }
       update(dt);
-      if (state === ST_REST) renderRest(); else renderMoving();
+      if (jm && !inZone) {   // off-zone: clear once, keep simulating only while something is still settling
+        if (drawn) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); drawn = false; }
+        if (animatingJ()) raf = requestAnimationFrame(frame);
+        return;
+      }
+      if (state === ST_REST) renderRest();
+      else { if (jm && state === ST_JOURNEY) fillTrailJ(uJ); renderMoving(); }
       if (debug) drawDebug();
       var ms = now() - t0, st = api.stats;
       st.ms = st.frames ? st.ms * 0.95 + ms * 0.05 : ms; st.frames++; st.last = ms; st.state = state;
+      if (jm) { st.u = uJ; st.uRest = uRest; st.uEnd = uEnd; st.restAt = restAt; }
       if (!(ms < st.max)) st.max = ms;
       raf = requestAnimationFrame(frame);
     }
@@ -1320,15 +1845,68 @@
     function onCancel() { ptr.inside = false; }
     function onVis() { if (document.hidden) stop(); else kick(); }
 
-    var ro = null, io = null;
-    target.addEventListener('pointermove', onMove, { passive: true });
-    target.addEventListener('pointerdown', onDown, { passive: true });
-    target.addEventListener('pointerleave', onLeave, { passive: true });
-    target.addEventListener('pointercancel', onCancel, { passive: true });
+    // journey: pointer on the whole document (document coords = client + scroll), never preventDefault
+    function onMoveJ(e) {
+      setPtr(e);
+      if (state === ST_CHASE && ptr.type === 'mouse') {
+        chaseX = clamp(e.clientX, 0.6 * rh, W - 0.6 * rh); chaseY = clamp(e.clientY + viewY, zoneTop + rh, zoneBot - rh); lastChaseMove = clock;
+      }
+    }
+    function tryChase(el, cx, cy, touch) {
+      if (reduced || !sized) return;
+      if (el && el.closest && el.closest(ignoreSel)) return;
+      viewY = scrollNow();
+      var y = cy + viewY;
+      if (y < zoneTop || y > zoneBot) return;
+      chaseIdle = touch ? CHASE_IDLE_TOUCH : CHASE_IDLE;
+      startChase(cx, y);
+    }
+    function onDownJ(e) {
+      setPtr(e);
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') { tap = { id: e.pointerId, x: e.clientX, y: e.clientY, t: now(), el: e.target }; return; }
+      if (e.button > 0) return;
+      tryChase(e.target, e.clientX, e.clientY, false);
+    }
+    function onUpJ(e) { // touch: a tap (short, still) starts a short chase; a scroll gesture never does
+      var t = tap; if (!t || e.pointerId !== t.id) return;
+      tap = null;
+      if (now() - t.t > 450 || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 12) return;
+      tryChase(t.el, e.clientX, e.clientY, true);
+    }
+    function onCancelJ() { tap = null; if (ptr.type !== 'mouse') ptr.inside = false; }
+    function onOutJ(e) { if (!e.relatedTarget && (e.pointerType || 'mouse') === 'mouse') { ptr.inside = false; if (state === ST_CHASE) chaseLeft = true; } }
+    function onBlurJ() { ptr.inside = false; tap = null; }
+    function onScrollJ() {
+      if (reduced) { if (!staticRaf && state === ST_STATIC) staticRaf = requestAnimationFrame(function () { staticRaf = 0; blitStatic(); }); return; }
+      kick();
+    }
+    function onLoadJ() { scheduleLayout(); }
+
+    var ro = null, io = null, pe = { passive: true };
+    if (jm) {
+      document.addEventListener('pointermove', onMoveJ, pe);
+      document.addEventListener('pointerdown', onDownJ, pe);
+      document.addEventListener('pointerup', onUpJ, pe);
+      document.addEventListener('pointercancel', onCancelJ, pe);
+      document.addEventListener('pointerout', onOutJ, pe);
+      window.addEventListener('blur', onBlurJ);
+      window.addEventListener('scroll', onScrollJ, pe);
+      window.addEventListener('resize', scheduleLayout);
+      window.addEventListener('load', onLoadJ);
+      if (window.ResizeObserver && document.body) { ro = new ResizeObserver(scheduleLayout); ro.observe(document.body); }
+      try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!destroyed) scheduleLayout(); }); } catch (e) { /* no font loading API */ }
+    } else {
+      target.addEventListener('pointermove', onMove, pe);
+      target.addEventListener('pointerdown', onDown, pe);
+      target.addEventListener('pointerleave', onLeave, pe);
+      target.addEventListener('pointercancel', onCancel, pe);
+    }
     document.addEventListener('visibilitychange', onVis);
-    if (window.ResizeObserver) { ro = new ResizeObserver(scheduleLayout); ro.observe(canvas); }
-    else window.addEventListener('resize', scheduleLayout);
-    if (window.IntersectionObserver) {
+    if (!jm) {
+      if (window.ResizeObserver) { ro = new ResizeObserver(scheduleLayout); ro.observe(canvas); }
+      else window.addEventListener('resize', scheduleLayout);
+    }
+    if (!jm && window.IntersectionObserver) {
       io = new IntersectionObserver(function (entries) {
         visible = entries[entries.length - 1].isIntersecting;
         if (visible) kick(); else stop();
@@ -1344,22 +1922,38 @@
     api.replay = function () {
       if (destroyed || !sized) return;
       if (reduced) { renderStatic(); return; }
+      if (jm) { if (state === ST_REST) leaveRestJ(); setEnd(false); }
       if (mode === 'logo') startWriting(); else startWander();
       kick();
     };
-    api.chase = function (x, y) { if (typeof x === 'number' && typeof y === 'number') startChase(x, y); };
+    api.chase = function (x, y) {
+      if (typeof x !== 'number' || typeof y !== 'number') return;
+      if (jm) { viewY = scrollNow(); chaseIdle = CHASE_IDLE; y += viewY; }
+      startChase(x, y); kick();
+    };
     api.pause = function () { userPaused = true; stop(); };
     api.resume = function () { userPaused = false; kick(); };
     api.destroy = function () {
       destroyed = true; stop();
       if (pendingLayout) clearTimeout(pendingLayout);
       if (furWaitTimer) clearTimeout(furWaitTimer);
+      if (staticRaf) cancelAnimationFrame(staticRaf);
       target.removeEventListener('pointermove', onMove);
       target.removeEventListener('pointerdown', onDown);
       target.removeEventListener('pointerleave', onLeave);
       target.removeEventListener('pointercancel', onCancel);
+      document.removeEventListener('pointermove', onMoveJ, pe);
+      document.removeEventListener('pointerdown', onDownJ, pe);
+      document.removeEventListener('pointerup', onUpJ, pe);
+      document.removeEventListener('pointercancel', onCancelJ, pe);
+      document.removeEventListener('pointerout', onOutJ, pe);
+      window.removeEventListener('blur', onBlurJ);
+      window.removeEventListener('scroll', onScrollJ, pe);
+      window.removeEventListener('load', onLoadJ);
       document.removeEventListener('visibilitychange', onVis);
-      if (ro) ro.disconnect(); else window.removeEventListener('resize', scheduleLayout);
+      window.removeEventListener('resize', scheduleLayout);
+      if (ro) ro.disconnect();
+      if (jm) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); }
       if (io) io.disconnect();
       var i = FUR.subs.indexOf(onFur); if (i >= 0) FUR.subs.splice(i, 1);
       bank = null; job = null; cacheA = cacheB = null;
