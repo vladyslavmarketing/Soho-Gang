@@ -60,7 +60,8 @@
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
   var BLOB = [1.06, 0.92, 0.8, 0.69, 0.59, 0.5, 0.42, 0.35];
   var Z_FREE = 10;            // layer tag for trail laid while chasing / wandering (on top)
-  var PERIOD = 2.16;          // band period in body widths: black .125 | cream .25 | black .125 | pink 1.66
+  var PERIOD = 1.72;          // band period in body widths: black | cream | black | pink (as on the reference photo)
+  var BAND = [0.14, 0.39, 0.53];   // band edges within a period (body widths): black .14 | cream .25 | black .14
   var VARIANTS = [3, 2, 2];   // pink, cream, black
   var WRITE_T = 2.8;          // seconds for the first writing
   var CHASE_IDLE = 2.5;       // seconds without pointer movement before returning
@@ -216,13 +217,17 @@
   // that is re-rasterised every moving frame), and never more than a MAX_RDEV body radius needs.
   function devScale(d, W, r) { return Math.min(d, W < 600 ? 1.5 : 2, Math.max(1, MAX_RDEV / r)); }
 
-  /* ------------------------------------------------------------------ fur photo (optional) */
+  /* ------------------------------------------------------------------ asset URLs */
   var SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
-  var FUR = { state: 'idle', dev: null, subs: [] };
-  function furUrl() {
-    try { return new URL('../img/fur-small.jpg', SCRIPT_SRC || document.baseURI).href; }
-    catch (e) { return 'assets/img/fur-small.jpg'; }
+  // Every image / atlas URL comes from here: relative to this script (assets/js/ -> assets/img/).
+  // The artifact build rewrites this one helper; keep it a single function with the '../img/' prefix.
+  function assetUrl(rel) {
+    try { return new URL('../img/' + rel, SCRIPT_SRC || document.baseURI).href; }
+    catch (e) { return 'assets/img/' + rel; }
   }
+
+  /* ------------------------------------------------------------------ fur photo (optional) */
+  var FUR = { state: 'idle', dev: null, subs: [] };
   // Photo -> luminance-deviation layer (light / dark alpha) used to modulate the procedural fur.
   function makeFurDev(img) {
     try {
@@ -247,9 +252,95 @@
     img.decoding = 'async';
     img.onload = function () { FUR.dev = makeFurDev(img); FUR.state = 'done'; notifyFur(); };
     img.onerror = function () { FUR.state = 'fail'; notifyFur(); };
-    img.src = furUrl();
+    img.src = assetUrl('fur-small.jpg');
   }
   function notifyFur() { var s = FUR.subs.slice(); for (var i = 0; i < s.length; i++) s[i](); }
+
+  /* ------------------------------------------------------------------ Blender fur atlases (optional) */
+  // assets/img/snake/manifest.json + body / head / cap WebP atlases: real hair-curve fur rendered in Blender
+  // (Cycles), every cell lit by the same fixed screen light as the procedural sprites (L3). Loaded async after
+  // mount; until they arrive (or if they fail) the procedural sprites are used, then the bank is rebuilt from
+  // the atlases (see atlasBody / atlasHead / atlasCap).
+  var ATL = { state: 'idle', data: null, subs: [] };
+  var KINDS = ['pink', 'cream', 'black'];
+  // Stamp window ("lens", x R): along the body |a| <= a0 - (a0 - a1) c^2 for |c| <= 1 (a1 beyond), +- fe soft edge.
+  // The tail edge of each stamp is the visible band boundary, so the curve makes bands wrap round the body like
+  // rings (the cells' own window is a straight cut); a1 keeps stamps overlapping at the silhouette.
+  var ATL_LENS = { a0: 0.55, a1: 0.36, fe: 0.1 }, ATL_LENS_SMALL = { a0: 0.55, a1: 0.36, fe: 0.14 };   // thin tail: softer
+  // Grade toward the reference photo, per kind: an alpha-preserving lerp toward a colour ('source-atop' fill) -
+  // warmer rose (head + cap too), ivory cream, near-black velvet stripes (the baked cells read dusty mauve,
+  // beige-grey and charcoal on the site's backdrop).
+  var ATL_GRADE = ['rgba(185,50,45,0.1)', 'rgba(255,250,238,0.32)', 'rgba(6,0,0,0.58)'];
+  function atlasGrade(c, kind) {
+    var g = c.getContext('2d');
+    g.globalCompositeOperation = 'source-atop'; g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = ATL_GRADE[kind]; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+  }
+  function lensEdge(L, c) { return c >= 1 ? L.a1 : L.a0 - (L.a0 - L.a1) * c * c; }
+  function lensMask(L, rs, ext) { // unrotated (x = along) alpha mask at radius rs
+    var ha = Math.ceil((L.a0 + L.fe) * rs) + 2, hc = Math.ceil(ext * rs) + 2, w = ha * 2, h = hc * 2;
+    var c = canvasEl(w, h), g = c.getContext('2d'), id = g.createImageData(w, h), d = id.data, x, y;
+    for (y = 0; y < h; y++) {
+      var e = lensEdge(L, Math.abs(y + 0.5 - hc) / rs);
+      for (x = 0; x < w; x++) {
+        var t = clamp((Math.abs(x + 0.5 - ha) / rs - e + L.fe) / (2 * L.fe), 0, 1);
+        d[(y * w + x) * 4 + 3] = 255 * (1 - t * t * (3 - 2 * t));
+      }
+    }
+    g.putImageData(id, 0, 0);
+    return c;
+  }
+  function loadAtlasImg(rel) {
+    return new Promise(function (res, rej) {
+      var im = new Image();
+      im.decoding = 'async';
+      function ok() { if (im.naturalWidth) res(im); else rej(); }
+      im.src = assetUrl('snake/' + rel);
+      if (im.decode) im.decode().then(ok, function () { if (im.complete && im.naturalWidth) res(im); else rej(); });
+      else { im.onload = ok; im.onerror = rej; }
+    });
+  }
+  function atlasData(m, ims) { // validates the manifest against the images; null = unusable
+    var B = m && m.body, Hd = m && m.head, C = m && m.cap, rows = [[], [], []], i;
+    if (!B || !Hd || !C || !(m.ref_R > 0) || !(B.angles >= 1) || !B.rows || !B.cell || !Hd.cell || !(Hd.buckets >= 1) || !(Hd.rh_ref > 0) || !(C.rc_ref > 0)) return null;
+    for (i = 0; i < B.rows.length; i++) { var k = KINDS.indexOf(B.rows[i] && B.rows[i].kind); if (k >= 0) rows[k].push(i); }
+    var hc = Hd.cols || Math.floor(ims[1].naturalWidth / Hd.cell[0]);
+    if (!rows[0].length || !rows[1].length || !rows[2].length || hc < 1 ||
+        ims[0].naturalWidth < B.angles * B.cell[0] || ims[0].naturalHeight < B.rows.length * B.cell[1] ||
+        ims[1].naturalHeight < Math.ceil(Hd.buckets / hc) * Hd.cell[1] || ims[2].naturalWidth < C.cell[0]) return null;
+    var along = B.along || ALONG, fe = B.feather || 0, fz = m.fuzz || FUZZ, b, bb = new Float32Array(NB * 2), lens = ATL_LENS;
+    // per-bucket sprite bounds (x R): the cell window |a| <= along * (1 - (c / 1.5)^4)^0.25 + feather, cut by the lens,
+    // |c| <= 1 + fuzz
+    for (b = 0; b < NB; b++) {
+      var th = b / NB * PI, co = Math.cos(th), si = Math.sin(th), mx = 0, my = 0;
+      for (i = 0; i <= 24; i++) {
+        var c = (i / 24) * (1 + fz), q = c / 1.5, a = Math.min(along * Math.pow(Math.max(0, 1 - q * q * q * q), 0.25) + fe, lensEdge(lens, c) + lens.fe);
+        mx = Math.max(mx, Math.abs(a * co) + c * Math.abs(si)); my = Math.max(my, Math.abs(a * si) + c * Math.abs(co));
+      }
+      bb[b * 2] = mx; bb[b * 2 + 1] = my;
+    }
+    return { atlas: true, m: m, body: ims[0], head: ims[1], cap: ims[2], rows: rows, hcols: hc, fz: fz, lens: lens, bounds: bb,
+             along: Math.min(along, lens.a0), step: clamp(+B.recommended_step_R || 0.3, 0.1, 0.6) };
+  }
+  function loadAtlas() {
+    if (ATL.state !== 'idle') return;
+    ATL.state = 'loading';
+    function done(d) { if (ATL.state !== 'loading') return; ATL.data = d; ATL.state = d ? 'done' : 'fail'; notifyAtlas(); }
+    try {
+      if (!window.fetch || !window.Promise) { done(null); return; }
+      window.fetch(assetUrl('snake/manifest.json')).then(function (r) {
+        if (!r.ok) throw new Error('manifest ' + r.status);
+        return r.json();
+      }).then(function (m) {
+        if (!m || !m.body || !m.head || !m.cap) throw new Error('manifest');
+        return Promise.all([loadAtlasImg(m.body.file), loadAtlasImg(m.head.file), loadAtlasImg(m.cap.file)]).then(function (ims) {
+          done(atlasData(m, ims));
+        });
+      }).then(null, function () { done(null); });   // 404 / offline / file:// -> procedural sprites
+    } catch (e) { done(null); }
+  }
+  function notifyAtlas() { var s = ATL.subs.slice(); for (var i = 0; i < s.length; i++) s[i](); }
 
   /* ------------------------------------------------------------------ sprites */
   // Lighting across a tube lying in the screen plane; t = position across (-1..1) along perp (px, py).
@@ -480,10 +571,57 @@
     return { c: c, ox: B.ox, oy: B.oy };
   }
 
+  /* Atlas sprites (Blender cells, see loadAtlas). One downscaled / rotated copy per engine bucket, drawn with
+     high-quality smoothing, so the frame loop keeps its integer-pixel blits. */
+  function hqContext(c) { var g = c.getContext('2d'); g.imageSmoothingEnabled = true; if ('imageSmoothingQuality' in g) g.imageSmoothingQuality = 'high'; return g; }
+  // Body stamp for bucket b (body axis at b / NB * PI): the nearest atlas angle, rotated by the residual (<= half
+  // an atlas bucket) and scaled from ref_R to rs.
+  function atlasBody(A, kind, v, b, rs, lens) {
+    var M = A.m.body, rows = A.rows[kind], row = rows[v % rows.length], n = M.angles;
+    var kf = b / NB * n, k = Math.round(kf), d = (kf - k) * PI / n;
+    if (k >= n) k -= n;
+    var s = rs / A.m.ref_R, cw = M.cell[0], chh = M.cell[1], ox = M.origin ? M.origin[0] : cw / 2, oy = M.origin ? M.origin[1] : chh / 2;
+    var lim = Math.max(ox, oy, cw - ox, chh - oy) * s * 1.1;
+    var hx = Math.ceil(Math.min(A.bounds[b * 2] * rs, lim)) + 2, hy = Math.ceil(Math.min(A.bounds[b * 2 + 1] * rs, lim)) + 2;
+    var c = canvasEl(hx * 2, hy * 2), g = hqContext(c), co = Math.cos(d) * s, si = Math.sin(d) * s;
+    g.setTransform(co, si, -si, co, hx, hy);
+    g.drawImage(A.body, k * cw, row * chh, cw, chh, -ox, -oy, cw, chh);
+    if (lens) {
+      var ct = Math.cos(b / NB * PI), st = Math.sin(b / NB * PI);
+      g.globalCompositeOperation = 'destination-in'; g.setTransform(ct, st, -st, ct, hx, hy);
+      g.drawImage(lens, -lens.width / 2, -lens.height / 2);
+    }
+    atlasGrade(c, kind);
+    return c;
+  }
+  // Head for lighting bucket b (heading b / HB * TAU), pointing +x, no eyes; {c, ox, oy} like headSprite.
+  function atlasHead(A, b, rh) {
+    var M = A.m.head, n = M.buckets, q = Math.round(b / HB * n) % n, w = M.cell[0], h = M.cell[1], s = rh / M.rh_ref;
+    var c = canvasEl(w * s + 2, h * s + 2), g = hqContext(c), ox = (M.origin ? M.origin[0] : w * 0.46) * s + 1, oy = (M.origin ? M.origin[1] : h / 2) * s + 1;
+    g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
+    if (!M.fade_baked) { // back of the head melts into the neck (same gradient as headBase)
+      g.globalCompositeOperation = 'destination-out'; g.setTransform(1, 0, 0, 0.62, ox, oy);
+      var fo = g.createRadialGradient(-1.55 * rh, 0, 0, -1.55 * rh, 0, 1.25 * rh);
+      fo.addColorStop(0, 'rgba(0,0,0,1)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.85)'); fo.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = fo; g.fillRect(-3 * rh, -3 * rh, 3 * rh, 6 * rh);
+    }
+    atlasGrade(c, 0);
+    return { c: c, ox: ox, oy: oy };
+  }
+  function atlasCap(A, rc) { // tail-tip fur ball, centred
+    var M = A.m.cap, s = rc / M.rc_ref, w = M.cell[0], h = M.cell[1], ox = M.origin ? M.origin[0] : w / 2, oy = M.origin ? M.origin[1] : h / 2;
+    var hw = Math.ceil(Math.max(ox, w - ox, oy, h - oy) * s) + 1, c = canvasEl(hw * 2, hw * 2), g = hqContext(c);
+    g.drawImage(A.cap, 0, 0, w, h, hw - ox * s, hw - oy * s, w * s, h * s);
+    atlasGrade(c, 0);
+    return c;
+  }
+
   // All sprites for one body radius (device px), built as a queue of small tasks so the work can be
   // spread over frames (no long main-thread task at load). job.step(ms) returns true when complete.
-  function bankJob(R, furDev) {
-    var bank = { R: R, RH: R * HEAD, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null };
+  // src: the atlas data (Blender sprites) or the fur-photo layer / null (procedural sprites).
+  function bankJob(R, src) {
+    var A = src && src.atlas ? src : null, furDev = A ? null : src;
+    var bank = { R: R, RH: R * HEAD, src: src, atlas: A, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null };
     var tasks = [], t0 = 0, spent = 0;
     // tasks are kept small (one sprite each) so a slow phone never gets a long main-thread task from the bank
     function set(kind, v, small) { // one colour variant: mask, detail, then the 32 angle sprites one by one
@@ -495,8 +633,22 @@
         tasks.push(function () { arr[b] = stampSprite(rs, b / NB * PI, kind, mask, det); });
       })(q);
     }
+    function aset(kind, v, small) { // atlas: one row (kind / variant), the NB rotated + scaled copies one by one
+      var rs = small ? R * SMALL : R, arr = new Array(NB);
+      (small ? bank.small : bank.big)[kind][v] = arr;
+      for (var q = 0; q < NB; q++) (function (b) {
+        tasks.push(function () { arr[b] = atlasBody(A, kind, v, b, rs, small ? bank.lensS : bank.lensB); });
+      })(q);
+    }
+    if (A) tasks.push(function () { bank.lensB = lensMask(A.lens, R, 1 + A.fz); bank.lensS = lensMask(ATL_LENS_SMALL, R * SMALL, 1 + A.fz); });
     for (var kind = 0; kind < 3; kind++) {
-      for (var v = 0; v < VARIANTS[kind]; v++) set(kind, v, false);
+      if (A) {
+        var nv = A.rows[kind].length;
+        for (var v = 0; v < nv; v++) aset(kind, v, false);
+        for (v = 0; v < Math.min(nv, kind === 0 ? 3 : 1); v++) aset(kind, v, true);
+        continue;
+      }
+      for (v = 0; v < VARIANTS[kind]; v++) set(kind, v, false);
       for (v = 0; v < (kind === 0 ? 3 : 1); v++) set(kind, v, true);
     }
     tasks.push(function () {
@@ -507,12 +659,12 @@
     });
     tasks.push(function () {
       bank.headShadow = blobSprite(R * HEAD * 1.55, [140, 60, 80]);
-      bank.cap = capSprite(R * TIP, furDev);
+      bank.cap = A ? atlasCap(A, R * TIP) : capSprite(R * TIP, furDev);
       bank.eye = eyeSprite(Math.max(1.6, R * HEAD * 0.13));
     });
-    tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
+    if (!A) tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
     for (var h = 0; h < HB; h++) (function (b) {
-      tasks.push(function () { bank.head[b] = headSprite(bank.headBase, b); });
+      tasks.push(A ? function () { bank.head[b] = atlasHead(A, b, bank.RH); } : function () { bank.head[b] = headSprite(bank.headBase, b); });
     })(h);
     var job = { bank: bank, tasks: tasks, i: 0 };
     job.step = function (budget) {
@@ -525,8 +677,10 @@
   }
   function getHead(bank, ang) {
     var b = Math.round((ang / TAU) * HB) % HB; if (b < 0) b += HB;
+    if (bank.head[b]) return bank.head[b];
+    if (bank.atlas) return (bank.head[b] = atlasHead(bank.atlas, b, bank.RH));   // fallbacks (normally prebuilt)
     if (!bank.headBase) bank.headBase = headBase(bank.RH, bank.fur);
-    return bank.head[b] || (bank.head[b] = headSprite(bank.headBase, b)); // fallback (normally prebuilt)
+    return (bank.head[b] = headSprite(bank.headBase, b));
   }
 
   /* ------------------------------------------------------------------ trail (ring buffer) */
@@ -576,6 +730,7 @@
     var reduced = typeof opts.reducedMotion === 'boolean' ? opts.reducedMotion : prefersReduced();
     var ignoreSel = jm ? JOURNEY_IGNORE + (opts.ignoreSelector ? ',' + opts.ignoreSelector : '') : (opts.ignoreSelector || DEFAULT_IGNORE);
     var debug = !!opts.debug;
+    var useAtl = opts.atlas !== false;    // Blender atlases (opts.atlas: false = procedural sprites only)
     if (!jm) canvas.style.touchAction = 'pan-y';
     if (jm && !heroEl) return api;
 
@@ -624,6 +779,16 @@
     // idle (journey, nothing moving): loop stopped until scroll / pointer / the next tongue flick
     var idleT = 0, idleAt = 0, drawnKey = '', restTick = 0, warmFrames = 0, warmT0 = 0;
     var seamOK = null;
+    // sprite source: the Blender atlases once loaded, else the procedural sprites (with the fur photo when loaded);
+    // the body tables follow the bank in use (atlas stamps are spaced wider: each shows a slice of real fur)
+    var tabAtlas = false, alongK = ALONG, floorA = 0.12, pumpT = 0, seamLen = 15;
+    function curSrc() { return (useAtl && ATL.data) || FUR.dev; }
+    function srcLoading() { return FUR.state === 'loading' || (useAtl && ATL.state === 'loading'); }
+    function needBank() {
+      var s = curSrc();
+      if (bank && Math.abs(bank.R - rDev) <= 0.25 && bank.src === s) { if (job) job = null; return; }
+      if (!job || job.bank.R !== rDev || job.bank.src !== s) job = bankJob(rDev, s);
+    }
 
     /* ---------------- layout ---------------- */
     function writeVars() {
@@ -669,7 +834,7 @@
           var dn = 0, dp = 0;
           while (dn < 3 * r && bodyColorAt(sc + dn) === 0) dn += 1;
           while (dp < 2 * r && bodyColorAt(sc - dp) === 0) dp += 1;
-          var score = Math.min(dn - 1.8 * r, dp - 0.9 * r) - 0.02 * Math.abs(sc - sOld) / r;
+          var score = Math.min(dn - 2 * r, dp - 0.35 * r) - 0.02 * Math.abs(sc - sOld) / r;
           if (score > bestScore) { bestScore = score; best = sc; }
         }
         if (best < 0) continue;
@@ -947,28 +1112,33 @@
     }
 
     function buildBodyTables() {
-      var L = Lbody, w = 2 * r, step = W < 600 ? 3 : clamp(0.075 * r, 2, 3), i, k;
+      // atlas stamps are pieces of a real fur tube: spaced ~0.3R so each shows a slice of its fur (dense
+      // stamping would leave only a thin rim of each and smear the fur into streaks)
+      var ab = bank || (job && job.bank), atl = ab && ab.atlas;
+      tabAtlas = !!atl; alongK = atl ? atl.along : ALONG;
+      var L = Lbody, w = 2 * r, step = atl ? Math.max(1.5, atl.step * r) : W < 600 ? 3 : clamp(0.075 * r, 2, 3), i, k;
       var s0 = 0.25 * rh, NI = Math.ceil(L) + 2, uTab = new Float64Array(NI);
       for (i = 1; i < NI; i++) uTab[i] = uTab[i - 1] + 1 / (w * profile(i - 0.5));
       function uAt(s) { s = clamp(s, 0, NI - 1.001); var a = s | 0; return uTab[a] + (uTab[a + 1] - uTab[a]) * (s - a); }
       function sAtU(u) { var lo = 0, hi = NI - 1; while (hi - lo > 1) { var m = (lo + hi) >> 1; if (uTab[m] < u) lo = m; else hi = m; } return lo + (u - uTab[lo]) / Math.max(1e-9, uTab[hi] - uTab[lo]); }
       // band layout: first band ~0.7w behind the head, whole periods, pink tail tip
       var uStart = uAt(1.22 * rh + 0.7 * w), uEnd = uAt(L), tipU = 1.5;
-      var nb = Math.floor((uEnd - tipU - uStart - 0.5) / PERIOD) + 1, kS = 1;
-      if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + 0.5);
+      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1;
+      if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + bw);
       function colorAtU(u) {
         if (!nb) return 0;
         var rel = (u - uStart) / kS; if (rel < 0) return 0;
         var p = Math.floor(rel / PERIOD); if (p >= nb) return 0;
-        var f = rel - p * PERIOD; return f < 0.125 ? 2 : f < 0.375 ? 1 : f < 0.5 ? 2 : 0;
+        var f = rel - p * PERIOD; return f < BAND[0] ? 2 : f < BAND[1] ? 1 : f < bw ? 2 : 0;
       }
       bodyColorAt = function (s) { return colorAtU(uAt(s)); };
       var list = [];
-      for (var s = s0; s < L; s += step * clamp(profile(s), 0.42, 1)) list.push(s);
+      // atlas: irregular spacing (0.7..1.3 step), so equal slices of the same cell never line up into a ladder
+      for (var s = s0; s < L; s += step * clamp(profile(s), atl ? 0.55 : 0.42, 1) * (atl ? 0.7 + 0.6 * hash(list.length * 5 + 11) : 1)) list.push(s);
       list.push(L);
-      var edges = [0, 0.125, 0.375, 0.5];
+      var edges = [0, BAND[0], BAND[1], BAND[2]];
       for (i = 0; i < nb; i++) for (k = 0; k < 4; k++) {
-        var sb = sAtU(uStart + kS * (i * PERIOD + edges[k])), sp = sb - ALONG * r * profile(sb);
+        var sb = sAtU(uStart + kS * (i * PERIOD + edges[k])), sp = sb - alongK * r * profile(sb);
         if (sp > s0 && sp < L) list.push(sp);
       }
       list.sort(function (a, b) { return a - b; });
@@ -981,7 +1151,7 @@
       for (k = 0; k < nSt; k++) {
         var sk = stS[k], f = profile(sk);
         stF[k] = f;
-        stCol[k] = colorAtU(uAt(sk + ALONG * r * f) - 1e-7);
+        stCol[k] = colorAtU(uAt(sk + alongK * r * f) - 1e-7);
         stVar[k] = Math.floor(hash(k * 7 + 3) * VARIANTS[stCol[k]]);
         stDith[k] = hash(k * 13 + 5);
         // sub-2px fixed jitter: on straight vertical / horizontal runs, integer blits would align the fur strands into stripes
@@ -996,6 +1166,8 @@
       chunkN = Math.max(8, Math.round(8 * r / step));
       shStep = Math.max(1, Math.round(0.42 * r / step));
       ovStep = Math.max(1, Math.round(0.3 * r / step));
+      floorA = FLOOR_A * (atl ? clamp(shStep * step / (0.42 * r), 0.5, 1.5) : 1);   // same floor-shadow density
+      seamLen = (atl ? 0.8 : 1.5) * r;   // over-run fade-in (atlas stamps have soft window edges of their own)
       sLookMax = sMaxLook = mode === 'logo' ? 0.11 * L : 0.12 * L;
       // pose / plan buffers
       poseF = makePose(nSt); poseR = makePose(nSt); poseL = makePose(nSt);
@@ -1014,7 +1186,7 @@
       var h = window.innerHeight || document.documentElement.clientHeight || 0;
       if (w < 2 || h < 2) { sized = false; stop(); return; }
       var d = Math.min(window.devicePixelRatio || 1, 2);
-      if (!bank && FUR.state === 'loading' && now() - mountT < 800) {
+      if (!bank && srcLoading() && now() - mountT < 800) {
         if (!furWaitTimer) furWaitTimer = setTimeout(function () { furWaitTimer = 0; layoutJ(true); }, 820 - (now() - mountT));
         return;
       }
@@ -1039,9 +1211,7 @@
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
       canvas.width = cw; canvas.height = ch; drawn = false; dirty = [0, 0, 0, 0]; drawnKey = '';
       rDev = r * dpr;
-      if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
-        if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
-      }
+      needBank();
       var oldRest = uRest, oldEnd = uEnd;
       buildLogoGeometry();
       buildBodyTables();
@@ -1049,7 +1219,7 @@
       buildJourney(); measSig = m.sig;
       buildRouteBuffers();
       sizeCaches();
-      if (job && (reduced || !window.requestAnimationFrame)) finishJob(Infinity);
+      if (job && (reduced || !window.requestAnimationFrame)) pumpJob();
       bankScale = bank ? rDev / bank.R : 1;
       sizeGrid();
       sized = true;
@@ -1184,8 +1354,8 @@
       if (w < 2 || h < 2) { sized = false; stop(); return; }
       var d = Math.min(window.devicePixelRatio || 1, 2);
       if (!force && sized && w === W && h === H && d === dprRaw) return;
-      // waiting briefly for the fur photo keeps the first frames free of a sprite rebuild
-      if (!bank && FUR.state === 'loading' && now() - mountT < 800) {
+      // waiting briefly for the fur photo / atlases keeps the first frames free of a sprite rebuild
+      if (!bank && srcLoading() && now() - mountT < 800) {
         if (!furWaitTimer) furWaitTimer = setTimeout(function () { furWaitTimer = 0; layout(true); }, 820 - (now() - mountT));
         return;
       }
@@ -1202,16 +1372,14 @@
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
       canvas.width = cw; canvas.height = ch; dirty = [0, 0, 0, 0];
       rDev = r * dpr;
-      if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
-        if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
-      }
+      needBank();
       if (mode === 'logo') buildLogoGeometry();
       else Lbody = clamp(22 * 2 * r, 260, 1.3 * W + H);
       buildBodyTables();
       if (mode === 'logo') placeSeams();
       buildRouteBuffers();
       sizeCaches();
-      if (job && (reduced || !window.requestAnimationFrame)) finishJob(Infinity);   // static render needs it now
+      if (job && (reduced || !window.requestAnimationFrame)) pumpJob();   // static render: built in chunks, drawn when done
       bankScale = bank ? rDev / bank.R : 1;
       sizeGrid();
       sized = true;
@@ -1274,8 +1442,20 @@
     function finishJob(budget) {
       if (!job) return true;
       if (!job.step(budget)) return false;
-      bank = job.bank; job = null; api.stats.bankMs = bank.ms; restReady = false; bankScale = 1;
+      bank = job.bank; job = null; restReady = false; cacheReady = false; drawnKey = ''; bankScale = rDev / bank.R;
+      api.stats.bankMs = bank.ms; api.stats.atlas = !!bank.atlas;
+      if (sized && !!bank.atlas !== tabAtlas) buildBodyTables();   // stamp spacing follows the sprite source
       return true;
+    }
+    // bank build while the frame loop is not running (reduced motion): small chunks on timers, then the static pose
+    function pumpJob() {
+      if (pumpT || !job || destroyed) return;
+      pumpT = setTimeout(function () {
+        pumpT = 0;
+        if (destroyed || !job) return;
+        if (!finishJob(6)) { pumpJob(); return; }
+        if (reduced) { if (sized) renderStatic(); } else kick();
+      }, 0);
     }
 
     function scheduleLayout() {
@@ -1517,7 +1697,7 @@
         while (k >= B) {
           var e = Math.max(B, k - chunkN + 1);
           for (j = k; j >= e; j--) if (j % ovStep === 0 && ov[j] > 0.02) op(PL, OP_OCCL, j, ov[j] * (seam ? smooth(0.6 * r, 2.2 * r, stS[j] - stS[B]) : 1));
-          for (j = k; j >= e; j--) op(PL, OP_BODY, j, seam ? smooth(0, 1.5 * r, stS[j] - stS[B]) : 1);
+          for (j = k; j >= e; j--) op(PL, OP_BODY, j, seam ? smooth(0, seamLen, stS[j] - stS[B]) : 1);
           k = e - 1;
         }
         if (withHead && B === 0) op(PL, OP_HEAD, 0, 0);
@@ -1560,9 +1740,14 @@
       c.drawImage(s, Math.round(x - s.width * 0.5), Math.round(y - s.height * 0.5));
     }
     function drawStamp(c, P, k, breath) {
-      var f = stF[k] * breath * bankScale, kind = stCol[k], spr, sc;
-      if (f >= 0.62) { spr = bank.big[kind][stVar[k] % bank.big[kind].length][P.bk[k]]; sc = f; }
-      else { spr = bank.small[kind][stVar[k] % bank.small[kind].length][P.bk[k]]; sc = f / SMALL; }
+      var f = stF[k] * breath * bankScale, kind = stCol[k], spr, sc, set, v, b = P.bk[k];
+      if (f >= 0.62) { set = bank.big[kind]; sc = f; } else { set = bank.small[kind]; sc = f / SMALL; }
+      v = stVar[k] % set.length; spr = set[v][b];
+      if (!spr) {   // not built yet (atlas bank adopted early): build it now
+        if (!bank.atlas) return;
+        var sm = set === bank.small[kind];
+        spr = set[v][b] = atlasBody(bank.atlas, kind, v, b, sm ? bank.R * SMALL : bank.R, sm ? bank.lensS : bank.lensB);
+      }
       var w2 = spr.width * 0.5, h2 = spr.height * 0.5;
       if (sc > 0.996 && sc < 1.004) c.drawImage(spr, Math.round(P.x[k] - w2 + stJx[k]), Math.round(P.y[k] - h2 + stJy[k]));
       else c.drawImage(spr, P.x[k] - w2 * sc, P.y[k] - h2 * sc, w2 * 2 * sc, h2 * 2 * sc);
@@ -1578,7 +1763,7 @@
           if (c.globalAlpha !== f) c.globalAlpha = f;
           drawStamp(c, P, k, breath);
         } else if (kind === OP_FLOOR) {
-          f = stF[k] * breath; drawBlob(c, bank.floor, P.x[k] + 0.1 * R * f, P.y[k] + 0.46 * R * f, f, FLOOR_A);
+          f = stF[k] * breath; drawBlob(c, bank.floor, P.x[k] + 0.1 * R * f, P.y[k] + 0.46 * R * f, f, floorA);
         } else if (kind === OP_OCCL) {
           if (PL.a[i] < 0.01) continue;
           f = stF[k] * breath; drawBlob(c, bank.occl, P.x[k] + 0.08 * R * f, P.y[k] + 0.4 * R * f, f, Math.min(1, PL.a[i] * 2.4) * 0.42);
@@ -1742,6 +1927,7 @@
     }
 
     function renderStatic() {
+      if (!bank) { pumpJob(); return; }   // drawn when the sprites are ready
       state = ST_STATIC;
       if (jm) { // the "ae" in the hero only, rendered once into the cache and blitted at the scroll offset
         restAt = REST_LOGO; buildRestTrail();
@@ -1911,7 +2097,8 @@
       var raw = lastT ? t - lastT : 99, dt = lastT ? Math.min(0.05, Math.max(0, raw / 1000)) : 1 / 60;
       lastT = t;
       var t0 = now();
-      if (job && !finishJob(8) && !bank) { lastT = 0; raf = requestAnimationFrame(frame); return; }
+      // sprite bank: built in slices (a smaller slice while an older bank still draws, e.g. the atlas upgrade)
+      if (job && !finishJob(bank ? 4 : 8) && !bank) { lastT = 0; raf = requestAnimationFrame(frame); return; }
       if (!bank) return;
       // the first writing waits for two smooth frames (start-up work on a slow phone would stretch it)
       if (state === ST_ROUTE && initialWrite && warmFrames < 2) {
@@ -1926,7 +2113,7 @@
       update(dt);
       if (jm && !inZone) {   // off-zone: clear once, keep simulating only while something is still settling
         if (drawn) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); drawn = false; dirty = [0, 0, 0, 0]; drawnKey = ''; }
-        if (animatingJ()) raf = requestAnimationFrame(frame);
+        if (animatingJ() || job) raf = requestAnimationFrame(frame);
         return;
       }
       if (state === ST_REST) {
@@ -1940,7 +2127,7 @@
         if (jm && state === ST_JOURNEY) {
           key = uJ + ':' + oyDev;
           if (key === drawnKey && drawn && tongueT < 0 && !lookingNow() && !debug) {   // still frame
-            if (animatingJ()) raf = requestAnimationFrame(frame); else goIdle();
+            if (animatingJ() || job) raf = requestAnimationFrame(frame); else goIdle();
             return;
           }
           fillTrailJ(uJ);
@@ -2047,9 +2234,25 @@
       }, { rootMargin: '80px' });
       io.observe(canvas);
     }
-    function onFur() { if (sized) layout(true); else layout(); }
+    function onFur() {
+      if (destroyed) return;
+      if (!sized) { layout(); return; }
+      if ((bank && bank.atlas) || (job && job.bank.atlas)) return;   // the Blender sprites don't use the photo
+      layout(true);
+    }
+    // atlases arrived: rebuild the bank from them (in slices, the procedural bank draws meanwhile); a failure
+    // changes nothing (procedural sprites)
+    function onAtlas() {
+      if (destroyed) return;
+      if (!sized) { layout(); return; }   // still waiting for the first layout
+      if (!ATL.data) return;
+      needBank();
+      if (!job) return;
+      if (reduced) pumpJob(); else kick();
+    }
     FUR.subs.push(onFur);
     loadFur();
+    if (useAtl) { ATL.subs.push(onAtlas); loadAtlas(); }
 
     /* ---------------- public API ---------------- */
     api.getLogoBox = getLogoBox;
@@ -2077,13 +2280,12 @@
       if (!sized) return;                         // the first layout reads `reduced`
       if (v) {
         stop(); if (idleT) { clearTimeout(idleT); idleT = 0; } idleAt = 0;
-        if (job) finishJob(Infinity);
+        if (job) pumpJob();
         if (jm) { setEnd(false); tap = null; }
         renderStatic();
         if (jm && !atLogo) setLogo(true);
         return;
       }
-      if (job) finishJob(Infinity);
       dirty = null; drawnKey = ''; restReady = false; cacheReady = false; lastT = 0;
       if (jm) {
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
@@ -2119,6 +2321,8 @@
       if (jm) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); }
       if (io) io.disconnect();
       var i = FUR.subs.indexOf(onFur); if (i >= 0) FUR.subs.splice(i, 1);
+      i = ATL.subs.indexOf(onAtlas); if (i >= 0) ATL.subs.splice(i, 1);
+      if (pumpT) clearTimeout(pumpT);
       bank = null; job = null; cacheA = cacheB = null;
     };
 

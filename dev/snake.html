@@ -8,7 +8,8 @@
 <style>
   /* Standalone test bed for assets/js/snake.js (no site CSS).
      Tall page: hero (logo) → ink marquee → paper section with cards → ink income section with a 400×400 gauge,
-     then the fur band with the 'wander' snake. Query flags: ?debug=1  ?reduced=1  ?panel=0 */
+     then the fur band with the 'wander' snake. Query flags: ?debug=1  ?reduced=1  ?panel=0
+     ?atlas=0 (procedural sprites only, no Blender atlases from assets/img/snake/) */
   :root {
     color-scheme: light;
     --paper: #F1D6DA; --paper-2: #E9C3CA; --fur: #D7899A; --fur-deep: #B85F75;
@@ -185,6 +186,7 @@
     var hero = document.getElementById('hero');
     var gauge = document.querySelector('[data-gauge]');
     var reduced = q.has('reduced') ? q.get('reduced') !== '0' : undefined;
+    var atlas = q.get('atlas') !== '0';
     if (q.get('panel') === '0') document.getElementById('panel').hidden = true;
     if (!window.SohoSnake) { hero.classList.add('is-written'); return; }
 
@@ -199,9 +201,9 @@
 
     var js = window.journeySnake = SohoSnake.mount(canvas, {
       mode: 'journey', hero: hero, end: gauge, zoneEnd: document.getElementById('income'), pointerTarget: hero,
-      reducedMotion: reduced, debug: q.get('debug') === '1'
+      reducedMotion: reduced, debug: q.get('debug') === '1', atlas: atlas
     });
-    var bs = window.bandSnake = SohoSnake.mount(document.getElementById('band-canvas'), { mode: 'wander', pointerTarget: document.getElementById('band'), reducedMotion: reduced });
+    var bs = window.bandSnake = SohoSnake.mount(document.getElementById('band-canvas'), { mode: 'wander', pointerTarget: document.getElementById('band'), reducedMotion: reduced, atlas: atlas });
 
     var paused = false;
     document.getElementById('b-replay').onclick = function () { hero.classList.remove('is-written'); js.replay(); };
@@ -213,7 +215,7 @@
     var out = document.getElementById('o-stat'), names = ['boot', 'route', 'rest', 'chase', 'wander', 'static', 'journey'];
     setInterval(function () {
       var s = js.stats;
-      out.textContent = (names[s.state] || '—') + ' · ' + (s.ms || 0).toFixed(2) + 'ms · u ' + Math.round(s.u || 0) + '/' + Math.round(s.uEnd || 0) + ' · band ' + (bs.stats.ms || 0).toFixed(2) + 'ms';
+      out.textContent = (names[s.state] || '—') + ' · ' + (s.atlas ? 'blender' : 'procedural') + ' · ' + (s.ms || 0).toFixed(2) + 'ms · u ' + Math.round(s.u || 0) + '/' + Math.round(s.uEnd || 0) + ' · band ' + (bs.stats.ms || 0).toFixed(2) + 'ms';
     }, 400);
   })();
 </script>
