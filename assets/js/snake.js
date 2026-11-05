@@ -669,7 +669,12 @@
     var job = { bank: bank, tasks: tasks, i: 0 };
     job.step = function (budget) {
       t0 = now();
-      while (job.i < tasks.length) { tasks[job.i++](); if (now() - t0 > budget) break; }
+      var t1 = t0, t2;
+      while (job.i < tasks.length) {
+        tasks[job.i++]();
+        t2 = now(); if (t2 - t1 > (bank.maxTask || 0)) bank.maxTask = t2 - t1; t1 = t2;
+        if (t2 - t0 > budget) break;
+      }
       spent += now() - t0; bank.ms = spent;
       return job.i >= tasks.length;
     };
@@ -1443,7 +1448,7 @@
       if (!job) return true;
       if (!job.step(budget)) return false;
       bank = job.bank; job = null; restReady = false; cacheReady = false; drawnKey = ''; bankScale = rDev / bank.R;
-      api.stats.bankMs = bank.ms; api.stats.atlas = !!bank.atlas;
+      api.stats.bankMs = bank.ms; api.stats.bankMaxTask = bank.maxTask; api.stats.atlas = !!bank.atlas;
       if (sized && !!bank.atlas !== tabAtlas) buildBodyTables();   // stamp spacing follows the sprite source
       return true;
     }
