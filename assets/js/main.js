@@ -310,9 +310,16 @@
     var tx = -100, ty = -100, rx = tx, ry = ty, dx = tx, dy = ty;
     var running = false, shown = false, last = 0;
 
+    /* Position via the individual `translate` property: CSS applies it AFTER `scale`, so the hover / press
+       scale no longer multiplies the offset (with `transform: translate()` a 1.6× hover threw the ring far away). */
+    var useTranslate = !!(win.CSS && CSS.supports && CSS.supports('translate', '1px 1px'));
+    function place(el, x, y) {
+      if (useTranslate) el.style.translate = x.toFixed(2) + 'px ' + y.toFixed(2) + 'px';
+      else el.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)';
+    }
     function paint() {
-      ring.style.transform = 'translate3d(' + rx.toFixed(2) + 'px,' + ry.toFixed(2) + 'px,0)';
-      dot.style.transform = 'translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
+      place(ring, rx, ry);
+      place(dot, dx, dy);
     }
     /* hidden state: class for the stylesheet + inline opacity so no hover rule can override it */
     function setShown(on) {
@@ -368,6 +375,7 @@
   /* ================================================================== MAGNETIC */
   function initMagnetic() {
     var MAX = 8;
+    var useTranslate = !!(win.CSS && CSS.supports && CSS.supports('translate', '1px 1px'));
     $$('[data-magnetic]').forEach(function (el) {
       var x = 0, y = 0, txx = 0, tyy = 0, id = 0, last = 0;
       function tick(t) {
@@ -376,7 +384,9 @@
         var k = lerpK(0.2, dt);
         x += (txx - x) * k; y += (tyy - y) * k;
         if (Math.abs(txx - x) + Math.abs(tyy - y) < 0.05) { x = txx; y = tyy; }
-        el.style.transform = (x || y) ? 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)' : '';
+        // `translate` (not transform) so the button's :active squish scale doesn't multiply the offset
+        if (useTranslate) el.style.translate = (x || y) ? x.toFixed(2) + 'px ' + y.toFixed(2) + 'px' : '';
+        else el.style.transform = (x || y) ? 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)' : '';
         if (x !== txx || y !== tyy) id = raf(tick);
         else { id = 0; last = 0; }
       }
