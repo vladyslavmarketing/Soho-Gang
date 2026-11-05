@@ -212,6 +212,10 @@
     return { x: x, y: y, w: bw, h: bh };
   }
 
+  // Canvas pixel density: device pixels, at most 2x, 1.5x on phones (the journey layer is a full-viewport canvas
+  // that is re-rasterised every moving frame), and never more than a MAX_RDEV body radius needs.
+  function devScale(d, W, r) { return Math.min(d, W < 600 ? 1.5 : 2, Math.max(1, MAX_RDEV / r)); }
+
   /* ------------------------------------------------------------------ fur photo (optional) */
   var SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
   var FUR = { state: 'idle', dev: null, subs: [] };
@@ -481,12 +485,14 @@
   function bankJob(R, furDev) {
     var bank = { R: R, RH: R * HEAD, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null };
     var tasks = [], t0 = 0, spent = 0;
-    function set(kind, v, small) { // one colour variant: mask + detail, then the 32 angle sprites in 4 slices
+    // tasks are kept small (one sprite each) so a slow phone never gets a long main-thread task from the bank
+    function set(kind, v, small) { // one colour variant: mask, detail, then the 32 angle sprites one by one
       var rs = small ? R * SMALL : R, seed = small ? 500 + kind * 31 + v * 7 : 1000 + kind * 97 + v * 13, mask, det, arr = [];
       (small ? bank.small : bank.big)[kind][v] = arr;
-      tasks.push(function () { mask = stampMask(rs, seed); det = stampDetail(rs, seed + (small ? 100 : 7), kind, furDev); });
-      for (var q = 0; q < 4; q++) (function (q) {
-        tasks.push(function () { for (var b = q * NB / 4; b < (q + 1) * NB / 4; b++) arr[b] = stampSprite(rs, b / NB * PI, kind, mask, det); });
+      tasks.push(function () { mask = stampMask(rs, seed); });
+      tasks.push(function () { det = stampDetail(rs, seed + (small ? 100 : 7), kind, furDev); });
+      for (var q = 0; q < NB; q++) (function (b) {
+        tasks.push(function () { arr[b] = stampSprite(rs, b / NB * PI, kind, mask, det); });
       })(q);
     }
     for (var kind = 0; kind < 3; kind++) {
@@ -498,13 +504,15 @@
         bank.floor.push(blobSprite(R * 1.2 * BLOB[i], [140, 60, 80]));
         bank.occl.push(blobSprite(R * 1.05 * BLOB[i], [84, 22, 42]));
       }
+    });
+    tasks.push(function () {
       bank.headShadow = blobSprite(R * HEAD * 1.55, [140, 60, 80]);
       bank.cap = capSprite(R * TIP, furDev);
       bank.eye = eyeSprite(Math.max(1.6, R * HEAD * 0.13));
     });
     tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
-    for (var h = 0; h < HB; h += 4) (function (h) {
-      tasks.push(function () { for (var b = h; b < h + 4; b++) bank.head[b] = headSprite(bank.headBase, b); });
+    for (var h = 0; h < HB; h++) (function (b) {
+      tasks.push(function () { bank.head[b] = headSprite(bank.headBase, b); });
     })(h);
     var job = { bank: bank, tasks: tasks, i: 0 };
     job.step = function (budget) {
@@ -609,6 +617,13 @@
     var uJ = 0, vJ = 0, vTs = 0, uTprev = -1, restAt = 0, atLogo = false, atEnd = false, routeEndU = -1, gaugeC = null, coil = null;
     var cullY0 = -1e9, cullY1 = 1e9, gridOY = 0, staticRaf = 0, tap = null, chaseIdle = CHASE_IDLE;
     var jTmp = [0, 0, 0, 0];
+    // scroll offset read in the scroll event (never inside the frame, after other rAF callbacks wrote styles)
+    var scrollCache = 0;
+    // dirty box (canvas device px) of everything drawn last frame: clear only that; null = unknown -> full clear
+    var dirty = null;
+    // idle (journey, nothing moving): loop stopped until scroll / pointer / the next tongue flick
+    var idleT = 0, idleAt = 0, drawnKey = '', restTick = 0, warmFrames = 0, warmT0 = 0;
+    var seamOK = null;
 
     /* ---------------- layout ---------------- */
     function writeVars() {
@@ -714,10 +729,22 @@
       }
       m.gauge = endEl && endEl.offsetWidth ? docBox(endEl) : null;
       m.zone = zoneEl && zoneEl.offsetHeight ? docBox(zoneEl) : m.hero;
+      // copy stacked above the gauge (phones / tablets): the approach must not cross it
+      m.endText = null;
+      if (m.gauge && zoneEl) {
+        var ts = zoneEl.querySelectorAll('.section-title, .section-lead'), g0 = m.gauge;
+        for (i = 0; i < ts.length; i++) {
+          b = docBox(ts[i]);
+          if (!(b.w > 0 && b.h > 0) || b.y + b.h > g0.y + 0.3 * g0.h || b.x > g0.x + g0.w || b.x + b.w < g0.x) continue;
+          if (!m.endText) m.endText = { x: b.x, y: b.y, r: b.x + b.w, b: b.y + b.h };
+          else { m.endText.x = Math.min(m.endText.x, b.x); m.endText.r = Math.max(m.endText.r, b.x + b.w); m.endText.b = Math.max(m.endText.b, b.y + b.h); }
+        }
+      }
       m.docH = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
       var sig = [m.hero.x, m.hero.y, m.hero.w, m.hero.h, m.colR, m.contR, m.zone.y, m.zone.h, m.docH];
       if (m.marq) sig.push(m.marq.y, m.marq.h);
       if (m.gauge) sig.push(m.gauge.x, m.gauge.y, m.gauge.w);
+      if (m.endText) sig.push(m.endText.b, m.endText.r);
       for (i = 0; i < m.secs.length; i++) { var s = m.secs[i]; sig.push(s.box.y, s.box.h); if (s.head) sig.push(s.head.y, s.head.h, s.head.r); }
       m.sig = sig.map(function (v) { return Math.round(v); }).join(',');
       return m;
@@ -752,12 +779,21 @@
       var iR = xs.length - 1;
 
       // (B) descent waypoints: {x, y, a (heading), t (tangent scale), col (on the right column)}
-      var contR = m.contR || W - 16, margin = W - contR;
-      var xr = margin >= 1.3 * bw ? contR + margin / 2 : W - 0.45 * bw;
+      // The right lane. In a page margin wide enough for the body, its wiggle and the (wider) head, the lane sits
+      // between the text column and the viewport edge: the body never covers copy, the head is never clipped.
+      // Otherwise (phones, tablets, ~1024px) it runs in the gutter mostly off-screen: only a sliver of fur shows
+      // beside the copy (cream text over pink fur would fail contrast), wiggling outward only.
+      var contR = m.contR || W - 16, margin = W - contR, laneRoom = margin - 8 - r - rh, gutter = laneRoom < 8, xr, colAmp;
+      if (!gutter) {
+        colAmp = Math.min(0.42 * bw, laneRoom / 2);
+        xr = clamp(contR + margin / 2, contR + 4 + r + colAmp, W - 4 - rh - colAmp);
+      } else {
+        colAmp = 0.12 * bw;
+        xr = contR + 2 + r;
+      }
       var logoMinX = 1e9, logoMaxY = -1e9;
       for (i = 0; i < pN; i++) { if (pX[i] < logoMinX) logoMinX = pX[i]; if (pY[i] > logoMaxY) logoMaxY = pY[i]; }
       var wide = W >= 960 && m.colR > 0 && box.x > m.colR;
-      var colAmp = margin >= 1.3 * bw ? Math.min(0.42 * bw, Math.max(4, (margin * 0.5 - r) * 0.85)) : 0.2 * bw;
       var wps = [{ x: pX[0], y: pY[0], a: Math.atan2(pY[0] - pY[6], pX[0] - pX[6]), t: 1 }];
       if (wide) {   // down the channel between the headline column and the logo
         wps.push({ x: (m.colR + logoMinX - r) / 2, y: box.y + box.h * 0.82, a: PI / 2, t: 1 });
@@ -781,18 +817,27 @@
         last = { x: xr, y: Math.max(last.y + 4 * bw, yMin), a: PI / 2, t: 1, col: true };
         wps.push(last);
       }
-      // (C) approach + coil: counter-clockwise, entering from the right over the top, head ending near 12 o'clock
-      var g = m.gauge, coilStart = -1;
+      // (C) approach + coil, head ending near 12 o'clock.
+      //   Gauge beside the copy (desktop): counter-clockwise, entering from the right over the top; the head rides
+      //   over the first turn. Copy stacked above the gauge (phones, tablets): the approach stays in the lane until
+      //   the copy is passed, then joins the ring at 3 o'clock heading down and wraps clockwise - it never crosses
+      //   the heading or the lead.
+      var g = m.gauge, et = m.endText;
       coil = null; gaugeC = null;
       if (g) {
         var cx = g.x + g.w / 2, cy = g.y + g.h / 2, ringR = 0.4 * g.w, R = ringR + 0.75 * bw;
-        var turns = clamp(Lbody * 0.96 / (TAU * (R + 0.25 * bw)), 0.62, 1.08), Phi = turns * TAU;
-        var thE = 262 / 180 * PI, thS = thE + Phi, dR = 0.22 * bw / TAU;
-        var mx = cx + R * Math.cos(thS), my = cy + R * Math.sin(thS);
-        var yq = Math.max(last.y + 3 * bw, my - 0.65 * Math.abs(xr - mx) - bw);
+        var dir, thS, Phi, lift, yq;
+        if (et) { dir = 1; thS = 0; Phi = 1.5 * PI + 0.1; lift = 0; }
+        else {
+          var turns = clamp(Lbody * 0.96 / (TAU * (R + 0.25 * bw)), 0.62, 1.08);
+          dir = -1; Phi = turns * TAU; thS = 262 / 180 * PI + Phi; lift = 0.78 * bw;
+        }
+        var dR = 0.22 * bw / TAU, mx = cx + R * Math.cos(thS), my = cy + R * Math.sin(thS);
+        if (et) yq = Math.min(Math.max(last.y + bw, et.b + r + 0.3 * bw), my - 1.2 * bw);
+        else yq = Math.max(last.y + 3 * bw, my - 0.65 * Math.abs(xr - mx) - bw);
         wps.push({ x: xr, y: yq, a: PI / 2, t: 1, col: true });
-        wps.push({ x: mx, y: my, a: thS - PI / 2, t: 1, coil: true });
-        coil = { cx: cx, cy: cy, R: R, thS: thS, Phi: Phi, dR: dR, lift: 0.78 * bw };
+        wps.push({ x: mx, y: my, a: thS + dir * PI / 2, t: 1, coil: true });
+        coil = { cx: cx, cy: cy, R: R, thS: thS, Phi: Phi, dR: dR, lift: lift, dir: dir };
         gaugeC = { x: cx, y: cy, r: ringR };
       } else {
         wps.push({ x: xr, y: Math.max(last.y + 3 * bw, m.zone.y + m.zone.h - 3 * bw), a: PI / 2, t: 1, col: true });
@@ -807,7 +852,8 @@
           var steps = Math.ceil(len / 2), ramp = Math.min(lam * 0.6, len / 2);
           for (var q = 1; q <= steps; q++) {
             var tt = len * q / steps, env = smooth(0, ramp, tt) * smooth(0, ramp, len - tt);
-            add(A.x + (B.x - A.x) * q / steps + colAmp * env * Math.sin(TAU * tt / lam), A.y + tt, Z_DESC);
+            var wig = gutter ? 0.5 * (1 - Math.cos(TAU * tt / lam)) : Math.sin(TAU * tt / lam);   // gutter: outward only
+            add(A.x + (B.x - A.x) * q / steps + colAmp * env * wig, A.y + tt, Z_DESC);
           }
         } else hermite(add, A.x, A.y, A.a, B.x, B.y, B.a, A.t, B.t, Z_DESC);
       }
@@ -816,7 +862,7 @@
         for (q = 1; q <= csteps; q++) {
           // slow outward spiral; the last stretch rides up and over the first turn so the head rests
           // half on its own body with its silhouette against the background
-          var ph = coil.Phi * q / csteps, th = coil.thS - ph, rr = coil.R + coil.dR * ph + coil.lift * smooth(TAU - 1.5, TAU + 0.15, ph);
+          var ph = coil.Phi * q / csteps, th = coil.thS + coil.dir * ph, rr = coil.R + coil.dR * ph + coil.lift * smooth(TAU - 1.5, TAU + 0.15, ph);
           add(coil.cx + rr * Math.cos(th), coil.cy + rr * Math.sin(th), Z_DESC);
         }
       }
@@ -943,6 +989,10 @@
         if (sk < 1.1 * rh) kHead = k + 1;
       }
       if (kHead >= nSt) kHead = nSt - 1;
+      // where a layer seam may start: >= 1.5r of plain pink tailward (buildPlan fades the over-run in there; a band
+      // stamp faded in would show as a translucent cream / grey disc)
+      seamOK = new Uint8Array(nSt);
+      for (k = nSt - 1, i = Infinity; k >= 0; k--) { if (stCol[k]) i = stS[k]; seamOK[k] = i - stS[k] > 1.5 * r ? 1 : 0; }
       chunkN = Math.max(8, Math.round(8 * r / step));
       shStep = Math.max(1, Math.round(0.42 * r / step));
       ovStep = Math.max(1, Math.round(0.3 * r / step));
@@ -974,9 +1024,9 @@
       var hc = sized && w === W && d === dprRaw && h <= Hmax && Hmax - h < 140 ? Hmax : h;
       var same = sized && !force && w === W && d === dprRaw && Math.abs(nb.x - box.x) < 0.5 && Math.abs(nb.y - box.y) < 0.5 && Math.abs(nb.w - box.w) < 0.5;
       var oldHv = Hview;
-      Hview = h; meas = m; viewY = scrollNow();
+      Hview = h; meas = m; viewY = scrollCache = scrollNow();
       if (same) {
-        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; }
+        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; dirty = [0, 0, 0, 0]; }
         if (m.sig !== measSig || Math.abs(oldHv - h) > 0.5) rebuildJourney();
         if (reduced) renderStatic(); else kick();
         return;
@@ -985,9 +1035,9 @@
       W = w; H = Hmax = hc; dprRaw = d;
       canvas.style.height = H + 'px';
       box = nb; r = THICK * 0.5 * box.h; rh = r * HEAD;
-      dpr = Math.min(dprRaw, Math.max(1, MAX_RDEV / r));
+      dpr = devScale(dprRaw, W, r);
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
-      canvas.width = cw; canvas.height = ch; drawn = false;
+      canvas.width = cw; canvas.height = ch; drawn = false; dirty = [0, 0, 0, 0]; drawnKey = '';
       rDev = r * dpr;
       if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
         if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
@@ -1121,8 +1171,8 @@
     // reduced motion: the static logo scrolls with the page (blitted from its cache)
     function blitStatic() {
       if (!cacheA || state !== ST_STATIC) return;
-      viewY = scrollNow(); oyDev = Math.round(viewY * dpr);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, cw, ch);
+      viewY = scrollCache; oyDev = Math.round(viewY * dpr);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, cw, ch); dirty = null;
       if (cacheY - oyDev < ch && cacheY + cacheA.height - oyDev > 0) ctx.drawImage(cacheA, cacheX, cacheY - oyDev);
     }
 
@@ -1148,9 +1198,9 @@
         r = clamp(THICK * 0.5 * vb.h * 0.7, 7, Math.max(7, H * 0.1));
       }
       rh = r * HEAD;
-      dpr = Math.min(dprRaw, Math.max(1, MAX_RDEV / r));
+      dpr = devScale(dprRaw, window.innerWidth || W, r);
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
-      canvas.width = cw; canvas.height = ch;
+      canvas.width = cw; canvas.height = ch; dirty = [0, 0, 0, 0];
       rDev = r * dpr;
       if (!bank || Math.abs(bank.R - rDev) > 0.25 || bank.fur !== FUR.dev) {
         if (!job || job.bank.R !== rDev || job.bank.fur !== FUR.dev) job = bankJob(rDev, FUR.dev);
@@ -1289,6 +1339,7 @@
       rq = 0; ri = 0; rv = vCruise;
       trail.push(rX[0], rY[0], rZ[0]);
       state = ST_ROUTE; initialWrite = true; restReady = false; restAt = 0; uJ = uRest; vJ = 0;
+      warmFrames = 0; warmT0 = now();
     }
 
     function startReturn() {
@@ -1422,9 +1473,28 @@
 
     /* ---------------- draw plan (layer-sorted runs, occlusion shadows) ---------------- */
     function op(PL, kind, i, a) { var n = PL.n; PL.k[n] = kind; PL.i[n] = i; PL.a[n] = a; PL.n = n + 1; }
+    // Seams follow the live pose: a layer boundary whose tail side is on top must start in plain pink. While the
+    // bands slide past fixed layer tags (writing, returning, chasing) the boundary moves to the nearest such stamp,
+    // at most ~2.2r away and never across another boundary.
+    function reseat(P, kFrom) {
+      var n = nSt, lim = 2.2 * r, k, j, a, b, zH, zT, stepA, stepB;
+      for (k = Math.max(1, kFrom + 1); k < n; k++) {
+        zH = P.z[k - 1]; zT = P.z[k];
+        if (!(zT > zH) || seamOK[k]) continue;
+        a = b = k;
+        for (;;) {
+          stepA = a + 1 < n && P.z[a + 1] === zT && stS[a + 1] - stS[k] <= lim;
+          if (stepA && seamOK[++a]) { for (j = k; j < a; j++) P.z[j] = zH; k = a; break; }
+          stepB = b - 1 > kFrom && P.z[b - 2] === zH && stS[k] - stS[b - 1] <= lim;
+          if (stepB && seamOK[--b]) { for (j = b; j < k; j++) P.z[j] = zT; break; }
+          if (!stepA && !stepB) break;
+        }
+      }
+    }
     function buildPlan(PL, P, kFrom, withHead) {
       var n = nSt, nr = 0, k, i, j, z;
       PL.n = 0;
+      reseat(P, kFrom);
       k = n - 1;
       while (k >= kFrom && nr < runA.length) { z = P.z[k]; runA[nr] = k; while (k >= kFrom && P.z[k] === z) k--; runB[nr] = k + 1; runZ[nr] = z; nr++; }
       for (i = 1; i < nr; i++) { // stable insertion sort by layer
@@ -1567,25 +1637,42 @@
     }
 
     /* ---------------- render paths ---------------- */
+    // Clears only what the previous frame drew (the canvas is viewport-sized; a full clear re-rasterises all of it).
     function clear() {
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.clearRect(0, 0, cw, ch);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      if (!dirty || debug) ctx.clearRect(0, 0, cw, ch);
+      else if (dirty[2] > dirty[0] && dirty[3] > dirty[1]) ctx.clearRect(dirty[0], dirty[1], dirty[2] - dirty[0], dirty[3] - dirty[1]);
+      dirty = null;   // unknown until the caller records what it drew (markDrawn)
       if (jm) { // world = document: draw with an offset of -scrollY; skip stamps outside the viewport
         baseX = 0; baseY = -oyDev; ctx.setTransform(1, 0, 0, 1, 0, baseY);
         var pad = 2.6 * rDev * HEAD; cullY0 = oyDev - pad; cullY1 = oyDev + ch + pad; drawn = true;
       }
     }
+    // device-px box (canvas coords) of a pose drawn this frame, padded for the head, tongue, fuzz and shadows
+    function markDrawn(P) {
+      var x0 = P.hx, x1 = P.hx, y0 = P.hy, y1 = P.hy, k, x, y;
+      for (k = 0; k < nSt; k++) {
+        x = P.x[k]; y = P.y[k];
+        if (x < x0) x0 = x; else if (x > x1) x1 = x;
+        if (y < y0) y0 = y; else if (y > y1) y1 = y;
+      }
+      var pad = 3.4 * rDev * HEAD * Math.max(1, bankScale) + 2, oy = jm ? oyDev : 0;
+      dirty = [Math.max(0, Math.floor(x0 - pad)), Math.max(0, Math.floor(y0 - oy - pad)),
+               Math.min(cw, Math.ceil(x1 + pad)), Math.min(ch, Math.ceil(y1 - oy + pad))];
+    }
+    function lookingNow() { return Math.abs(lookA) > 0.002 || Math.abs(lookDX) > 0.05 || Math.abs(lookDY) > 0.05; }
 
     function renderMoving() {
       if (!samplePose(poseR)) return;
-      var looking = Math.abs(lookA) > 0.002 || Math.abs(lookDX) > 0.05 || Math.abs(lookDY) > 0.05;
       var P = poseR;
-      if (looking) { copyPose(poseF, poseR); applyLook(poseF, poseR); P = poseF; }
+      if (lookingNow()) { copyPose(poseF, poseR); applyLook(poseF, poseR); P = poseF; }
       tangents(P, 0, nSt);
       if (jm) gridOY = oyDev - 0.3 * ch;
       buildPlan(planF, P, 0, true);
       headState.breath = 1;
       clear();
       execPlan(ctx, planF, P, 0, planF.n, 1);
+      markDrawn(P);
     }
     function copyPose(D, S) { D.x.set(S.x); D.y.set(S.y); D.z.set(S.z); D.bk.set(S.bk); D.hx = S.hx; D.hy = S.hy; D.ha = S.ha; }
 
@@ -1643,6 +1730,7 @@
         buildPlan(planF, poseL, 0, true);
         headState.breath = b;
         execPlan(ctx, planF, poseL, 0, planF.n, 1);
+        markDrawn(poseL);
         return;
       }
       ctx.drawImage(cacheA, cacheX, cacheY);
@@ -1650,6 +1738,7 @@
       for (var k = kLive - 1; k >= 0; k--) drawStamp(ctx, poseL, k, b);
       ctx.globalAlpha = 1;
       drawHead(ctx, poseL.hx, poseL.hy, poseL.ha, headState.tongue, b);
+      markDrawn(poseL);
     }
 
     function renderStatic() {
@@ -1683,6 +1772,7 @@
       headState.tongue = mode === 'logo' ? 0.85 : 0; headState.breath = 1;
       clear();
       execPlan(ctx, planF, poseR, 0, planF.n, 1);
+      markDrawn(poseR);
       if (debug) drawDebug();
       if (mode === 'logo' && !written) { written = true; setTimeout(function () { if (!destroyed) emit(canvas, 'snake:written'); }, 0); }
     }
@@ -1790,6 +1880,8 @@
       }
       if (state !== ST_JOURNEY) return;
       follow(dt, uT);
+      // caught up: snap exactly, so a still page means a still frame (and the loop can idle)
+      if (Math.abs(uT - uJ) < 0.3 && Math.abs(vJ) < 3 && Math.abs(vTs) < 3) { uJ = uT; vJ = 0; vTs = 0; }
       if (Math.abs(uT - uJ) < 2 && Math.abs(vJ) < 60) {   // settle: a <2px snap is invisible
         if (uT <= uRest + 0.5) enterRestJ(REST_LOGO);
         else if (uT >= uEnd - 0.5) enterRestJ(REST_END);
@@ -1802,32 +1894,64 @@
 
     /* ---------------- loop ---------------- */
     function shouldRun() { return sized && !reduced && visible && !document.hidden && !userPaused && !destroyed && state !== ST_BOOT && state !== ST_STATIC; }
-    function kick() { if (!raf && shouldRun()) { lastT = 0; raf = requestAnimationFrame(frame); } }
+    function kick() {
+      if (idleT) { clearTimeout(idleT); idleT = 0; }
+      if (idleAt) { var el = Math.max(0, (now() - idleAt) / 1000); clock += el; bobT += el; idleAt = 0; }   // time went on while idle
+      if (!raf && shouldRun()) { lastT = 0; raf = requestAnimationFrame(frame); }
+    }
     function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+    // journey, nothing on screen changes: stop the loop; scroll / pointer / the next tongue flick restart it
+    function goIdle() {
+      idleAt = now();
+      idleT = setTimeout(function () { idleT = 0; kick(); }, Math.max(50, (nextFlick - clock) * 1000));
+    }
     function frame(t) {
       raf = 0;
       if (!shouldRun()) return;
-      var dt = lastT ? Math.min(0.05, Math.max(0, (t - lastT) / 1000)) : 1 / 60;
+      var raw = lastT ? t - lastT : 99, dt = lastT ? Math.min(0.05, Math.max(0, raw / 1000)) : 1 / 60;
       lastT = t;
       var t0 = now();
       if (job && !finishJob(8) && !bank) { lastT = 0; raf = requestAnimationFrame(frame); return; }
       if (!bank) return;
+      // the first writing waits for two smooth frames (start-up work on a slow phone would stretch it)
+      if (state === ST_ROUTE && initialWrite && warmFrames < 2) {
+        warmFrames = raw < 34 ? warmFrames + 1 : 0;
+        if (warmFrames < 2 && now() - warmT0 < 1500) { raf = requestAnimationFrame(frame); return; }
+        warmFrames = 2;
+      }
       if (jm) {
-        viewY = scrollNow(); oyDev = Math.round(viewY * dpr);
+        viewY = scrollCache; oyDev = Math.round(viewY * dpr);
         inZone = viewY < zoneBot + 40 && viewY + Hview > zoneTop - 40;
       }
       update(dt);
       if (jm && !inZone) {   // off-zone: clear once, keep simulating only while something is still settling
-        if (drawn) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); drawn = false; }
+        if (drawn) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch); drawn = false; dirty = [0, 0, 0, 0]; drawnKey = ''; }
         if (animatingJ()) raf = requestAnimationFrame(frame);
         return;
       }
-      if (state === ST_REST) renderRest();
-      else { if (jm && state === ST_JOURNEY) fillTrailJ(uJ); renderMoving(); }
+      if (state === ST_REST) {
+        // calm rest (no pointer near, no tongue): the slow breathing is drawn at half rate; the cache keeps building
+        if (cacheReady && tongueT < 0 && !(ptr.inside && clock - ptr.t < 1.2) && (restTick = 1 - restTick)) {
+          stepCache(); raf = requestAnimationFrame(frame); return;
+        }
+        renderRest(); drawnKey = '';
+      } else {
+        var key = '';
+        if (jm && state === ST_JOURNEY) {
+          key = uJ + ':' + oyDev;
+          if (key === drawnKey && drawn && tongueT < 0 && !lookingNow() && !debug) {   // still frame
+            if (animatingJ()) raf = requestAnimationFrame(frame); else goIdle();
+            return;
+          }
+          fillTrailJ(uJ);
+        }
+        renderMoving();
+        drawnKey = tongueT >= 0 || lookingNow() ? '' : key;
+      }
       if (debug) drawDebug();
       var ms = now() - t0, st = api.stats;
       st.ms = st.frames ? st.ms * 0.95 + ms * 0.05 : ms; st.frames++; st.last = ms; st.state = state;
-      if (jm) { st.u = uJ; st.uRest = uRest; st.uEnd = uEnd; st.restAt = restAt; }
+      if (jm) { st.u = uJ; st.uRest = uRest; st.uEnd = uEnd; st.restAt = restAt; st.uT = uAtScroll(viewY); st.viewY = viewY; }
       if (!(ms < st.max)) st.max = ms;
       raf = requestAnimationFrame(frame);
     }
@@ -1864,7 +1988,7 @@
     function tryChase(el, cx, cy, touch) {
       if (reduced || !sized) return;
       if (el && el.closest && el.closest(ignoreSel)) return;
-      viewY = scrollNow();
+      viewY = scrollCache = scrollNow();
       var y = cy + viewY;
       if (y < zoneTop || y > zoneBot) return;
       chaseIdle = touch ? CHASE_IDLE_TOUCH : CHASE_IDLE;
@@ -1886,6 +2010,7 @@
     function onOutJ(e) { if (!e.relatedTarget && (e.pointerType || 'mouse') === 'mouse') { ptr.inside = false; if (state === ST_CHASE) chaseLeft = true; } }
     function onBlurJ() { ptr.inside = false; tap = null; }
     function onScrollJ() {
+      scrollCache = window.pageYOffset || document.documentElement.scrollTop || 0;
       if (reduced) { if (!staticRaf && state === ST_STATIC) staticRaf = requestAnimationFrame(function () { staticRaf = 0; blitStatic(); }); return; }
       kick();
     }
@@ -1937,13 +2062,42 @@
     };
     api.chase = function (x, y) {
       if (typeof x !== 'number' || typeof y !== 'number') return;
-      if (jm) { viewY = scrollNow(); chaseIdle = CHASE_IDLE; y += viewY; }
+      if (jm) { viewY = scrollCache = scrollNow(); chaseIdle = CHASE_IDLE; y += viewY; }
       startChase(x, y); kick();
     };
     api.pause = function () { userPaused = true; stop(); };
     api.resume = function () { userPaused = false; kick(); };
+    // Reduced motion switched while the page is open (OS setting or an on-page "pause animation" control):
+    // on -> the static final pose (journey: the "ae" in the hero, scrolling with the page); off -> live again,
+    // picking the journey up where the scroll is.
+    api.setReducedMotion = function (v) {
+      v = !!v;
+      if (destroyed || v === reduced) return;
+      reduced = v;
+      if (!sized) return;                         // the first layout reads `reduced`
+      if (v) {
+        stop(); if (idleT) { clearTimeout(idleT); idleT = 0; } idleAt = 0;
+        if (job) finishJob(Infinity);
+        if (jm) { setEnd(false); tap = null; }
+        renderStatic();
+        if (jm && !atLogo) setLogo(true);
+        return;
+      }
+      if (job) finishJob(Infinity);
+      dirty = null; drawnKey = ''; restReady = false; cacheReady = false; lastT = 0;
+      if (jm) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
+        viewY = scrollCache = scrollNow();
+        var u = uAtScroll(viewY);
+        if (u > uRest + 1) setLogo(false);
+        placeAt(u);
+      } else if (mode === 'logo') { enterRest(); }
+      else startWander();
+      kick();
+    };
     api.destroy = function () {
       destroyed = true; stop();
+      if (idleT) clearTimeout(idleT);
       if (pendingLayout) clearTimeout(pendingLayout);
       if (furWaitTimer) clearTimeout(furWaitTimer);
       if (staticRaf) cancelAnimationFrame(staticRaf);

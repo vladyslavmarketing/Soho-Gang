@@ -28,6 +28,8 @@
   var mqReduce = mq('(prefers-reduced-motion: reduce)');
   var mqHover = mq('(hover: hover) and (pointer: fine)');
   function reduced() { return mqReduce.matches || doc.documentElement.classList.contains('reduced-motion'); }
+  /* the on-page «Остановить анимацию» toggle (main.js: html.motion-paused + an 'ae:motion' event) */
+  function paused() { return doc.documentElement.classList.contains('motion-paused'); }
   function onMq(list, fn) {
     if (list.addEventListener) list.addEventListener('change', fn);
     else if (list.addListener) list.addListener(fn);
@@ -85,11 +87,16 @@
       });
     }
 
-    /* keep the on-air preview visible on the mobile strip after layout changes */
-    var resizeT = 0;
+    /* keep the on-air preview visible on the mobile strip after layout changes; only a real width change
+       counts (mobile browsers fire resize when the URL bar shows / hides, which must not undo a swipe) */
+    var resizeT = 0, lastW = win.innerWidth;
     win.addEventListener('resize', function () {
       clearTimeout(resizeT);
-      resizeT = setTimeout(function () { reveal(current(), false); }, 150);
+      resizeT = setTimeout(function () {
+        if (win.innerWidth === lastW) return;
+        lastW = win.innerWidth;
+        reveal(current(), false);
+      }, 150);
     });
 
     /* REC timecode, 25 fps, only while the console is on screen */
@@ -106,10 +113,11 @@
       lastText = text;
       for (var i = 0; i < tcs.length; i++) tcs[i].textContent = text;
     }
+    /* 25 fps display: one tick per timecode frame (40 ms), not a 60 fps loop; frozen while paused */
     function loop() {
       render();
-      if (!inView) { loopId = 0; return; }
-      loopId = reduced() ? setTimeout(function () { raf(loop); }, 500) : raf(loop);
+      if (!inView || paused()) { loopId = 0; return; }
+      loopId = setTimeout(loop, reduced() ? 500 : 40);
     }
     render();
     if (win.IntersectionObserver) {
@@ -118,6 +126,7 @@
         if (inView && !loopId) loop();
       }).observe(mc);
     }
+    doc.addEventListener('ae:motion', function () { if (inView && !loopId) loop(); });
   }
 
   /* ============================================================== B · CHAT */
@@ -162,11 +171,11 @@
       var av = el('span', 'msg__avatar', 'ae');
       av.setAttribute('aria-hidden', 'true');
       var b = el('div', 'msg__bubble');
-      b.appendChild(srOnly('Менеджер: '));
+      b.appendChild(srOnly('ae' + NBSP + 'studio: '));
       nodes.forEach(function (n) { b.appendChild(n); });
       var meta = el('p', 'msg__meta');
       meta.setAttribute('aria-hidden', 'true');
-      meta.appendChild(el('b', null, 'менеджер'));
+      meta.appendChild(el('b', null, 'ae' + NBSP + 'studio'));
       meta.appendChild(doc.createTextNode(' · ' + clock()));
       m.appendChild(av); m.appendChild(b); m.appendChild(meta);
       log.appendChild(m);
@@ -204,11 +213,13 @@
       updateCount();
     }
 
-    /* typing indicator (decorative; the log announces the answer itself) */
+    /* typing indicator (decorative; the log announces the answer itself). The answers are prepared in
+       advance, so the header never claims a live manager is online: a real one answers in Telegram. */
+    var IDLE_STATUS = 'частые вопросы';
     var typingEl = null;
     function setTyping(on) {
       chat.classList.toggle('is-typing', on);
-      if (statusEl) statusEl.textContent = on ? 'печатает…' : 'онлайн';
+      if (statusEl) statusEl.textContent = on ? 'печатает…' : IDLE_STATUS;
       if (on && !typingEl) {
         typingEl = el('div', 'msg msg--in msg--typing is-new');
         typingEl.setAttribute('aria-hidden', 'true');
@@ -261,6 +272,9 @@
       b.appendChild(doc.createTextNode(it.q));
       b.appendChild(el('span', 'sr-only qchip__state', ''));
       b.addEventListener('click', function () { ask(it); });
+      b.addEventListener('focus', function () {   // the chip strip is masked at the edges: keep a focused chip fully visible
+        try { b.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced() ? 'auto' : 'smooth' }); } catch (e) {}
+      });
       it.chip = b;
       chipsBox.appendChild(b);
     });
@@ -269,7 +283,8 @@
     var day = el('p', 'chat__day', 'Сегодня');
     day.setAttribute('aria-hidden', 'true');
     log.appendChild(day);
-    managerMsg([para('Привет! Я менеджер ae' + NBSP + 'studio. Выбирай вопрос внизу — отвечу честно и' + NBSP + 'без' + NBSP + 'давления.')], false);
+    if (statusEl) statusEl.textContent = IDLE_STATUS;
+    managerMsg([para('Привет! Здесь ответы на' + NBSP + 'частые вопросы' + NBSP + '— выбирай внизу. Живой менеджер ответит в' + NBSP + 'Telegram: @ae_studio_cam')], false);
     var first = items[0];
     userMsg(first.q, false);
     first.bubble = managerMsg(answerNodes(first), false);
@@ -337,12 +352,13 @@
       var a = doc.activeElement;
       return !!(a && pass.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !/^(radio|checkbox)$/.test(a.type));
     }
-    function motionOK() { return mqHover.matches && !reduced(); }
+    function motionOK() { return mqHover.matches && !reduced() && !paused(); }
 
     function frame(t) {
       var dt = last ? Math.min(48, t - last) : 16.7;
       last = t;
-      var calm = typing() || !motionOK();
+      /* filling the form = a flat, still card: any focused control (text, radio, chip, checkbox, button) calms it */
+      var calm = typing() || !motionOK() || !!(form && form.contains(doc.activeElement));
       var gx = (hovering && !calm) ? tx : 0;
       var gy = (hovering && !calm) ? ty : 0;
       var k = 1 - Math.pow(1 - .12, dt / 16.7);
@@ -378,6 +394,15 @@
     });
     rig.addEventListener('pointermove', function (e) {
       if (e.pointerType !== 'mouse') return;
+      /* over the form itself the card stays flat (no tilt, no swing): text and inputs must not drift
+         under the cursor. Tilt and sheen live on the pass header and the stub. */
+      var inForm = !!(form && e.target && form.contains(e.target));
+      var t = e.timeStamp || now();
+      if (inForm) {
+        tx = ty = 0; lastPX = null;
+        hovering = true; kick();
+        return;
+      }
       var r = pass.getBoundingClientRect();
       var px = clamp((e.clientX - r.left) / (r.width || 1), 0, 1);
       var py = clamp((e.clientY - r.top) / (r.height || 1), 0, 1);
@@ -385,7 +410,6 @@
       tx = (px - .5) * 2 * MAX_Y;
       ty = -(py - .5) * 2 * MAX_X;
       /* a quick sideways brush nudges the pendulum */
-      var t = e.timeStamp || now();
       if (lastPX !== null && motionOK() && !typing()) {
         var vx = (e.clientX - lastPX) / Math.max(8, t - lastPT);      // px/ms
         sv += clamp(vx, -3, 3) * .7;
@@ -405,7 +429,9 @@
       }, { threshold: .35 });
       io.observe(rig);
     }
-    onMq(mqReduce, function () { if (reduced()) { sw = sv = rx = ry = 0; pass.style.transform = ''; } });
+    function settleNow() { if (!motionOK()) { sw = sv = rx = ry = 0; pass.style.transform = ''; } }
+    onMq(mqReduce, settleNow);
+    doc.addEventListener('ae:motion', settleNow);
   }
 
   /* ============================================================== BOOT */

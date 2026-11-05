@@ -510,15 +510,24 @@ legend.mc__label + * { clear: both; }
   background: linear-gradient(90deg, #FFB067 0%, #FFCF9A 18%, #FFE7CB 38%, #FFF5EA 58%, #F7F4F4 78%, #EEF0F6 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
 }
-.kelvin i {
+.kelvin i {   /* a read-only marker (not a slider thumb) */
   position: absolute;
   top: 50%;
   left: calc(var(--k, .5) * 100%);
-  width: 16px; height: 16px;
-  margin: -8px 0 0 -8px;
-  border-radius: 50%;
-  background: var(--plush-ball);
-  box-shadow: 0 0 0 2.5px var(--ink), 0 0 0 4px var(--cream), 0 3px 8px rgba(0, 0, 0, .5);
+  width: 3px; height: 16px;
+  margin: -8px 0 0 -1.5px;
+  border-radius: 2px;
+  background: var(--cream);
+  box-shadow: 0 0 0 1.5px var(--ink);
+}
+.kelvin i::after {   /* small caret above the scale */
+  content: "";
+  position: absolute;
+  left: 50%; top: -7px;
+  margin-left: -4px;
+  border: 4px solid transparent;
+  border-top: 5px solid var(--cream);
+  border-bottom: 0;
 }
 
 /* ---------- small screens: switch in the bezel, 2-line preview labels ---------- */
@@ -1429,7 +1438,7 @@ legend.mc__label + * { clear: both; }
   letter-spacing: .08em;
   color: var(--ink-2);
 }
-.msg__meta b { font-weight: 600; color: #9C4560; text-transform: uppercase; letter-spacing: .12em; }   /* 5.1:1 on cream */
+.msg__meta b { font-weight: 600; color: #87394F; text-transform: uppercase; letter-spacing: .12em; }   /* ≥ 5.4:1 on the pink log */
 
 /* the user's own messages: plush pink bubbles on the right */
 .msg--out {
@@ -1456,6 +1465,11 @@ legend.mc__label + * { clear: both; }
   background:
     linear-gradient(-45deg, rgba(0, 0, 0, 0) 45%, #9C4560 45% 60%, rgba(0, 0, 0, 0) 60%) 0 0 / 9px 9px no-repeat,
     linear-gradient(-45deg, rgba(0, 0, 0, 0) 45%, #9C4560 45% 60%, rgba(0, 0, 0, 0) 60%) 6px 0 / 9px 9px no-repeat;
+}
+@media (max-width: 479px) {   /* phones: wider bubbles, smaller avatar → fewer 2-word lines */
+  .msg { max-width: 96%; grid-template-columns: 26px minmax(0, 1fr); column-gap: 8px; }
+  .msg--out { max-width: 85%; grid-template-columns: minmax(0, 1fr); }
+  .msg__avatar { width: 26px; height: 26px; font-size: 11px; margin-bottom: 18px; }
 }
 .msg.is-new { animation: msg-in .5s var(--ease-soft) both; }
 .msg--out.is-new { transform-origin: 100% 100%; }
@@ -1503,6 +1517,7 @@ legend.mc__label + * { clear: both; }
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  scroll-padding-inline: 16px 32px;   /* clear of the 28px fade mask */
   margin: -4px -16px 0;
   padding: 7px 16px 7px;
   scrollbar-width: none;
@@ -1510,6 +1525,11 @@ legend.mc__label + * { clear: both; }
   mask: linear-gradient(90deg, rgba(0, 0, 0, 0), #000 16px, #000 calc(100% - 28px), rgba(0, 0, 0, 0));
 }
 .chat__chips::-webkit-scrollbar { display: none; }
+.chat__chips:focus-within { scroll-snap-type: none; }   /* snapping must not pull a focused chip back under the mask */
+@media (max-width: 639px) {   /* a chip is never wider than the strip: the longest questions wrap to two lines */
+  .chat__chips { align-items: center; }
+  .qchip { max-width: calc(100vw - 72px); white-space: normal; text-align: left; }
+}
 .qchip {
   position: relative;
   flex: none;
@@ -1656,6 +1676,7 @@ legend.mc__label + * { clear: both; }
 /* header — plush pink fur with the BACKSTAGE title */
 .pass__top {
   position: relative;
+  container-type: inline-size;   /* .pass__title sizes itself to the room left of the seal */
   padding: 46px 22px 18px;
   border-radius: 26px 26px 0 0;
   color: var(--ink);
@@ -1689,6 +1710,7 @@ legend.mc__label + * { clear: both; }
 .pass__title {
   margin-top: 14px;
   font-size: clamp(44px, 13.4vw, 70px);
+  font-size: clamp(30px, calc((100cqi - 66px) / 5.6), 76px);   /* BACKSTAGE ends ~6px before the seal */
   font-weight: 900;
   line-height: .82;
   letter-spacing: -.055em;
@@ -1779,9 +1801,21 @@ legend.mc__label + * { clear: both; }
 .pass .field input[type="number"],
 .pass .field input[type="tel"],
 .pass .field input[type="email"],
-.pass .field textarea { background: #FBF5EC; border-color: rgba(30, 22, 24, .26); }
+.pass .field textarea { background: #FBF5EC; border-color: rgba(30, 22, 24, .5); }   /* ≥ 3:1 edge on the card */
 .pass .field input:focus,
 .pass .field textarea:focus { background: #FFF8F9; }
+/* same specificity as the rule above, later → focus and error states win over the resting border */
+.pass .field input:focus,
+.pass .field textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink), 0 0 0 5px rgba(215, 137, 154, .55); }
+.pass .field.has-error input,
+.pass .field.has-error textarea,
+.pass .field [aria-invalid="true"] { border-color: var(--rec-ink); box-shadow: 0 0 0 1px var(--rec-ink); }
+.pass .field.has-error input:focus,
+.pass .field [aria-invalid="true"]:focus { box-shadow: 0 0 0 1px var(--rec-ink), 0 0 0 5px rgba(229, 48, 74, .25); }
+/* 14 shift chips: an even 4-up row (2 × 2 on phones) instead of 3 + an orphan */
+.pass .chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pass .chip span { display: flex; justify-content: center; padding: 0 10px; }
+@media (max-width: 479px) { .pass .chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .pass .form__nav { margin-top: 22px; }
 .pass .form__success { padding: 18px 4px 12px; }
 
@@ -1885,9 +1919,14 @@ legend.mc__label + * { clear: both; }
   .pass__stamp { right: 14px; top: 172px; padding: 8px 14px 7px; border-width: 3px; outline-offset: -8px; }
   .pass__stamp b { font-size: 27px; }
   .pass__stamp small { font-size: 9px; }
-  .pass__title { font-size: 12.4vw; }
+  .pass__title { font-size: 12.4vw; font-size: clamp(30px, calc((100cqi - 50px) / 5.6), 60px); }
+  .pass__seal { width: 48px; height: 48px; right: 12px; }
+  .pass__seal b { font-size: 20px; }
 }
 .pass.is-accepted .pass__stamp { animation: stamp-in .6s cubic-bezier(.2, .9, .3, 1.25) .25s both; }
+/* the stamp lands in the empty space right of the success ring, not on the ID row */
+.pass.is-accepted .pass__stamp { top: 282px; right: 14px; }
+@media (max-width: 599px) { .pass.is-accepted .pass__stamp { top: 250px; right: 8px; transform: scale(.82); transform-origin: 100% 0; } }
 .pass.is-accepted .pass__card { animation: pass-thud .5s var(--ease-out) .5s; }
 @keyframes stamp-in {
   0% { opacity: 0; scale: 2.3; rotate: -26deg; }
@@ -1956,7 +1995,7 @@ legend.mc__label + * { clear: both; }
   .pass__id { padding: 20px 28px 0; }
   .pass .form { padding: 24px 28px 8px; }
   .pass__stub { padding: 16px 28px 18px; }
-  .pass__title { font-size: clamp(56px, 5.4vw, 76px); }
+  .pass__title { font-size: clamp(56px, 5.4vw, 76px); font-size: clamp(44px, calc((100cqi - 66px) / 5.6), 76px); }
 }
 
 /* ==========================================================================
@@ -1973,3 +2012,12 @@ html.reduced-motion .mc.is-flicker .mc__feed,
 html.reduced-motion .set--midnight .set__prop--a::before,
 html.reduced-motion .faq__mascot-bubble { animation: none; }
 html.reduced-motion .pass { transform: none !important; }
+
+/* Forced colours (Windows High Contrast): the multicam light switch keeps a visible state */
+@media (forced-colors: active) {
+  .mc__light-ui { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .mc__light-ui::after { top: 2px; left: 2px; background: CanvasText; box-shadow: none; }
+  .mc__light input:checked ~ .mc__light-ui { background: Highlight; border-color: Highlight; }
+  .mc__light input:checked ~ .mc__light-ui::after { background: HighlightText; box-shadow: none; }
+  .cam__input:checked ~ .cam__screen { outline: 3px solid Highlight; outline-offset: 2px; }
+}
