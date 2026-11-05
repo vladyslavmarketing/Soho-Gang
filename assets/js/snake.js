@@ -41,6 +41,9 @@
  *          builders. Each stamp only shows its tail-side slice (atlas stamps ~0.3R apart, so a slice of
  *          real fur shows; procedural ones dense, reading as fur combed toward the tail); band edges curve
  *          like stripes wrapped round a cylinder.
+ *   Head   An egg centred on the path's head point (atlas v2: photo-measured, bead eyes and the neck fade baked
+ *          into the cells; procedural fallback: the same egg with engine-drawn beads). The engine adds the neck
+ *          band (cream | black, then the regular bands), the forked tongue and the soft shadow.
  *   Depth  Trail points carry a layer tag; the body is drawn in layer-sorted runs and every part that
  *          lies over another part casts a soft occlusion shadow onto it.
  *   Cost   While resting, the body is cached (re-rendered progressively so it can breathe) and only
@@ -507,12 +510,14 @@
     W += W & 1;
     var n = W * H, NX = new Float32Array(n), NY = new Float32Array(n), NZ = new Float32Array(n);
     var AL = new Float32Array(n), MU = new Float32Array(n), SH = new Float32Array(n), px, py;
+    var RHO = new Float32Array(W), DR = new Float32Array(W);   // the profile only depends on x: once per column
+    for (px = 0; px < W; px++) { var xc = (px + 0.5 - ox) / rh; RHO[px] = headRho(xc); DR[px] = (headRho(xc + 0.01) - headRho(xc - 0.01)) / 0.02; }
     for (py = 0; py < H; py++) {
       var y = (py + 0.5 - oy) / rh, ay = Math.abs(y);
       for (px = 0; px < W; px++) {
-        var x = (px + 0.5 - ox) / rh, rho = headRho(x), edge = (rho - ay) * rh, i = py * W + px;
+        var x = (px + 0.5 - ox) / rh, rho = RHO[px], edge = (rho - ay) * rh, i = py * W + px;
         if (edge <= -0.5) continue;
-        var dr = (headRho(x + 0.01) - headRho(x - 0.01)) / 0.02, z = Math.sqrt(Math.max(0, rho * rho - y * y));
+        var dr = DR[px], z = Math.sqrt(Math.max(0, rho * rho - y * y));
         var nx = -rho * dr, ny = y, nz = z, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
         NX[i] = nx / nl; NY[i] = ny / nl; NZ[i] = nz / nl; AL[i] = clamp(edge + 0.5, 0, 1);
         MU[i] = smooth(0.55 * EG_F, 1.02 * EG_F, x) * 0.3;          // lighter muzzle
@@ -1838,23 +1843,26 @@
       c.globalAlpha = 1;
     }
 
-    // tongue (head-local, x body radius; photo): pale pink #ECC4CB with a deeper edge, from under the snout tip, a
-    // 1.85R stem ~17deg below the head axis, then two 0.7R prongs spread ~60deg; ~0.14R wide. Flicks scale it out.
+    // tongue (head-local, x body radius; photo): from under the snout tip, a 1.85R stem ~17deg below the head axis,
+    // then two 0.7R prongs spread ~60deg (the fork turned a little toward the up side); stem ~0.2R wide, prongs ~0.14R;
+    // a lit cylinder: pale #F0C9D1 top, deeper rose rim on the shadow (screen-down) side. Flicks scale it out.
     function drawTongue(c, ext, up) {
       var R = bank.R, down = -up, len = 1.85 * R * ext, pl = 0.7 * R * ext;
       var bx = bank.tongueX * R, by = down * 0.08 * R, ang = down * 0.297 + Math.sin(clock * 31) * 0.05 * ext;
       var ca = Math.cos(ang), sa = Math.sin(ang), fx = bx + ca * len, fy = by + sa * len;
       var wv = Math.sin(clock * 47) * 0.07 * R * ext, mx = bx + ca * len * 0.5 - sa * wv, my = by + sa * len * 0.5 + ca * wv;
-      var spread = 0.5 + Math.sin(clock * 53) * 0.07, a1 = ang - spread, a2 = ang + spread;
-      var lo = Math.max(1.6 * dpr, 0.14 * R), li = Math.max(dpr, lo - Math.max(1.1 * dpr, 0.04 * R));
+      var spread = 0.5 + Math.sin(clock * 53) * 0.07, fk = ang + up * 0.15, a1 = fk - spread, a2 = fk + spread;
+      var lo = Math.max(1.6 * dpr, 0.2 * R), li = Math.max(dpr, lo * 0.58), off = up * (lo - li) * 0.32;
       for (var pass = 0; pass < 2; pass++) {
         var lw = pass ? li : lo;
-        c.strokeStyle = pass ? '#ECC4CB' : '#D892A3';
+        if (pass) c.translate(0, off);   // highlight toward the light: the rim stays on the shadow side
+        c.strokeStyle = pass ? '#F0C9D1' : '#C98597';
         c.lineWidth = lw;
         c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(mx, my, fx, fy); c.stroke();
-        c.lineWidth = lw * 0.82;
+        c.lineWidth = lw * 0.7;
         c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx + Math.cos(a1) * pl, fy + Math.sin(a1) * pl);
         c.moveTo(fx, fy); c.lineTo(fx + Math.cos(a2) * pl, fy + Math.sin(a2) * pl); c.stroke();
+        if (pass) c.translate(0, -off);
       }
     }
     function drawHead(c, x, y, ang, tongue, breath) {
