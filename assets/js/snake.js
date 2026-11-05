@@ -53,12 +53,17 @@
   /* ------------------------------------------------------------------ constants */
   var PI = Math.PI, TAU = PI * 2;
   var ASPECT = 1.85;          // logo box w:h
-  var THICK = 0.17;           // body thickness / logo box height
+  var THICK = 0.18;           // body (skin) thickness / logo box height; with the fur ~0.23 of the visible "ae" height, as on the photo
   var NB = 32;                // body sprite angle buckets over [0, PI)
   var HB = 32;                // head sprite lighting buckets over [0, 2PI)
   var ALONG = 0.62;           // stamp ellipse: semi-axis along the body / radius
   var FUZZ = 0.24;            // fur reach beyond the radius (sprite padding, x radius)
-  var HEAD = 1.36;            // head radius / body radius
+  var HEAD = 1.2;             // head skin half-width / body radius (atlas head_scale); rh = HEAD * r
+  var HEAD_REACH = 4.8;       // head + tongue reach from the head point (x body radius): clear / cull / cache pads
+  // Neck band (photo: pink head -> cream -> black -> pink, no black on the head side), in body widths of arc
+  // length behind the head point (= egg centre): cream from .575 (its front hides under the head's back fur),
+  // black from 1.195, pink from 1.345; the regular black | cream | black bands resume at 2.0.
+  var NECK_BAND = [0.575, 1.195, 1.345], NECK_NEXT = 2.0;
   var TIP = 0.36;             // tail-tip radius / body radius
   var SMALL = 0.6;            // radius of the low-res sprite set used by the thin tail
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
@@ -95,12 +100,13 @@
   ];
 
   /* "ae" logo path, normalised to the box height (box = 1.85 x 1), head -> tail.
-     Head rests top-left looking left; the neck arcs over the 'a' and dives behind the front
+     Head rests top-left looking left; the neck arcs over the 'a' (its top a little below the top of the 'e', as on
+     the photo; it also keeps the full-thickness neck clear of the hero hint above the box) and dives behind the front
      diagonal, loops counter-clockwise through the bowl, rises as the diagonal (a's stem / e's
      back), rolls over the top of the 'e', comes back as the crossbar, tucks under the diagonal,
      wraps round the bottom of the 'e' and trails off to the right. */
   var LOGO = [
-    [0.170, 0.215], [0.300, 0.125], [0.460, 0.085], [0.592, 0.130], [0.652, 0.250], [0.645, 0.382],
+    [0.170, 0.215], [0.300, 0.125], [0.460, 0.110], [0.592, 0.130], [0.652, 0.250], [0.645, 0.382],
     [0.552, 0.462], [0.360, 0.475], [0.200, 0.530], [0.110, 0.670], [0.170, 0.850], [0.340, 0.915],
     [0.510, 0.885], [0.635, 0.770], [0.695, 0.580], [0.737, 0.385], [0.805, 0.205], [0.950, 0.095],
     [1.120, 0.110], [1.225, 0.250], [1.215, 0.430], [1.090, 0.515], [0.920, 0.520], [0.790, 0.575],
@@ -473,20 +479,31 @@
     return c;
   }
 
-  // Head silhouette: back sphere + snout sphere joined by a tangent cone (body of revolution).
-  var HC1 = -0.16, HR1 = 1, HC2 = 0.94, HR2 = 0.62;
-  var HSA = (HR1 - HR2) / (HC2 - HC1), HCA = Math.sqrt(1 - HSA * HSA);
-  var HX1 = HC1 + HR1 * HSA, HX2 = HC2 + HR2 * HSA;
+  // Procedural head (fallback until / unless the atlas loads): the egg of head atlas v2 as a body of revolution,
+  // centred on the head point. Units of rh (= HEAD x body radius): superellipse snout (blunt, exponent EG_P) to
+  // EG_F ahead, elliptic back of EG_B smooth-maxed into the neck (EG_N), half-height EG_H. A little fuller than
+  // the atlas skin (the procedural fur is shorter), so both silhouettes match the body they sit on.
+  var EG_F = 1.98 / HEAD, EG_B = 1.75 / HEAD, EG_H = 1.25 / HEAD, EG_N = 1.0 / HEAD, EG_P = 2.5;
   function headRho(x) {
-    if (x <= HX1) { var d = x - HC1; return d < -HR1 ? 0 : Math.sqrt(HR1 * HR1 - d * d); }
-    if (x >= HX2) { var e = x - HC2; return e > HR2 ? 0 : Math.sqrt(HR2 * HR2 - e * e); }
-    return HR1 * HCA + (x - HX1) / (HX2 - HX1) * (HR2 * HCA - HR1 * HCA);
+    if (x >= 0) { var u = x / EG_F; return u >= 1 ? 0 : EG_H * Math.pow(1 - Math.pow(u, EG_P), 1 / EG_P); }
+    var v = x / EG_B, e = v <= -1 ? 0 : EG_H * Math.sqrt(1 - v * v), k = 0.14, h = Math.max(0, k - Math.abs(e - EG_N)) / k;
+    return Math.max(e, EG_N) + h * h * k * 0.25;   // smooth max(back, neck)
   }
   function headInside(x, y) { return Math.abs(y) < headRho(x); }
+  // Fade of the head's back into the neck along local x (x body radius): opaque at -1.0, gone at -1.8 (as baked
+  // into the atlas cells), so the neck band shows through the back fur.
+  var HEAD_FADE = [-1.0, -1.8];
+  // Atlas head: the baked fade is a straight cut across the head; where the neck bends away right behind it (the
+  // rest pose, look-at turns) its translucent back corners would stick out past the neck. The back half is rounded
+  // off by this ellipse (semi-axes x body radius, soft edge as a fraction), merging into the neck width ~1.2R back.
+  var HEAD_BACK = [1.85, 1.8, 0.08];
+  // Procedural bead eyes (atlas v2 positions, x body radius): forward, across, radius.
+  var EYE_X = 0.327, EYE_Y = 0.938, EYE_R = 0.25;
+  var TONGUE_BASE = 1.9;      // tongue root ahead of the head point (x body radius), under the snout tip
 
   // Lighting-independent head data (once per bank): normal field, alpha, fur layer, fuzz strands.
   function headBase(rh, furDev) {
-    var ox = Math.ceil(1.5 * rh) + 2, W = ox + Math.ceil(1.86 * rh) + 2, oy = Math.ceil(1.32 * rh) + 2, H = oy * 2;
+    var ox = Math.ceil((EG_B + 0.12) * rh) + 2, W = ox + Math.ceil((EG_F + 0.16) * rh) + 2, oy = Math.ceil((EG_H + 0.18) * rh) + 2, H = oy * 2;
     W += W & 1;
     var n = W * H, NX = new Float32Array(n), NY = new Float32Array(n), NZ = new Float32Array(n);
     var AL = new Float32Array(n), MU = new Float32Array(n), SH = new Float32Array(n), px, py;
@@ -498,7 +515,7 @@
         var dr = (headRho(x + 0.01) - headRho(x - 0.01)) / 0.02, z = Math.sqrt(Math.max(0, rho * rho - y * y));
         var nx = -rho * dr, ny = y, nz = z, nl = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
         NX[i] = nx / nl; NY[i] = ny / nl; NZ[i] = nz / nl; AL[i] = clamp(edge + 0.5, 0, 1);
-        MU[i] = smooth(0.62, 1.5, x) * 0.32;                         // lighter muzzle
+        MU[i] = smooth(0.55 * EG_F, 1.02 * EG_F, x) * 0.3;          // lighter muzzle
         SH[i] = 0.08 * smooth(0.72, 1, ay / Math.max(rho, 1e-3));   // fuzzy sheen at the outline
       }
     }
@@ -507,27 +524,27 @@
     g.translate(ox, oy); g.lineCap = 'round';
     if (furDev) {
       g.globalAlpha = 0.8;
-      g.drawImage(furDev, 40, 60, Math.min(furDev.width - 40, rh * 4), Math.min(furDev.height - 60, rh * 3), -1.5 * rh, -1.32 * rh, 3.4 * rh, 2.64 * rh);
+      g.drawImage(furDev, 40, 60, Math.min(furDev.width - 40, rh * 4), Math.min(furDev.height - 60, rh * 3), -ox, -oy, W, H);
       g.globalAlpha = 1;
     }
     m = Math.round(150 + rh * 7);
     for (k = 0; k < m; k++) {
-      var sx = -1.15 + rnd() * 2.6, r0 = headRho(sx); if (r0 < 0.06) continue;
+      var sx = -EG_B + rnd() * (EG_B + EG_F * 0.97), r0 = headRho(sx); if (r0 < 0.06) continue;
       var sy = (rnd() * 2 - 1) * r0 * 0.97, f = sy / r0, ang = PI - f * 1.05 + (rnd() - 0.5) * 0.6;
-      var len = (0.08 + rnd() * 0.16) * rh * (sx > 0.85 ? 0.55 : 1), light = rnd() < 0.55;
+      var len = (0.08 + rnd() * 0.16) * rh * (sx > 0.62 * EG_F ? 0.55 : 1), light = rnd() < 0.55;
       var a = light ? st.la[0] + rnd() * (st.la[1] - st.la[0]) : st.da[0] + rnd() * (st.da[1] - st.da[0]);
       var ca = Math.cos(ang), sa = Math.sin(ang), x0 = sx * rh, y0 = sy * rh;
       g.lineWidth = Math.max(0.6, rh * (0.012 + rnd() * 0.014));
       g.strokeStyle = rgba(light ? st.lo : st.dk, a);
       g.beginPath(); g.moveTo(x0 - ca * len * 0.3, y0 - sa * len * 0.3); g.lineTo(x0 + ca * len, y0 + sa * len); g.stroke();
     }
-    // fuzzy outline: rays from the head centre to the silhouette; strands poke outward
+    // fuzzy outline: rays from inside the egg to the silhouette; strands poke outward
     m = Math.round(90 + rh * 3);
     var fz = new Float32Array(m * 9);
     for (k = 0; k < m; k++) {
-      var phi = rnd() * TAU, dxr = Math.cos(phi), dyr = Math.sin(phi), lo = 0, hi = 2.2;
-      for (var it = 0; it < 18; it++) { var mid = (lo + hi) / 2; if (headInside(0.25 + dxr * mid, dyr * mid)) lo = mid; else hi = mid; }
-      var bx = 0.25 + dxr * lo, by = dyr * lo, sg = by < 0 ? -1 : 1;
+      var phi = rnd() * TAU, dxr = Math.cos(phi), dyr = Math.sin(phi), lo = 0, hi = EG_F + 0.2;
+      for (var it = 0; it < 18; it++) { var mid = (lo + hi) / 2; if (headInside(0.2 + dxr * mid, dyr * mid)) lo = mid; else hi = mid; }
+      var bx = 0.2 + dxr * lo, by = dyr * lo, sg = by < 0 ? -1 : 1;
       var g1 = -(headRho(bx + 0.01) - headRho(bx - 0.01)) / 0.02, gl = Math.sqrt(g1 * g1 + 1) || 1, ex = g1 / gl, ey = sg / gl;
       var j = (rnd() - 0.5) * 0.8 - 0.25 * sg * (bx > 0 ? 1 : 0), cj = Math.cos(j), sj = Math.sin(j);
       var o = k * 9;
@@ -536,12 +553,11 @@
       fz[o + 4] = rh * (0.05 + rnd() * 0.09); fz[o + 5] = 0.45 + rnd() * 0.3; fz[o + 6] = 0.15 + rnd() * 0.2;
       fz[o + 7] = ex; fz[o + 8] = ey;
     }
-    // back of the head melts into the neck (keeps the bulging outline above / below it)
-    var fade = canvasEl(W, H), fg = fade.getContext('2d');
-    fg.setTransform(1, 0, 0, 0.62, ox, oy);
-    var fo = fg.createRadialGradient(-1.55 * rh, 0, 0, -1.55 * rh, 0, 1.25 * rh);
-    fo.addColorStop(0, 'rgba(0,0,0,1)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.85)'); fo.addColorStop(1, 'rgba(0,0,0,0)');
-    fg.fillStyle = fo; fg.fillRect(-3 * rh, -3 * rh, 3 * rh, 6 * rh);
+    // back of the head melts into the neck along x (same ramp as the atlas cells)
+    var fade = canvasEl(W, H), fg = fade.getContext('2d'), rb = rh / HEAD;
+    var fo = fg.createLinearGradient(ox + HEAD_FADE[0] * rb, 0, ox + HEAD_FADE[1] * rb, 0);
+    fo.addColorStop(0, 'rgba(0,0,0,0)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.6)'); fo.addColorStop(1, 'rgba(0,0,0,1)');
+    fg.fillStyle = fo; fg.fillRect(0, 0, Math.ceil(ox + HEAD_FADE[0] * rb) + 1, H);
     return { W: W, H: H, ox: ox, oy: oy, rh: rh, NX: NX, NY: NY, NZ: NZ, AL: AL, MU: MU, SH: SH, det: det, fz: fz, nf: m, fade: fade };
   }
 
@@ -598,19 +614,30 @@
     atlasGrade(c, kind);
     return c;
   }
-  // Head for lighting bucket b (heading b / HB * TAU), pointing +x, no eyes; {c, ox, oy} like headSprite.
+  // Head for lighting bucket b (heading b / HB * TAU), pointing +x, origin = the head point; {c, ox, oy} like
+  // headSprite. Drawn at the size the atlas was made for (head_scale x body radius), whatever HEAD says.
   function atlasHead(A, b, rh) {
-    var M = A.m.head, n = M.buckets, q = Math.round(b / HB * n) % n, w = M.cell[0], h = M.cell[1], s = rh / M.rh_ref;
+    var M = A.m.head, n = M.buckets, q = Math.round(b / HB * n) % n, w = M.cell[0], h = M.cell[1];
+    var s = (M.head_scale > 0 ? rh / HEAD * M.head_scale : rh) / M.rh_ref;
     var c = canvasEl(w * s + 2, h * s + 2), g = hqContext(c), ox = (M.origin ? M.origin[0] : w * 0.46) * s + 1, oy = (M.origin ? M.origin[1] : h / 2) * s + 1;
     g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
-    if (!M.fade_baked) { // back of the head melts into the neck (same gradient as headBase)
-      g.globalCompositeOperation = 'destination-out'; g.setTransform(1, 0, 0, 0.62, ox, oy);
-      var fo = g.createRadialGradient(-1.55 * rh, 0, 0, -1.55 * rh, 0, 1.25 * rh);
-      fo.addColorStop(0, 'rgba(0,0,0,1)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.85)'); fo.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = fo; g.fillRect(-3 * rh, -3 * rh, 3 * rh, 6 * rh);
+    if (!M.fade_baked) { // back of the head melts into the neck (same ramp as headBase)
+      var rb = rh / HEAD, x0 = ox + HEAD_FADE[0] * rb, fo = g.createLinearGradient(x0, 0, ox + HEAD_FADE[1] * rb, 0);
+      fo.addColorStop(0, 'rgba(0,0,0,0)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.6)'); fo.addColorStop(1, 'rgba(0,0,0,1)');
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = fo; g.fillRect(0, 0, Math.ceil(x0) + 1, c.height);
+      g.globalCompositeOperation = 'source-over';
     }
+    roundBack(g, ox, oy, rh / HEAD);
     atlasGrade(c, 0);
     return { c: c, ox: ox, oy: oy };
+  }
+  function roundBack(g, ox, oy, rb) { // soft elliptic cut of the head's back half (HEAD_BACK), origin (ox, oy), rb px / R
+    var e = HEAD_BACK, o = 1 + e[2], fo;
+    g.save(); g.setTransform(e[0] * rb, 0, 0, e[1] * rb, ox, oy);
+    fo = g.createRadialGradient(0, 0, 0, 0, 0, o);
+    fo.addColorStop((1 - e[2]) / o, 'rgba(0,0,0,0)'); fo.addColorStop(1 / o, 'rgba(0,0,0,0.5)'); fo.addColorStop(1, 'rgba(0,0,0,1)');
+    g.globalCompositeOperation = 'destination-out'; g.fillStyle = fo; g.fillRect(-4, -4, 4, 8);
+    g.restore();
   }
   function atlasCap(A, rc) { // tail-tip fur ball, centred
     var M = A.m.cap, s = rc / M.rc_ref, w = M.cell[0], h = M.cell[1], ox = M.origin ? M.origin[0] : w / 2, oy = M.origin ? M.origin[1] : h / 2;
@@ -625,7 +652,8 @@
   // src: the atlas data (Blender sprites) or the fur-photo layer / null (procedural sprites).
   function bankJob(R, src) {
     var A = src && src.atlas ? src : null, furDev = A ? null : src;
-    var bank = { R: R, RH: R * HEAD, src: src, atlas: A, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null };
+    var bank = { R: R, RH: R * HEAD, src: src, atlas: A, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null,
+                 eyesBaked: !!(A && A.m.head.eyes), tongueX: (A && A.m.head.tongue_base_R && +A.m.head.tongue_base_R[0]) || TONGUE_BASE };
     var tasks = [], t0 = 0, spent = 0;
     // tasks are kept small (one sprite each) so a slow phone never gets a long main-thread task from the bank
     function set(kind, v, small) { // one colour variant: mask, detail, then the 32 angle sprites one by one
@@ -662,9 +690,9 @@
       }
     });
     tasks.push(function () {
-      bank.headShadow = blobSprite(R * HEAD * 1.55, [140, 60, 80]);
+      bank.headShadow = blobSprite(R * 1.9, [140, 60, 80]);   // the egg head + fur (atlas v2 silhouette)
       bank.cap = A ? atlasCap(A, R * TIP) : capSprite(R * TIP, furDev);
-      bank.eye = eyeSprite(Math.max(1.6, R * HEAD * 0.13));
+      if (!bank.eyesBaked) bank.eye = eyeSprite(Math.max(1.6, R * EYE_R));
     });
     if (!A) tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
     for (var h = 0; h < HB; h++) (function (b) {
@@ -1112,10 +1140,8 @@
     function setLogo(v) { if (atLogo === v) return; atLogo = v; if (v) written = true; emit(canvas, v ? 'snake:written' : 'snake:unwritten'); }
     function setEnd(v) { if (atEnd === v) return; atEnd = v; emit(canvas, v ? 'snake:arrived' : 'snake:departed'); }
 
-    function profile(s) { // radius factor along the body (s from head centre)
-      var w = 2 * r, f = 1, nk = (s - rh * 1.1) / w;
-      if (nk > -0.6 && nk < 2.6) f -= 0.1 * Math.sin(clamp((nk + 0.6) / 3.2, 0, 1) * PI);   // gentle neck
-      var t0 = Lbody * (mode === 'logo' ? 0.76 : 0.7);
+    function profile(s) { // radius factor along the body (s from head centre); no neck dip (the photo's neck is full)
+      var f = 1, t0 = Lbody * (mode === 'logo' ? 0.76 : 0.7);
       if (s > t0) f *= 1 - (1 - TIP) * Math.pow((s - t0) / (Lbody - t0), 1.35);              // long taper
       return f;
     }
@@ -1130,11 +1156,15 @@
       for (i = 1; i < NI; i++) uTab[i] = uTab[i - 1] + 1 / (w * profile(i - 0.5));
       function uAt(s) { s = clamp(s, 0, NI - 1.001); var a = s | 0; return uTab[a] + (uTab[a + 1] - uTab[a]) * (s - a); }
       function sAtU(u) { var lo = 0, hi = NI - 1; while (hi - lo > 1) { var m = (lo + hi) >> 1; if (uTab[m] < u) lo = m; else hi = m; } return lo + (u - uTab[lo]) / Math.max(1e-9, uTab[hi] - uTab[lo]); }
-      // band layout: first band ~0.7w behind the head, whole periods, pink tail tip
-      var uStart = uAt(1.22 * rh + 0.7 * w), uEnd = uAt(L), tipU = 1.5;
-      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1;
+      // band layout: the neck band (cream | black, NECK_BAND), then whole black | cream | black periods from
+      // NECK_NEXT body widths behind the head, stretched to end before a pink tail tip. Independent of the sprite
+      // source, so a late atlas swap never moves a band.
+      var uN0 = uAt(NECK_BAND[0] * w), uN1 = uAt(NECK_BAND[1] * w), uN2 = uAt(NECK_BAND[2] * w);
+      var uStart = uAt(NECK_NEXT * w), uEnd = uAt(L), tipU = 1.5;
+      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1, neck = uN2 < uEnd - tipU;
       if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + bw);
       function colorAtU(u) {
+        if (u < uN2) return neck && u >= uN0 ? (u < uN1 ? 1 : 2) : 0;
         if (!nb) return 0;
         var rel = (u - uStart) / kS; if (rel < 0) return 0;
         var p = Math.floor(rel / PERIOD); if (p >= nb) return 0;
@@ -1145,9 +1175,10 @@
       // atlas: irregular spacing (0.7..1.3 step), so equal slices of the same cell never line up into a ladder
       for (var s = s0; s < L; s += step * clamp(profile(s), atl ? 0.55 : 0.42, 1) * (atl ? 0.7 + 0.6 * hash(list.length * 5 + 11) : 1)) list.push(s);
       list.push(L);
-      var edges = [0, BAND[0], BAND[1], BAND[2]];
-      for (i = 0; i < nb; i++) for (k = 0; k < 4; k++) {
-        var sb = sAtU(uStart + kS * (i * PERIOD + edges[k])), sp = sb - alongK * r * profile(sb);
+      var edges = [0, BAND[0], BAND[1], BAND[2]], ub = neck ? [uN0, uN1, uN2] : [];
+      for (i = 0; i < nb; i++) for (k = 0; k < 4; k++) ub.push(uStart + kS * (i * PERIOD + edges[k]));
+      for (i = 0; i < ub.length; i++) {   // a stamp right at every band edge (each stamp shows its tail-side slice)
+        var sb = sAtU(ub[i]), sp = sb - alongK * r * profile(sb);
         if (sp > s0 && sp < L) list.push(sp);
       }
       list.sort(function (a, b) { return a - b; });
@@ -1333,8 +1364,9 @@
     function placeCache() {
       var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, P = poseR, k;
       for (k = 0; k < nSt; k++) { var x = P.x[k], y = P.y[k]; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-      var mg = 1.9 * rh * dpr;
-      x0 = Math.max(0, Math.floor(x0 - mg)); x1 = Math.min(cw, Math.ceil(x1 + mg)); y0 = Math.floor(y0 - mg); y1 = Math.ceil(y1 + mg);
+      var mg = 1.9 * rh * dpr, hr = HEAD_REACH * rDev;   // body fuzz + shadows; head + tongue (reduced motion: cached too)
+      x0 = Math.min(x0 - mg, P.hx - hr); x1 = Math.max(x1 + mg, P.hx + hr); y0 = Math.min(y0 - mg, P.hy - hr); y1 = Math.max(y1 + mg, P.hy + hr);
+      x0 = Math.max(0, Math.floor(x0)); x1 = Math.min(cw, Math.ceil(x1)); y0 = Math.floor(y0); y1 = Math.ceil(y1);
       var w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
       if (!cacheA || cacheA.width < w || cacheA.height < h) {
         var nw = Math.max(w, cacheA ? cacheA.width : 0), nh = Math.max(h, cacheA ? cacheA.height : 0);
@@ -1345,8 +1377,9 @@
     function restDims(u) {
       var a = jIndex(Math.max(0, u - Lbody)), b = Math.min(jN - 1, jIndex(u) + 1), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
       for (var i = a; i <= b; i++) { if (jX[i] < x0) x0 = jX[i]; if (jX[i] > x1) x1 = jX[i]; if (jY[i] < y0) y0 = jY[i]; if (jY[i] > y1) y1 = jY[i]; }
-      var mg = 1.9 * rh + r;
-      return [Math.ceil(Math.min(W, x1 - x0 + 2 * mg) * dpr), Math.ceil((y1 - y0 + 2 * mg) * dpr)];
+      var mg = 1.9 * rh + r, hr = HEAD_REACH * r + r, o = jAt(u, jTmp);   // body margin; head + tongue around the head
+      x0 = Math.min(x0 - mg, o[0] - hr); x1 = Math.max(x1 + mg, o[0] + hr); y0 = Math.min(y0 - mg, o[1] - hr); y1 = Math.max(y1 + mg, o[1] + hr);
+      return [Math.ceil(Math.min(W, x1 - x0) * dpr), Math.ceil((y1 - y0) * dpr)];
     }
     // reduced motion: the static logo scrolls with the page (blitted from its cache)
     function blitStatic() {
@@ -1795,8 +1828,8 @@
           var cs = bank.cap, sc = breath * bankScale;
           c.drawImage(cs, P.x[k] - cs.width * 0.5 * sc, P.y[k] - cs.height * 0.5 * sc, cs.width * sc, cs.height * sc);
         } else if (kind === OP_HEADSH) {
-          var hs = bank.headShadow; c.globalAlpha = 0.13;
-          c.drawImage(hs, Math.round(P.hx + Math.cos(P.ha) * 0.2 * R * HEAD + 0.1 * R - hs.width * 0.5), Math.round(P.hy + 0.5 * R - hs.height * 0.5));
+          var hs = bank.headShadow; c.globalAlpha = 0.13;   // under the egg: centred ~0.3R ahead of the head point
+          c.drawImage(hs, Math.round(P.hx + Math.cos(P.ha) * 0.3 * R + 0.1 * R - hs.width * 0.5), Math.round(P.hy + Math.sin(P.ha) * 0.3 * R + 0.5 * R - hs.height * 0.5));
         } else if (kind === OP_HEAD) {
           c.globalAlpha = 1;
           drawHead(c, P.hx, P.hy, P.ha, headState.tongue, headState.breath);
@@ -1805,22 +1838,23 @@
       c.globalAlpha = 1;
     }
 
-    // tongue: two thin prongs, pale pink with a deeper edge, flicking from the snout tip
+    // tongue (head-local, x body radius; photo): pale pink #ECC4CB with a deeper edge, from under the snout tip, a
+    // 1.85R stem ~17deg below the head axis, then two 0.7R prongs spread ~60deg; ~0.14R wide. Flicks scale it out.
     function drawTongue(c, ext, up) {
-      var R = rDev * HEAD, len = R * 1.05 * ext, down = -up;
-      var bx = R * 1.3, by = down * R * 0.1, ang = down * 0.28 + Math.sin(clock * 31) * 0.05 * ext;
-      var ca = Math.cos(ang), sa = Math.sin(ang), fx = bx + ca * len * 0.68, fy = by + sa * len * 0.68;
-      var wv = Math.sin(clock * 47) * 0.06 * R * ext, mx = bx + ca * len * 0.36 - sa * wv, my = by + sa * len * 0.36 + ca * wv;
-      var spread = 0.3 + Math.sin(clock * 53) * 0.07, pl = len * 0.36;
-      var a1 = ang - spread, a2 = ang + spread;
-      var lw = Math.max(1.2 * dpr, R * 0.075);
+      var R = bank.R, down = -up, len = 1.85 * R * ext, pl = 0.7 * R * ext;
+      var bx = bank.tongueX * R, by = down * 0.08 * R, ang = down * 0.297 + Math.sin(clock * 31) * 0.05 * ext;
+      var ca = Math.cos(ang), sa = Math.sin(ang), fx = bx + ca * len, fy = by + sa * len;
+      var wv = Math.sin(clock * 47) * 0.07 * R * ext, mx = bx + ca * len * 0.5 - sa * wv, my = by + sa * len * 0.5 + ca * wv;
+      var spread = 0.5 + Math.sin(clock * 53) * 0.07, a1 = ang - spread, a2 = ang + spread;
+      var lo = Math.max(1.6 * dpr, 0.14 * R), li = Math.max(dpr, lo - Math.max(1.1 * dpr, 0.04 * R));
       for (var pass = 0; pass < 2; pass++) {
-        c.lineWidth = pass ? lw : lw + 1.4 * dpr;
-        c.strokeStyle = pass ? '#F2B9C6' : '#E58AA0';
-        c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(mx, my, fx, fy);
-        c.lineTo(fx + Math.cos(a1) * pl, fy + Math.sin(a1) * pl);
-        c.moveTo(fx, fy); c.lineTo(fx + Math.cos(a2) * pl, fy + Math.sin(a2) * pl);
-        c.stroke();
+        var lw = pass ? li : lo;
+        c.strokeStyle = pass ? '#ECC4CB' : '#D892A3';
+        c.lineWidth = lw;
+        c.beginPath(); c.moveTo(bx, by); c.quadraticCurveTo(mx, my, fx, fy); c.stroke();
+        c.lineWidth = lw * 0.82;
+        c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx + Math.cos(a1) * pl, fy + Math.sin(a1) * pl);
+        c.moveTo(fx, fy); c.lineTo(fx + Math.cos(a2) * pl, fy + Math.sin(a2) * pl); c.stroke();
       }
     }
     function drawHead(c, x, y, ang, tongue, breath) {
@@ -1831,17 +1865,18 @@
       if (tongue > 0.01) drawTongue(c, tongue, up);
       c.drawImage(hs.c, -hs.ox, -hs.oy);
       c.setTransform(1, 0, 0, 1, baseX, baseY);
-      // eyes: one bead on the upper side; the second appears when the head points up/down (faces us)
-      var R = rDev * HEAD, e = bank.eye, two = smooth(0.42, 0.12, Math.abs(co));
+      headCX = x / dpr; headCY = y / dpr; headAng = ang;
+      if (bank.eyesBaked) return;   // atlas v2 cells carry their bead eyes (screen-up one; both facing us)
+      // procedural: one bead on the upper side; the second appears when the head points up/down (faces us)
+      var R = bank.R, rH = R * HEAD, e = bank.eye, two = smooth(0.42, 0.12, Math.abs(co));
       for (var s = 0; s < 2; s++) {
         var a = s ? two : 1; if (a < 0.02) continue;
-        var ly = (s ? -up : up) * 0.4 * R + eyeY * R, lx = 0.3 * R + eyeX * R;
+        var ly = (s ? -up : up) * EYE_Y * R + eyeY * rH, lx = EYE_X * R + eyeX * rH;
         var ex = x + (co * lx - si * ly) * k, ey = y + (si * lx + co * ly) * k;
         c.globalAlpha = a;
         c.drawImage(e, Math.round(ex - e.width * 0.5), Math.round(ey - e.height * 0.5));
       }
       c.globalAlpha = 1;
-      headCX = x / dpr; headCY = y / dpr; headAng = ang;
     }
 
     /* ---------------- render paths ---------------- */
@@ -1853,7 +1888,7 @@
       dirty = null;   // unknown until the caller records what it drew (markDrawn)
       if (jm) { // world = document: draw with an offset of -scrollY; skip stamps outside the viewport
         baseX = 0; baseY = -oyDev; ctx.setTransform(1, 0, 0, 1, 0, baseY);
-        var pad = 2.6 * rDev * HEAD; cullY0 = oyDev - pad; cullY1 = oyDev + ch + pad; drawn = true;
+        var pad = HEAD_REACH * rDev; cullY0 = oyDev - pad; cullY1 = oyDev + ch + pad; drawn = true;
       }
     }
     // device-px box (canvas coords) of a pose drawn this frame, padded for the head, tongue, fuzz and shadows
@@ -1864,7 +1899,7 @@
         if (x < x0) x0 = x; else if (x > x1) x1 = x;
         if (y < y0) y0 = y; else if (y > y1) y1 = y;
       }
-      var pad = 3.4 * rDev * HEAD * Math.max(1, bankScale) + 2, oy = jm ? oyDev : 0;
+      var pad = HEAD_REACH * rDev * Math.max(1, bankScale) + 2, oy = jm ? oyDev : 0;
       dirty = [Math.max(0, Math.floor(x0 - pad)), Math.max(0, Math.floor(y0 - oy - pad)),
                Math.min(cw, Math.ceil(x1 + pad)), Math.min(ch, Math.ceil(y1 - oy + pad))];
     }
@@ -2161,6 +2196,7 @@
       if (debug) drawDebug();
       var ms = now() - t0, st = api.stats;
       st.ms = st.frames ? st.ms * 0.95 + ms * 0.05 : ms; st.frames++; st.last = ms; st.state = state;
+      st.hx = headCX; st.hy = headCY; st.ha = headAng; st.r = r;   // last drawn head (css px, canvas / document)
       if (jm) { st.u = uJ; st.uRest = uRest; st.uEnd = uEnd; st.restAt = restAt; st.uT = uAtScroll(viewY); st.viewY = viewY; }
       if (!(ms < st.max)) st.max = ms;
       raf = requestAnimationFrame(frame);
