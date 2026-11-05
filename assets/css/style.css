@@ -25,6 +25,7 @@
   --white: #FFF8F9;     /* plush white (logo letters) */
   --rec: #E5304A;       /* REC dot / error accents */
   --rec-ink: #B3182F;   /* error TEXT (≥4.5:1 on cream & paper) */
+  --fur-text: #A3506A;  /* pink accent TEXT: ≥3.9:1 on the lit paper (large type); --fur-deep stays for fills */
   --cream-70: rgba(244, 234, 219, .72);
 
   --font-body: "Onest", "Helvetica Neue", Arial, sans-serif;
@@ -128,6 +129,10 @@ html { scrollbar-width: thin; scrollbar-color: var(--fur) var(--paper-2); }
   border-radius: 6px;
 }
 .btn:focus-visible, .icon-btn:focus-visible { border-radius: 999px; }
+/* skip-link target (tabindex="-1"): takes focus without drawing a frame around the whole page */
+main:focus, main:focus-visible { outline: none; box-shadow: none; }
+/* keyboard focus never lands flush on the bottom edge (ring + halo stay visible) */
+a, button, input, textarea, select, summary, [tabindex] { scroll-margin-bottom: 24px; }
 .income :focus-visible { outline-color: var(--cream); box-shadow: 0 0 0 3px var(--ink); }
 
 /* 2 ── UTILITIES & SNAKE BAND -------------------------------------------- */
@@ -189,6 +194,7 @@ html { scrollbar-width: thin; scrollbar-color: var(--fur) var(--paper-2); }
 
 /* REC dot */
 .rec-dot {
+  position: relative;
   display: inline-block;
   flex: none;
   width: 8px; height: 8px;
@@ -197,9 +203,23 @@ html { scrollbar-width: thin; scrollbar-color: var(--fur) var(--paper-2); }
   box-shadow: 0 0 0 3px rgba(229, 48, 74, .18);
   animation: rec-pulse 1.6s ease-in-out infinite;
 }
+/* the expanding ring is its own layer: only transform + opacity animate (compositor) */
+.rec-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: rgba(229, 48, 74, .22);
+  animation: rec-ring 1.6s ease-out infinite;
+  pointer-events: none;
+}
 @keyframes rec-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(229, 48, 74, .18); }
-  50% { opacity: .35; box-shadow: 0 0 0 6px rgba(229, 48, 74, 0); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+@keyframes rec-ring {
+  0% { transform: scale(1); opacity: 1; }
+  60%, 100% { transform: scale(1.7); opacity: 0; }
 }
 
 /* 3 ── TYPE -------------------------------------------------------------- */
@@ -768,7 +788,7 @@ html.is-loaded .hero:not(.is-written):not(.was-written) .hero__studio { animatio
   top: 0;
   display: inline;
 }
-.hero__title .line--accent { color: var(--fur-deep); }
+.hero__title .line--accent { color: var(--fur-text); }
 /* snake-band underline under each wrapped line of "Большой доход." */
 .hero__title .line--accent > span {
   padding-bottom: .02em;
@@ -777,6 +797,10 @@ html.is-loaded .hero:not(.is-written):not(.was-written) .hero__studio { animatio
   box-decoration-break: clone;
 }
 .hero__title .line--accent { line-height: 1.02; }
+/* the overflow mask is only needed for the slide-up intro; release it afterwards (WCAG 1.4.12) */
+html.is-loaded .hero__title .line { animation: line-unmask 1ms linear 1.7s forwards; }
+html:not(.js) .hero__title .line { overflow: visible; }
+@keyframes line-unmask { to { overflow: visible; } }
 
 .hero__lead {
   max-width: 44ch;
@@ -861,8 +885,8 @@ html.is-loaded .hero:not(.is-written):not(.was-written) .hero__studio { animatio
   white-space: nowrap;
 }
 .hero__facts span {
-  max-width: 10.5ch;
-  font-size: max(11px, calc(var(--sticker) * .098));
+  max-width: 7.5em;
+  font-size: max(10.5px, calc(var(--sticker) * .095));
   font-weight: 600;
   line-height: 1.18;
   letter-spacing: -.005em;
@@ -880,8 +904,8 @@ html.is-loaded .hero:not(.is-written):not(.was-written) .hero__studio { animatio
   z-index: 5;
   display: none;
   left: var(--logo-x);
-  top: calc(var(--logo-y) - 54px);
-  max-width: min(34ch, calc(var(--logo-w) * .42));
+  top: calc(var(--logo-y) - 44px);                   /* 2 lines, ~12px clear of the snake's head */
+  max-width: min(48ch, calc(var(--logo-w) * .62));
   padding-left: 22px;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1047,7 +1071,7 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   overflow: hidden;   /* fallback */
   overflow: clip;     /* the seams bleed to the viewport edges; clip (no stacking context) keeps the page from scrolling sideways */
 }
-.studio__pct { color: var(--fur-deep); }
+.studio__pct { color: var(--fur-text); }
 .studio .section-head { margin-bottom: clamp(44px, 5.5vw, 72px); }
 
 .tags {
@@ -1249,17 +1273,19 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   transition: scale 1s var(--ease-soft) calc(var(--i, 0) * 80ms), opacity .4s var(--ease-out) calc(var(--i, 0) * 80ms);
 }
 
+@media (max-width: 419px) {   /* ~10% more measure: fewer one-word lines and hyphen breaks */
+  .tag__face { padding-left: 11px; padding-right: 11px; }
+  .tag__text { font-size: 14px; line-height: 1.45; }
+}
 @media (max-width: 380px) {
   .tags { --gap: 8px; }
-  .tag__face { padding-left: 12px; padding-right: 12px; }
-  .tag__text { font-size: 14px; }
   .tag__care { letter-spacing: .06em; }
 }
 @media (min-width: 640px) {
   .tags { --cols: 3; --gap: 16px; max-width: 780px; }
 }
 @media (min-width: 1180px) {
-  .tags { --cols: 6; --gap: 14px; max-width: calc(100% - clamp(48px, 7vw, 120px)); row-gap: 0; }
+  .tags { --cols: 6; --gap: 12px; max-width: calc(100% - 48px); row-gap: 0; }   /* the snake's lane is in the page margin */
   .tag__text { font-size: 14.5px; }
 }
 
@@ -1275,6 +1301,11 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 }
 .income .eyebrow { color: var(--cream-70); }
 .income .section-lead { color: var(--cream-70); }
+/* the travelling snake can pass under this copy on phones: an ink halo (invisible on the ink band)
+   keeps cream type readable over the pink body */
+.income .eyebrow, .income .section-title, .income .section-lead {
+  text-shadow: 0 0 2px var(--ink), 0 0 6px rgba(30, 22, 24, .9), 0 0 14px rgba(30, 22, 24, .75);
+}
 .income__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1552,6 +1583,11 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 /* 10 ── ROOMS ------------------------------------------------------------ */
 .rooms { background: var(--cream); padding-bottom: clamp(72px, 8vw, 120px); }
 .rooms .section-head { margin-bottom: clamp(32px, 4.5vw, 56px); }
+.rooms .section-title { max-width: 19ch; font-size: clamp(1.85rem, 9.2vw, 2.2rem); }   /* «Четыре комнаты. / Четыре настроения.» — 2 lines from 320 up */
+@media (min-width: 960px) {
+  .rooms .section-head--split { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+  .rooms .section-title { font-size: clamp(2.1rem, 4.4vw, 4.1rem); }
+}
 /* 11 ── PATH: instant photos of the first week -----------------------------
    Five polaroids taped to the pink paper with snake-band washi tape. A plush
    snake (main.js initPath) crawls down the stitched guide with scroll; every photo
@@ -1578,14 +1614,19 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 .path__shade,
 .path__line,
 .path__sheen { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.path__shade { stroke: rgba(120, 40, 60, .2); stroke-width: 20; transform: translate(2px, 6px); }
-.path__line { stroke: var(--fur); stroke-width: 16; }
+.path__shade { stroke: rgba(120, 40, 60, .2); stroke-width: 26; transform: translate(2px, 6px); }
+.path__line { stroke: var(--fur); stroke-width: 22; }   /* phones: a plush body, not a thin worm (main.js reads this width) */
 .path__sheen { stroke: rgba(255, 238, 242, .5); stroke-width: 4; transform: translate(-2px, -2.5px); }
 .path__scales {
   fill: none;
   stroke: var(--cream);
-  stroke-width: 16;
+  stroke-width: 22;
   stroke-linecap: butt;
+}
+/* phones: the head stays clearly wider than the 22px body (≈1.7×), tongue pushed out to the new tip */
+@media (max-width: 959px) {
+  .path__head-shape, .path__eye, .path__eye-glint { scale: 1.45; }
+  .path__tongue { translate: 13px 0; }
 }
 .path__head-shape { fill: var(--fur); stroke: rgba(30, 22, 24, .2); stroke-width: 1; }
 .path__eye { fill: var(--ink); }
@@ -2439,6 +2480,24 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   pointer-events: none;
 }
 
+/* the off switch reads as a control on the cream panel (1.4.11: ≥ 3:1 edge) */
+.toggle__ui { box-shadow: inset 0 0 0 1.5px rgba(30, 22, 24, .6), inset 0 2px 5px rgba(120, 40, 60, .22); }
+
+/* phones: the live preview sits right above the switches it reacts to */
+@media (max-width: 599px) {
+  .privacy__grid { display: flex; flex-direction: column; gap: 0; }
+  .privacy__copy { display: contents; }
+  .privacy__copy > .eyebrow { align-self: flex-start; }
+  .privacy__grid > .stream { order: 1; max-width: min(500px, 48svh); margin: 30px auto 0; }
+  .toggles { order: 2; margin-top: 22px; }
+  .privacy__label { order: 3; }
+}
+/* tablets: copy + switches on the left, the preview sticks beside them */
+@media (min-width: 600px) and (max-width: 959px) {
+  .privacy__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 32px; }
+  .privacy__grid > .stream { position: sticky; top: calc(var(--nav-h) + 24px); margin: 0; }
+}
+
 /* 13 ── FAQ -------------------------------------------------------------- */
 .faq { background: var(--paper); }
 .faq__grid {
@@ -2576,7 +2635,7 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   width: 100%;
   min-height: 52px;
   padding: 0 16px;
-  border: 1px solid rgba(30, 22, 24, .24);
+  border: 1px solid rgba(30, 22, 24, .5);   /* ≥ 3:1 edge: the border is what marks the field */
   border-radius: var(--radius-sm);
   background: var(--paper);
   color: var(--ink);
@@ -2587,12 +2646,12 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
   transition: border-color .25s, box-shadow .3s var(--ease-out), background-color .25s;
 }
 .field textarea { min-height: 112px; padding: 14px 16px; resize: vertical; }
-.field input::placeholder, .field textarea::placeholder { color: rgba(90, 53, 64, .72); }
+.field input::placeholder, .field textarea::placeholder { color: rgba(90, 53, 64, .82); }
 .field input[type="number"] { -moz-appearance: textfield; }
 .field input::-webkit-outer-spin-button,
 .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .field input:hover, .field textarea:hover { border-color: rgba(30, 22, 24, .45); }
+  .field input:hover, .field textarea:hover { border-color: rgba(30, 22, 24, .75); }
 }
 .field input:focus,
 .field textarea:focus,
@@ -2830,6 +2889,8 @@ nav.footer__col { gap: 0; }
 .footer__col p { font-size: 15px; line-height: 1.55; color: var(--ink-2); }
 .footer__contact { color: var(--ink) !important; font-weight: 600; }
 .footer__col .btn { margin-top: 6px; }
+.footer__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.footer__actions .btn { margin-top: 0; }
 .footer__col .btn--ghost:hover { background: var(--paper); }
 .footer__copied {
   min-height: 1.2em;
@@ -2838,7 +2899,7 @@ nav.footer__col { gap: 0; }
   letter-spacing: .08em;
   color: var(--ink) !important;
 }
-.footer__copied:not(:empty)::before { content: "✓ "; }
+.footer__copied[data-state="ok"]:not(:empty)::before { content: "✓ "; }
 .footer__col a:not(.btn) {
   position: relative;
   display: inline-flex;
@@ -2890,6 +2951,11 @@ nav.footer__col { gap: 0; }
 .footer__bottom a::after { content: "↑"; margin-left: 8px; font-family: var(--font-body); }
 .footer__bottom a:hover { background: var(--cream); color: var(--ink); }
 .footer__bottom :focus-visible { outline-color: var(--cream); box-shadow: 0 0 0 3px var(--ink); }
+@media (max-width: 359px) {   /* one row instead of a 120px blob */
+  .footer__bottom { flex-wrap: nowrap; gap: 8px; padding: 8px 8px 8px 16px; font-size: 10px; letter-spacing: .08em; }
+  .footer__bottom a { padding: 0 12px; }
+  .footer__bottom .badge-18 { flex: none; width: 34px; height: 34px; font-size: 11px; }
+}
 .badge-18 {
   display: inline-grid;
   place-items: center;
@@ -2968,7 +3034,6 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
 }
 
 @media (max-width: 959px) {
-  .nav__cta { display: none; }
   /* hero: snake on top, copy below (CSS formula shared with snake.js) */
   .hero__actions .btn { flex: 1 1 auto; }
   .vf-bottom span:nth-child(2) { display: none; }
@@ -2976,8 +3041,21 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
   .vf-top { display: none; }
 }
 
-@media (min-width: 480px) {
-  .nav__cta { display: inline-flex; }
+/* phones: the nav keeps a compact CTA so the form is one tap away on every screen
+   (logo + CTA + burger fit in the 288px row at 320) */
+@media (max-width: 479px) {
+  .nav__cta { padding: 0 14px; font-size: 14px; }
+  .nav__cta::before { display: none; }
+}
+/* phones: a calmer headline lifts the hero CTA onto the first screen (≈ top 750 at 390×844) */
+@media (max-width: 599px) {
+  .hero__title .line { font-size: clamp(2.4rem, 13.2vw, 3.5rem); }   /* «Мягкий старт.» keeps one line from ~340px up */
+  .hero__lead { margin-top: 16px; }
+  .hero__actions { margin-top: 24px; }
+}
+/* tablets: the stickers line up with the left-aligned copy */
+@media (min-width: 600px) and (max-width: 959px) {
+  .hero__facts { justify-content: flex-start; }
 }
 
 @media (min-width: 640px) {
@@ -3042,8 +3120,9 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
     grid-template-rows: 1fr auto;
     gap: 32px 40px;
   }
-  .footer__cols { grid-column: 1; grid-row: 1; grid-template-columns: 1fr .9fr 1.25fr; }
-  .footer__cols .footer__col:last-child { grid-column: auto; }
+  /* contact + sections side by side, «Важно» across the bottom: the contact buttons never spill into «Разделы» */
+  .footer__cols { grid-column: 1; grid-row: 1; grid-template-columns: minmax(min-content, 1.2fr) minmax(0, 1fr); }
+  .footer__cols .footer__col:last-child { grid-column: 1 / -1; }
   .footer__logo { grid-column: 2; grid-row: 1; margin-bottom: -6px; }
   .footer__bottom { grid-column: 1 / -1; grid-row: 2; }
 }
@@ -3066,6 +3145,18 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
   .hero__actions { margin-top: 22px; }
   .hero__content > .hero__facts { --sticker: clamp(86px, var(--logo-w) * .125, 120px); top: calc(var(--logo-y) + var(--logo-h) + var(--logo-w) * .035); }
   .scroll-cue { display: none; }
+}
+/* ≥1280 (tall enough): lift the sticker row so its bottom sits on the «studio» baseline */
+@media (min-width: 1280px) and (min-height: 801px) {
+  .hero__content > .hero__facts { top: calc(var(--logo-y) + var(--logo-h) + var(--logo-w) * .02); }
+}
+/* 960–1279: the sticker row would run into the «studio» caption — drop it below the caption
+   (kept inside the hero on short screens) */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .hero__content > .hero__facts {
+    --sticker: 104px;
+    top: min(calc(var(--logo-y) + var(--logo-h) + var(--logo-w) * .17), calc(100svh - var(--sticker) - 44px));
+  }
 }
 
 /* 19 ── REDUCED MOTION --------------------------------------------------- */
@@ -3097,11 +3188,37 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
 }
 html.reduced-motion .marquee__track { animation: none !important; }
 html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
+/* the snake is a still image with reduced motion: no "hover / click and she crawls" hint */
+html.reduced-motion .hero__hint { display: none; }
+@media (prefers-reduced-motion: reduce) { .hero__hint { display: none; } }
+
+/* very short viewports (landscape phones, 400% zoom): the nav scrolls away instead of
+   taking a quarter of the screen; it stays put while the menu is open */
+@media (max-height: 420px) {
+  .nav { position: absolute; }
+  body.menu-open .nav { position: fixed; }
+}
+
+/* Forced colours (Windows High Contrast): keep switch states, the selected option and
+   slider tracks visible when backgrounds and shadows are dropped */
+@media (forced-colors: active) {
+  .toggle__ui { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .toggle__ui::before { display: none; }
+  .toggle__ui::after { top: 3px; left: 3px; background: CanvasText; box-shadow: none; }
+  .toggle input:checked + .toggle__ui { background: Highlight; border-color: Highlight; }
+  .toggle input:checked + .toggle__ui::after { background: HighlightText; }
+  .segmented__opt input:checked + span,
+  .chip input:checked + span { outline: 2px solid Highlight; outline-offset: -2px; }
+  .check__box { border: 1px solid CanvasText; }
+  input[type="range"]::-webkit-slider-runnable-track { border: 1px solid CanvasText; }
+  input[type="range"]::-moz-range-track { border: 1px solid CanvasText; }
+  input[type="range"]::-webkit-slider-thumb { forced-color-adjust: none; background: CanvasText; border-color: Canvas; }
+}
 
 /* Network error slot for the application form (only used when data-endpoint is set) */
 .form__error {
   margin: 0;
-  color: var(--rec);
+  color: var(--rec-ink);
   font-size: .9375rem;
   font-weight: 500;
 }
@@ -3125,8 +3242,29 @@ html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
 .section > .container { position: relative; z-index: 4; }
 
 /* With the travelling plush snake on the page, the flat SVG snake on the income
-   ring would read as a second snake: hide it. Progress stays visible in the goal bar. */
+   ring would read as a second snake: hide its head and bands. The arc stays as a
+   thin glowing progress line inside the coil, so the sliders still move the ring. */
 html.has-journey .gauge__head,
-html.has-journey .gauge__fill,
 html.has-journey .gauge__scales { opacity: 0; transition: opacity .3s; }
+html.has-journey .gauge__fill {
+  stroke: var(--fur);
+  stroke-width: 14;
+  filter: drop-shadow(0 0 6px rgba(215, 137, 154, .5));
+}
 html.has-journey .gauge__cam { visibility: hidden; } /* sits under the coil */
+/* HUD brackets frame the coil instead of hiding under it; no room for them on narrow screens */
+@media (min-width: 960px) { html.has-journey .gauge__hud { inset: -12%; } }
+@media (max-width: 959px) {
+  html.has-journey .gauge__hud { background: none; }
+  /* keep the thin progress arc clear of the plush head resting at 12 o'clock */
+  html.has-journey .gauge__fill { stroke-width: 10; transform: rotate(-90deg) scale(.9); transform-origin: 200px 200px; }
+}
+
+/* «Остановить анимацию» (WCAG 2.2.2): main.js sets html.motion-paused and stops JS motion; this freezes the CSS loops too. */
+html.motion-paused *,
+html.motion-paused *::before,
+html.motion-paused *::after { animation-play-state: paused !important; }
+/* Blocks scrolled far off screen (main.js toggles .is-offscreen) keep their CSS loops paused to save battery. */
+.is-offscreen *,
+.is-offscreen *::before,
+.is-offscreen *::after { animation-play-state: paused !important; }

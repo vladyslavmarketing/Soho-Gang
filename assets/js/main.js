@@ -46,9 +46,28 @@
   var mqReduce = mq('(prefers-reduced-motion: reduce)');
   var mqDesktop = mq('(min-width: 960px)');
 
-  var state = { hover: mqHover.matches, reduced: mqReduce.matches };
+  var state = { hover: mqHover.matches, reduced: mqReduce.matches, paused: false };
   var motionFns = [];
   function onMotionChange(fn) { motionFns.push(fn); }
+
+  /* "still" = reduced motion (OS setting) or the on-page «Остановить анимацию» toggle:
+     everything that moves on its own (snakes, globe, timecodes, live counters, CSS loops) stops */
+  var PAUSE_KEY = 'ae-studio:motion-paused';
+  var stillFns = [];
+  var lastStill = null;
+  function still() { return state.reduced || state.paused; }
+  function onStillChange(fn) { stillFns.push(fn); }
+  function emitStill() {
+    var s = still();
+    root.classList.toggle('motion-paused', state.paused);
+    if (s === lastStill) return;
+    lastStill = s;
+    for (var i = 0; i < stillFns.length; i++) safe(stillFns[i], s);
+    var ev;
+    try { ev = new CustomEvent('ae:motion', { detail: { still: s, paused: state.paused } }); }
+    catch (e) { ev = doc.createEvent('CustomEvent'); ev.initCustomEvent('ae:motion', false, false, { still: s, paused: state.paused }); }
+    doc.dispatchEvent(ev);
+  }
 
   /* Group thousands: 1560 -> "1 560" (narrow no-break space by default) */
   function groupNum(n, sep) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, sep || NNBSP); }
@@ -83,15 +102,19 @@
   function onScroll(fn) { scrollFns.push(fn); }
   function onLayout(fn) { layoutFns.push(fn); }
 
+  /* the offset is read in the scroll event itself (layout is clean there); reading it inside the rAF
+     callback, after other callbacks wrote styles, would force a synchronous layout every scroll frame */
+  var pageY = win.pageYOffset || root.scrollTop || 0;
+  function readScroll() { pageY = win.pageYOffset || root.scrollTop || 0; return pageY; }
   function runScroll() {
     scrollQueued = false;
-    var y = win.pageYOffset || root.scrollTop || 0;
-    for (var i = 0; i < scrollFns.length; i++) safe(scrollFns[i], y);
+    for (var i = 0; i < scrollFns.length; i++) safe(scrollFns[i], pageY);
   }
-  function queueScroll() { if (!scrollQueued) { scrollQueued = true; raf(runScroll); } }
+  function queueScroll() { readScroll(); if (!scrollQueued) { scrollQueued = true; raf(runScroll); } }
   function runLayout() {
     layoutQueued = false;
     for (var i = 0; i < layoutFns.length; i++) safe(layoutFns[i]);
+    readScroll();
     runScroll();
   }
   function queueLayout() { if (!layoutQueued) { layoutQueued = true; raf(runLayout); } }
@@ -113,7 +136,9 @@
       state.reduced = mqReduce.matches;
       root.classList.toggle('reduced-motion', state.reduced);
       for (var i = 0; i < motionFns.length; i++) safe(motionFns[i], state.reduced);
+      emitStill();
     }
+    try { state.paused = win.localStorage.getItem(PAUSE_KEY) === '1'; } catch (e) { /* storage unavailable */ }
     setHover(); setReduced();
     onMq(mqHover, setHover);
     onMq(mqReduce, setReduced);
@@ -256,7 +281,19 @@
     toggle.addEventListener('click', function () { if (isOpen) close(true); else open(); });
     menu.addEventListener('click', function (e) {
       var link = e.target.closest && e.target.closest('a[href], [data-menu-link]');
-      if (link) close(false);              // let the anchor navigate; focus follows the target
+      if (!link) return;
+      close(false);                        // let the anchor navigate (smooth scroll + scroll-padding place it)
+      /* the focused link is about to be hidden: move focus to the target so keyboard and
+         screen-reader users continue there instead of at the top of the page */
+      var href = link.getAttribute('href') || '';
+      var t = href.charAt(0) === '#' && href.length > 1 ? doc.getElementById(href.slice(1)) : null;
+      if (t) t = $('h1, h2', t) || t;      // the section's heading: announced, and a small focus ring
+      if (t) {
+        raf(function () {
+          if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', '-1');
+          try { t.focus({ preventScroll: true }); } catch (err) { /* old browsers: leave focus */ }
+        });
+      }
     });
     onMq(mqDesktop, function () { if (mqDesktop.matches) close(false); });
   }
@@ -469,7 +506,7 @@
       };
     });
 
-    var id = 0, last = 0, inView = !win.IntersectionObserver;
+    var id = 0, last = 0, inView = !win.IntersectionObserver, onScreen = true;
 
     function measure() {
       var sx = win.pageXOffset || 0, sy = win.pageYOffset || 0;
@@ -484,6 +521,7 @@
       if (css !== t.css) { t.el.style.transform = css; t.css = css; }
     }
     function frame(time) {
+      if (!onScreen) { rest(); return; }      // swung off-screen (fling, anchor jump): stop at rest
       var dt = last ? clamp((time - last) / 1000, 0, 0.034) : 0.016;
       last = time;
       var busy = false;
@@ -560,8 +598,9 @@
       var dy = y - lastY, dt = lastT ? clamp(tnow - lastT, 8, 120) : 16.667;
       lastY = y; lastT = tnow;
       if (state.reduced || state.hover || !inView) return;
-      var vy = clamp(dy / dt, -2.5, 2.5);                          // px/ms
-      if (Math.abs(vy) < 0.04) return;
+      var vy = dy / dt;                                            // px/ms
+      /* a programmatic / anchor scroll or a hard fling races past: no sway */
+      if (Math.abs(vy) < 0.04 || Math.abs(vy) >= 2.5) return;
       for (var i = 0; i < tags.length; i++) push(tags[i], vy * 1.5 * tags[i].sway * (dt / 16.667));
       kick();
     });
@@ -589,6 +628,11 @@
         inView = e.isIntersecting;
         if (inView) { measure(); dropIn(); }
       }, { rootMargin: '0px 0px -12% 0px', threshold: 0 }).observe(rack);
+      /* any part on screen at all: the spring only runs while it can be seen */
+      new IntersectionObserver(function (entries) {
+        onScreen = entries[entries.length - 1].isIntersecting;
+        if (!onScreen && id) rest();
+      }, { rootMargin: '40px 0px', threshold: 0 }).observe(rack);
     }
 
     onLayout(measure);
@@ -617,17 +661,23 @@
       canvas.addEventListener('snake:arrived', function () { if (gauge) gauge.classList.add('has-snake'); });
       canvas.addEventListener('snake:departed', function () { if (gauge) gauge.classList.remove('has-snake'); });
       try {
-        engine.mount(canvas, {
+        var snake = engine.mount(canvas, {
           mode: 'journey',
           hero: hero,
           end: gauge,
           zoneEnd: $('#income'),
           pointerTarget: hero,
-          reducedMotion: state.reduced
+          reducedMotion: still()
         });
-        // the plush snake replaces the flat SVG head on the income ring
-        if (!state.reduced) doc.documentElement.classList.add('has-journey');
-        setTimeout(function () { if (!everWritten) markWritten(); }, 4000);   // safety net
+        /* the plush snake replaces the flat SVG head on the income ring (only while it travels) */
+        var setJourney = function () { root.classList.toggle('has-journey', !still()); };
+        setJourney();
+        onStillChange(function (on) {
+          if (snake && typeof snake.setReducedMotion === 'function') snake.setReducedMotion(on);
+          setJourney();
+        });
+        /* safety net: the first writing takes ~3 s, longer on a slow phone (writing ends on 'snake:written') */
+        setTimeout(function () { if (!everWritten) markWritten(); }, 7000);
       } catch (e) {
         warn('hero snake', e);
         markWritten();
@@ -638,7 +688,7 @@
 
     /* hint copy for touch devices */
     var hint = $('[data-hero-hint]', hero);
-    if (hint && !state.hover) hint.textContent = 'Коснись — она поползёт за' + NBSP + 'тобой';
+    if (hint && !state.hover) hint.textContent = 'Коснись экрана' + NBSP + '— и' + NBSP + 'она поползёт за' + NBSP + 'тобой.';
 
     /* timecode HH:MM:SS:FF @ 25 fps, only ticking while the hero is on screen */
     var tc = $('[data-timecode]', hero);
@@ -656,10 +706,11 @@
       var text = pad(Math.floor(s / 3600) % 100) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60) + ':' + pad(ff);
       if (text !== lastText) { tc.textContent = text; lastText = text; }
     }
+    /* a 25 fps display needs no 60 fps loop: one tick per frame of the timecode (40 ms) */
     function loop() {
       render();
-      if (!inView) { loopId = 0; return; }
-      loopId = state.reduced ? setTimeout(function () { raf(loop); }, 250) : raf(loop);
+      if (!inView || state.paused) { loopId = 0; return; }
+      loopId = setTimeout(loop, state.reduced ? 250 : 40);
     }
     loop();
     if (win.IntersectionObserver) {
@@ -668,6 +719,7 @@
         if (inView && !loopId) loop();
       }).observe(hero);
     }
+    onStillChange(function () { if (inView && !loopId) loop(); });
   }
 
   /* ================================================================== BAND DASHES
@@ -711,12 +763,30 @@
     var tipsBox = $('[data-gauge-tips]');
     var goalLabel = gauge ? $('.gauge__label', gauge) : null;
 
-    /* each level shows its hourly rate, read from the radio value so they never disagree */
+    /* each level shows its average hourly rate («≈»: earnings depend on viewers), read from the radio
+       value so they never disagree */
     $$('input[name="level"]', form).forEach(function (r) {
       var lab = r.parentNode ? $('[data-rate]', r.parentNode) : null;
       var v = parseFloat(r.value);
-      if (lab && isFinite(v)) lab.textContent = '$' + groupNum(v) + '/ч';
+      if (lab && isFinite(v)) lab.textContent = '≈' + NBSP + '$' + groupNum(v) + '/ч';
     });
+
+    /* screen readers get the final figures from a twin; the visible digits only animate (aria-hidden),
+       so the intro count-up and slider tweens never announce or expose an intermediate $0 */
+    var srOut = null;
+    if (readout && incomeEl) {
+      srOut = doc.createElement('span');
+      srOut.className = 'sr-only';
+      readout.appendChild(srOut);
+      incomeEl.setAttribute('aria-hidden', 'true');
+      if (subEl) subEl.setAttribute('aria-hidden', 'true');
+    }
+    function money(n) { return '$' + groupNum(Math.round(n / 10) * 10); }
+    function announce(v) {
+      if (!srOut) return;
+      var t = money(v.m) + ', примерно ' + money(v.w) + ' в' + NBSP + 'неделю';
+      if (srOut.textContent !== t) srOut.textContent = t;
+    }
 
     var MAX = 12000;
     var R = 160;
@@ -756,14 +826,15 @@
       }
     }
     function render(v) {
-      if (incomeEl) incomeEl.textContent = '$' + groupNum(Math.round(v.m / 10) * 10);
-      if (subEl) subEl.textContent = '≈ $' + groupNum(Math.round(v.w / 10) * 10) + ' в' + NBSP + 'неделю';
+      if (incomeEl) incomeEl.textContent = money(v.m);
+      if (subEl) subEl.textContent = '≈' + NBSP + money(v.w) + ' в' + NBSP + 'неделю';
       renderGauge(v.m);
     }
 
     var tweenId = 0;
     function animateTo(target, duration) {
       caf(tweenId);
+      announce(target);
       if (state.reduced || !duration) {
         shown = { m: target.m, w: target.w };
         render(shown);
@@ -787,13 +858,15 @@
        (debounced so a slider drag adds up to one alert) */
     var pendingTip = 0, tipTimer = 0;
     function spawnTip(amount) {
-      if (!tipsBox || state.reduced || amount < 10) return;
+      if (!tipsBox || still() || amount < 10) return;
       while (tipsBox.children.length >= 3) tipsBox.removeChild(tipsBox.firstChild);
       var tip = doc.createElement('span');
       tip.className = 'tip';
       tip.textContent = '+$' + groupNum(Math.round(amount / 10) * 10);
       var y = goalLabel ? goalLabel.offsetTop - 22 : (gauge ? gauge.offsetHeight * 0.26 : 0);
-      tip.style.setProperty('--x', (50 + (Math.random() - 0.5) * 14).toFixed(1) + '%');
+      /* the coiled plush snake rests its head at 12 o'clock: chips pop beside it, not on its face */
+      var x = gauge && gauge.classList.contains('has-snake') ? 72 + Math.random() * 6 : 50 + (Math.random() - 0.5) * 14;
+      tip.style.setProperty('--x', x.toFixed(1) + '%');
       tip.style.setProperty('--y', Math.max(0, y).toFixed(0) + 'px');
       tip.style.setProperty('--dx', ((Math.random() - 0.5) * 34).toFixed(0) + 'px');
       function drop() { if (tip.parentNode) tip.parentNode.removeChild(tip); }
@@ -802,7 +875,7 @@
       tipsBox.appendChild(tip);
     }
     function queueTip(amount) {
-      if (!tipsBox || state.reduced) return;
+      if (!tipsBox || still()) return;
       pendingTip += amount;
       clearTimeout(tipTimer);
       tipTimer = setTimeout(function () { var a = pendingTip; pendingTip = 0; spawnTip(a); }, 200);
@@ -810,9 +883,17 @@
 
     var introDone = false;
     var lastTarget = compute();
+    /* sliders speak with their unit: «6 часов в смену», not a bare «6» */
+    function valueText() {
+      var h = num(hoursIn, 6), d = num(daysIn, 5);
+      if (hoursIn) hoursIn.setAttribute('aria-valuetext', h + ' ' + plural(h, ['час', 'часа', 'часов']) + ' в' + NBSP + 'смену');
+      if (daysIn) daysIn.setAttribute('aria-valuetext', d + ' ' + plural(d, ['смена', 'смены', 'смен']) + ' в' + NBSP + 'неделю');
+    }
+    valueText();
     function update() {
       if (outHours && hoursIn) outHours.textContent = hoursIn.value;
       if (outDays && daysIn) outDays.textContent = daysIn.value;
+      valueText();
       introDone = true;
       var next = compute();
       if (next.m > lastTarget.m) queueTip(next.m - lastTarget.m);
@@ -836,6 +917,7 @@
 
     /* first appearance: the plush ring grows from zero when the gauge scrolls into view */
     var target = compute();
+    announce(target);
     if (!state.reduced && gauge && win.IntersectionObserver) {
       shown = { m: 0, w: 0 };
       render(shown);
@@ -902,16 +984,24 @@
 
     function f(n) { return Math.round(n * 10) / 10; }
 
+    /* path geometry: the d string plus the same cubics as numbers (the length table is sampled from
+       these analytically; sampling the DOM path with getPointAtLength was the biggest load-time task) */
+    function Geo(x, y) { this.d = 'M' + f(x) + ' ' + f(y); this.segs = []; this.x = f(x); this.y = f(y); }
+    Geo.prototype.c = function (x1, y1, x2, y2, x, y) {
+      x1 = f(x1); y1 = f(y1); x2 = f(x2); y2 = f(y2); x = f(x); y = f(y);
+      this.d += ' C' + x1 + ' ' + y1 + ' ' + x2 + ' ' + y2 + ' ' + x + ' ' + y;
+      this.segs.push(this.x, this.y, x1, y1, x2, y2, x, y);
+      this.x = x; this.y = y;
+    };
+
     /* uniform Catmull-Rom → cubic Bézier through points */
     function smoothThrough(pts) {
-      var d = 'M' + f(pts[0].x) + ' ' + f(pts[0].y);
+      var g = new Geo(pts[0].x, pts[0].y);
       for (var i = 0; i < pts.length - 1; i++) {
         var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-        d += ' C' + f(p1.x + (p2.x - p0.x) / 6) + ' ' + f(p1.y + (p2.y - p0.y) / 6) +
-             ' ' + f(p2.x - (p3.x - p1.x) / 6) + ' ' + f(p2.y - (p3.y - p1.y) / 6) +
-             ' ' + f(p2.x) + ' ' + f(p2.y);
+        g.c(p1.x + (p2.x - p0.x) / 6, p1.y + (p2.y - p0.y) / 6, p2.x - (p3.x - p1.x) / 6, p2.y - (p3.y - p1.y) / 6, p2.x, p2.y);
       }
-      return d;
+      return g;
     }
 
     function centres() {
@@ -934,12 +1024,12 @@
         var start = { x: 2 * cx - first.x, y: first.y - avg * 0.62 };
         var end = { x: 2 * cx - lastP.x, y: lastP.y + avg * 0.56 };
         var all = [start].concat(pts, [end]);
-        var d = 'M' + f(start.x) + ' ' + f(start.y);
+        var g = new Geo(start.x, start.y);
         for (var j = 1; j < all.length; j++) {
           var a = all[j - 1], b = all[j], k = (b.y - a.y) * 0.56;
-          d += ' C' + f(a.x) + ' ' + f(a.y + k) + ' ' + f(b.x) + ' ' + f(b.y - k) + ' ' + f(b.x) + ' ' + f(b.y);
+          g.c(a.x, a.y + k, b.x, b.y - k, b.x, b.y);
         }
-        return d;
+        return g;
       }
 
       /* mobile: near-vertical line at x≈22 with a gentle sine wiggle */
@@ -972,20 +1062,35 @@
       lastW = W; lastH = H; lastMode = desktop;
 
       svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-      var d = buildD(centres(), W, desktop);
-      [bg, shade, line, sheen, ink, scales].forEach(function (p) { if (p) p.setAttribute('d', d); });
+      var geo = buildD(centres(), W, desktop);
+      [bg, shade, line, sheen, ink, scales].forEach(function (p) { if (p) p.setAttribute('d', geo.d); });
 
       T = line.getTotalLength();
       if (!(T > 0)) return;
 
-      /* length lookup table (y is monotonic along both layouts) */
+      /* length lookup table (y is monotonic along both layouts), sampled from the cubics:
+         a dense chord polyline, scaled to the browser's length, resampled every STEP px */
+      var px = [], py = [], ps = [], acc = 0, N = 24, sg = geo.segs, i2, j2;
+      for (i2 = 0; i2 < sg.length; i2 += 8) {
+        for (j2 = px.length ? 1 : 0; j2 <= N; j2++) {
+          var t = j2 / N, u = 1 - t, b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
+          var qx = b0 * sg[i2] + b1 * sg[i2 + 2] + b2 * sg[i2 + 4] + b3 * sg[i2 + 6];
+          var qy = b0 * sg[i2 + 1] + b1 * sg[i2 + 3] + b2 * sg[i2 + 5] + b3 * sg[i2 + 7];
+          if (px.length) acc += Math.sqrt((qx - px[px.length - 1]) * (qx - px[px.length - 1]) + (qy - py[py.length - 1]) * (qy - py[py.length - 1]));
+          px.push(qx); py.push(qy); ps.push(acc);
+        }
+      }
+      if (!(acc > 0)) return;
+      var scaleS = T / acc;
       lutS = []; lutX = []; lutY = [];
-      var STEP = 4, maxY = -Infinity;
+      var STEP = 4, maxY = -Infinity, kk = 0;
       for (var s = 0; s <= T + STEP - 0.001; s += STEP) {
-        var L = Math.min(s, T);
-        var pt = line.getPointAtLength(L);
-        maxY = Math.max(maxY, pt.y);
-        lutS.push(L); lutX.push(pt.x); lutY.push(maxY);
+        var L = Math.min(s, T), sd = L / scaleS;
+        while (kk < ps.length - 2 && ps[kk + 1] < sd) kk++;
+        var span = ps[kk + 1] - ps[kk], tt = span > 0 ? clamp((sd - ps[kk]) / span, 0, 1) : 0;
+        var x = px[kk] + (px[kk + 1] - px[kk]) * tt, y = py[kk] + (py[kk + 1] - py[kk]) * tt;
+        maxY = Math.max(maxY, y);
+        lutS.push(L); lutX.push(x); lutY.push(maxY);
       }
       stepLen = centres().map(function (c) { return lengthAtY(c.y); });
 
@@ -1125,7 +1230,7 @@
           }
         }
       }
-      if (geoStatus) geoStatus.textContent = geo ? 'Скрыт от' + NBSP + 'зрителей' : 'Виден всем странам';
+      if (geoStatus) geoStatus.textContent = geo ? 'Скрыт от' + NBSP + 'зрителей' : 'Открыт для' + NBSP + 'всех зрителей';
       if (animate) tweenViewers(); else { shownViewers = viewersTarget(); paintViewers(shownViewers); }
       if (globe) globe.setGeo(geo);
     }
@@ -1142,7 +1247,7 @@
     if (stream && win.IntersectionObserver) {
       var timer = 0;
       var tick = function () {
-        if (!state.reduced) { jitter = clamp(jitter + Math.round((Math.random() - 0.45) * 7), -14, 18); tweenViewers(); }
+        if (!still()) { jitter = clamp(jitter + Math.round((Math.random() - 0.45) * 7), -14, 18); tweenViewers(); }
         timer = setTimeout(tick, 2200 + Math.random() * 1600);
       };
       new IntersectionObserver(function (entries) {
@@ -1303,14 +1408,14 @@
     function frame(t) {
       var dt = last ? clamp(t - last, 0, 64) : 16.667;
       last = t;
-      if (!state.reduced) { rot += SPEED * dt; pulse += dt; }
+      if (!still()) { rot += SPEED * dt; pulse += dt; }
       if (mix !== mixTarget) {
         mix += (mixTarget - mix) * lerpK(0.1, dt);
         if (Math.abs(mixTarget - mix) < 0.004) mix = mixTarget;
       }
       draw();
       var animating = mix !== mixTarget;
-      if (inView && (!state.reduced || animating)) id = raf(frame);
+      if (inView && (!still() || animating)) id = raf(frame);
       else { id = 0; last = 0; }
     }
     function kick() { if (!id) id = raf(frame); }
@@ -1322,7 +1427,7 @@
       }).observe(canvas);
     } else { inView = true; }
     onLayout(function () { draw(); });
-    onMotionChange(function () { kick(); });
+    onStillChange(function () { kick(); });
     draw();
     if (inView) kick();
 
@@ -1393,6 +1498,7 @@
     var nextBtn = $('[data-form-next]', form);
     var submitBtn = $('[data-form-submit]', form);
     var label = $('[data-step-label]', form);
+    var formErr = $('[data-form-error]', form);          // role="alert": submit failures go here
     var bar = $('[data-form-progress]', form);
     var success = $('[data-form-success]', form);
     var head = $('.form__head', form);
@@ -1411,8 +1517,8 @@
     /* ---- contact channel switch */
     var CHANNELS = {
       telegram: { label: 'Ник в' + NBSP + 'Telegram', ph: '@username', mode: 'text', ac: 'username', type: 'text' },
-      whatsapp: { label: 'Номер WhatsApp', ph: '+7 900 000-00-00', mode: 'tel', ac: 'tel', type: 'tel' },
-      phone: { label: 'Номер телефона', ph: '+7 900 000-00-00', mode: 'tel', ac: 'tel', type: 'tel' }
+      whatsapp: { label: 'Номер WhatsApp', ph: '+380 67 000 00 00', mode: 'tel', ac: 'tel', type: 'tel' },
+      phone: { label: 'Номер телефона', ph: '+380 67 000 00 00', mode: 'tel', ac: 'tel', type: 'tel' }
     };
     function applyChannel() {
       var c = CHANNELS[channel()] || CHANNELS.telegram;
@@ -1433,13 +1539,13 @@
       switch (el.name) {
         case 'name':
           if (!v) return 'Укажи имя или псевдоним';
-          if (v.length < 2) return 'Слишком коротко — нужно хотя бы 2' + NBSP + 'буквы';
+          if (v.length < 2) return 'Имя слишком короткое' + NBSP + '— нужно хотя бы 2' + NBSP + 'буквы';
           return '';
         case 'age':
           if (!v) return 'Укажи возраст';
-          if (!/^\d{1,3}$/.test(v)) return 'Возраст — целое число, например 23';
+          if (!/^\d{1,3}$/.test(v)) return 'Укажи возраст цифрами, например 23';
           var n = parseInt(v, 10);
-          if (n < 18) return 'Анкету можно отправить только с' + NBSP + '18' + NBSP + 'лет';
+          if (n < 18) return 'Мы работаем только с' + NBSP + 'совершеннолетними' + NBSP + '— анкету можно отправить с' + NBSP + '18' + NBSP + 'лет';
           if (n > 60) return 'Укажи возраст от' + NBSP + '18 до' + NBSP + '60';
           return '';
         case 'city':
@@ -1448,12 +1554,12 @@
           var ch = channel();
           if (ch === 'telegram') {
             if (!v) return 'Укажи ник в' + NBSP + 'Telegram';
-            return /^@?[a-zA-Z0-9_]{4,32}$/.test(v) ? '' : 'Ник — от' + NBSP + '4 до' + NBSP + '32 символов: латиница, цифры и' + NBSP + '«_»';
+            return /^@?[a-zA-Z0-9_]{4,32}$/.test(v) ? '' : 'Проверь ник: латиница, цифры и' + NBSP + 'нижнее подчёркивание, 4–32' + NBSP + 'символа. Например, @anna_pink' + NBSP + '— без' + NBSP + 'ссылки t.me';
           }
           if (!v) return ch === 'whatsapp' ? 'Укажи номер WhatsApp' : 'Укажи номер телефона';
-          return v.replace(/\D/g, '').length >= 10 ? '' : 'В номере должно быть не' + NBSP + 'меньше 10' + NBSP + 'цифр';
+          return v.replace(/\D/g, '').length >= 10 ? '' : 'Проверь номер: нужно не' + NBSP + 'меньше 10' + NBSP + 'цифр вместе с' + NBSP + 'кодом страны, например +7' + NBSP + '900' + NBSP + '000-00-00';
         case 'consent':
-          return el.checked ? '' : 'Подтверди, что тебе есть 18' + NBSP + 'лет, и' + NBSP + 'согласие на' + NBSP + 'обработку данных';
+          return el.checked ? '' : 'Отметь галочку' + NBSP + '— так ты подтверждаешь, что тебе есть 18' + NBSP + 'лет и' + NBSP + 'ты согласна на' + NBSP + 'обработку данных';
         default:
           return '';
       }
@@ -1516,6 +1622,7 @@
       if (nextBtn) nextBtn.hidden = current === TOTAL;
       if (submitBtn) submitBtn.hidden = current !== TOTAL;
       if (label) label.textContent = 'Шаг ' + current + ' из ' + TOTAL;
+      if (formErr) formErr.textContent = '';
       if (bar) bar.style.transform = 'scaleX(' + (current / TOTAL).toFixed(4) + ')';
       if (focus) {
         var fs = steps[current - 1];
@@ -1603,6 +1710,7 @@
     }
     function setSending(on) {
       sending = on;
+      if (on && formErr) formErr.textContent = '';
       form.setAttribute('aria-busy', on ? 'true' : 'false');
       if (submitBtn) {
         submitBtn.disabled = on;
@@ -1638,7 +1746,11 @@
         showSuccess();
       }, function () {
         setSending(false);
-        if (label) label.textContent = 'Не получилось отправить. Проверь интернет и' + NBSP + 'попробуй ещё раз';
+        /* the step label («Шаг 3 из 3») stays; the alert slot explains and offers another way */
+        var msg = 'Не получилось отправить анкету. Проверь интернет и' + NBSP + 'нажми «Отправить анкету» ещё раз' + NBSP +
+          '— или напиши нам в' + NBSP + 'Telegram: @ae_studio_cam';
+        if (formErr) formErr.textContent = msg;
+        else if (label) label.textContent = msg;
       });
     });
 
@@ -1653,13 +1765,16 @@
     var canvas = $('[data-footer-snake]');
     var engine = win.SohoSnake;
     if (!footer || !canvas || !engine || typeof engine.mount !== 'function') return;
-    var mounted = false;
+    var mounted = false, snake = null;
     function mount() {
       if (mounted) return;
       mounted = true;
-      try { engine.mount(canvas, { mode: 'wander', pointerTarget: footer, reducedMotion: state.reduced }); }
+      try { snake = engine.mount(canvas, { mode: 'wander', pointerTarget: footer, reducedMotion: still() }); }
       catch (e) { warn('footer snake', e); }
     }
+    onStillChange(function (on) {
+      if (snake && typeof snake.setReducedMotion === 'function') snake.setReducedMotion(on);
+    });
     /* mount lazily, shortly before the footer scrolls into view */
     if (win.IntersectionObserver) {
       var io = new IntersectionObserver(function (entries) {
@@ -1679,11 +1794,13 @@
       var source = $('[data-copy-text]', scope);
       var timer = 0;
 
-      function say(text) {
+      /* data-state lets the stylesheet put the ✓ on success only */
+      function say(text, ok) {
         if (!status) return;
+        status.setAttribute('data-state', ok ? 'ok' : 'fail');
         status.textContent = text;
         clearTimeout(timer);
-        timer = setTimeout(function () { status.textContent = ''; }, 2500);
+        timer = setTimeout(function () { status.textContent = ''; status.removeAttribute('data-state'); }, ok ? 2500 : 6000);
       }
       function legacyCopy(text) {
         var ta = doc.createElement('textarea');
@@ -1710,16 +1827,71 @@
         var text = btn.getAttribute('data-copy') || (source ? source.textContent.trim() : '');
         if (!text) return;
         var fallback = function () {
-          if (legacyCopy(text)) say('Скопировано');
-          else { selectSource(); say('Ник выделен — нажми «Копировать»'); }
+          if (legacyCopy(text)) say('Ник скопирован', true);
+          else { selectSource(); say('Не' + NBSP + 'получилось скопировать' + NBSP + '— ник выделен, скопируй его вручную', false); }
         };
         if (navigator.clipboard && navigator.clipboard.writeText && win.isSecureContext !== false) {
-          navigator.clipboard.writeText(text).then(function () { say('Скопировано'); }, fallback);
+          navigator.clipboard.writeText(text).then(function () { say('Ник скопирован', true); }, fallback);
         } else {
           fallback();
         }
       });
     });
+  }
+
+  /* ================================================================== PAUSE ANIMATION (WCAG 2.2.2)
+     Two buttons drive one setting: a skip-link style one first in the tab order (shown on focus) and one
+     in the footer bar. The choice is remembered. Hidden while the OS already asks for reduced motion. */
+  function initMotionToggle() {
+    var btns = [];
+    function label() { return state.paused ? 'Включить анимацию' : 'Остановить анимацию'; }
+    function sync() {
+      btns.forEach(function (b) {
+        b.textContent = label();
+        b.hidden = state.reduced && !state.paused;
+      });
+    }
+    function make(cls) {
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      b.setAttribute('data-motion-toggle', '');
+      b.addEventListener('click', function () {
+        state.paused = !state.paused;
+        try {
+          if (state.paused) win.localStorage.setItem(PAUSE_KEY, '1');
+          else win.localStorage.removeItem(PAUSE_KEY);
+        } catch (e) { /* storage unavailable: the choice lasts for this visit */ }
+        emitStill();
+        sync();
+      });
+      btns.push(b);
+      return b;
+    }
+    var skip = $('.skip-link');
+    if (skip && skip.parentNode) skip.parentNode.insertBefore(make('skip-link motion-toggle motion-toggle--skip'), skip.nextSibling);
+    /* footer: under the «Важно» note, styled like the other small footer buttons */
+    var cols = $$('.footer__cols > .footer__col');
+    var col = cols[cols.length - 1];
+    if (col) {
+      var p = doc.createElement('p');
+      p.className = 'footer__motion';
+      p.appendChild(make('btn btn--ghost btn--small motion-toggle motion-toggle--footer'));
+      col.appendChild(p);
+    }
+    onStillChange(sync);
+    sync();
+  }
+
+  /* ================================================================== OFF-SCREEN BLOCKS
+     `.is-offscreen` on top-level blocks that are out of view, so the stylesheet can pause their looping
+     CSS animations (REC dots, neon, steam…): offscreen loops still cost paint/composite every frame. */
+  function initOffscreen() {
+    if (!win.IntersectionObserver) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { e.target.classList.toggle('is-offscreen', !e.isIntersecting); });
+    }, { rootMargin: '120px 0px' });
+    $$('main > *, body > footer').forEach(function (el) { io.observe(el); });
   }
 
   /* ============================================================ RANGE FILL */
@@ -1743,7 +1915,8 @@
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['tags', initTags],
     ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
-    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill]
+    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
+    ['motionToggle', initMotionToggle], ['offscreen', initOffscreen]
   ];
   function boot() {
     for (var i = 0; i < inits.length; i++) {
