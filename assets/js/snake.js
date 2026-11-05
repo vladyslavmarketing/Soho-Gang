@@ -15,6 +15,7 @@
  *     opts.zoneEnd        'journey': the last section of the snake's zone (default: end's section)
  *     opts.reducedMotion  boolean (default: matchMedia('(prefers-reduced-motion: reduce)'))
  *     opts.ignoreSelector pointerdown on these never starts a chase
+ *     opts.atlas          false = procedural fur sprites only (default: the Blender atlases, see below)
  *   controller = { replay(), chase(x, y), pause(), resume(), destroy(), getLogoBox() }
  *     chase(x, y)   x/y in CSS px relative to the canvas' top-left corner
  *     getLogoBox()  {x, y, w, h} in CSS px relative to pointerTarget (same numbers as the CSS vars)
@@ -33,10 +34,13 @@
  *   Body   A ring buffer of head positions (the trail). Body stamps sit at fixed arc-length offsets
  *          from the head, so the body lies exactly on whatever path the head travelled. Writing the
  *          logo = the head travelling the "ae" path in reverse, from beyond the right edge.
- *   Plush  Pre-rendered fur sprites (colour x variant x 32 angle buckets, cylinder lighting baked in)
- *          are blitted at integer device pixels from tail to head. Each stamp only shows its
- *          tail-side crescent, which reads as fur combed toward the tail; band edges curve like
- *          stripes wrapped round a cylinder.
+ *   Plush  Pre-rendered fur sprites (colour x variant x 32 angle buckets, lighting baked in) are
+ *          blitted at integer device pixels from tail to head. Sprites come from the Blender atlases
+ *          (assets/img/snake/manifest.json: real hair-curve fur rendered in Cycles, one cell per angle /
+ *          head-light bucket, loaded async) and, until they arrive or if they fail, from the procedural
+ *          builders. Each stamp only shows its tail-side slice (atlas stamps ~0.3R apart, so a slice of
+ *          real fur shows; procedural ones dense, reading as fur combed toward the tail); band edges curve
+ *          like stripes wrapped round a cylinder.
  *   Depth  Trail points carry a layer tag; the body is drawn in layer-sorted runs and every part that
  *          lies over another part casts a soft occlusion shadow onto it.
  *   Cost   While resting, the body is cached (re-rendered progressively so it can breathe) and only
@@ -266,7 +270,7 @@
   // Stamp window ("lens", x R): along the body |a| <= a0 - (a0 - a1) c^2 for |c| <= 1 (a1 beyond), +- fe soft edge.
   // The tail edge of each stamp is the visible band boundary, so the curve makes bands wrap round the body like
   // rings (the cells' own window is a straight cut); a1 keeps stamps overlapping at the silhouette.
-  var ATL_LENS = { a0: 0.55, a1: 0.36, fe: 0.1 }, ATL_LENS_SMALL = { a0: 0.55, a1: 0.36, fe: 0.14 };   // thin tail: softer
+  var ATL_LENS = { a0: 0.55, a1: 0.36, fe: 0.1 }, ATL_LENS_SMALL = { a0: 0.55, a1: 0.36, fe: 0.14 }, LENS_FE_MAX = 0.16;   // thin tail: softer
   // Grade toward the reference photo, per kind: an alpha-preserving lerp toward a colour ('source-atop' fill) -
   // warmer rose (head + cap too), ivory cream, near-black velvet stripes (the baked cells read dusty mauve,
   // beige-grey and charcoal on the site's backdrop).
@@ -278,13 +282,13 @@
     g.globalCompositeOperation = 'source-over';
   }
   function lensEdge(L, c) { return c >= 1 ? L.a1 : L.a0 - (L.a0 - L.a1) * c * c; }
-  function lensMask(L, rs, ext) { // unrotated (x = along) alpha mask at radius rs
-    var ha = Math.ceil((L.a0 + L.fe) * rs) + 2, hc = Math.ceil(ext * rs) + 2, w = ha * 2, h = hc * 2;
+  function lensMask(L, rs, ext) { // unrotated (x = along) alpha mask at radius rs; edge >= ~3.5 px soft (small sizes)
+    var fe = clamp(3.5 / rs, L.fe, LENS_FE_MAX), ha = Math.ceil((L.a0 + fe) * rs) + 2, hc = Math.ceil(ext * rs) + 2, w = ha * 2, h = hc * 2;
     var c = canvasEl(w, h), g = c.getContext('2d'), id = g.createImageData(w, h), d = id.data, x, y;
     for (y = 0; y < h; y++) {
       var e = lensEdge(L, Math.abs(y + 0.5 - hc) / rs);
       for (x = 0; x < w; x++) {
-        var t = clamp((Math.abs(x + 0.5 - ha) / rs - e + L.fe) / (2 * L.fe), 0, 1);
+        var t = clamp((Math.abs(x + 0.5 - ha) / rs - e + fe) / (2 * fe), 0, 1);
         d[(y * w + x) * 4 + 3] = 255 * (1 - t * t * (3 - 2 * t));
       }
     }
@@ -296,9 +300,9 @@
       var im = new Image();
       im.decoding = 'async';
       function ok() { if (im.naturalWidth) res(im); else rej(); }
+      function viaLoad() { if (im.complete) ok(); else { im.onload = ok; im.onerror = rej; } }   // decode() unsupported / rejected
       im.src = assetUrl('snake/' + rel);
-      if (im.decode) im.decode().then(ok, function () { if (im.complete && im.naturalWidth) res(im); else rej(); });
-      else { im.onload = ok; im.onerror = rej; }
+      if (im.decode) im.decode().then(ok, viaLoad); else viaLoad();
     });
   }
   function atlasData(m, ims) { // validates the manifest against the images; null = unusable
@@ -315,7 +319,7 @@
     for (b = 0; b < NB; b++) {
       var th = b / NB * PI, co = Math.cos(th), si = Math.sin(th), mx = 0, my = 0;
       for (i = 0; i <= 24; i++) {
-        var c = (i / 24) * (1 + fz), q = c / 1.5, a = Math.min(along * Math.pow(Math.max(0, 1 - q * q * q * q), 0.25) + fe, lensEdge(lens, c) + lens.fe);
+        var c = (i / 24) * (1 + fz), q = c / 1.5, a = Math.min(along * Math.pow(Math.max(0, 1 - q * q * q * q), 0.25) + fe, lensEdge(lens, c) + LENS_FE_MAX);
         mx = Math.max(mx, Math.abs(a * co) + c * Math.abs(si)); my = Math.max(my, Math.abs(a * si) + c * Math.abs(co));
       }
       bb[b * 2] = mx; bb[b * 2 + 1] = my;
@@ -1176,7 +1180,8 @@
       sLookMax = sMaxLook = mode === 'logo' ? 0.11 * L : 0.12 * L;
       // pose / plan buffers
       poseF = makePose(nSt); poseR = makePose(nSt); poseL = makePose(nSt);
-      planF = makePlan(nSt * 2 + 32); planR = makePlan(nSt * 2 + 32);
+      var planN = Math.ceil(nSt / shStep) + Math.ceil(nSt / ovStep) + nSt * 2 + 64;   // floor + occlusion + body (+ seam carry-overs)
+      planF = makePlan(planN); planR = makePlan(planN);
       rank = new Int32Array(nSt); ov = new Float32Array(nSt); gcell = new Int32Array(nSt); gnext = new Int32Array(nSt);
     }
     function makePose(n) { return { x: new Float32Array(n), y: new Float32Array(n), z: new Uint8Array(n), bk: new Uint8Array(n), hx: 0, hy: 0, ha: 0 }; }
@@ -1448,9 +1453,16 @@
       if (!job) return true;
       if (!job.step(budget)) return false;
       bank = job.bank; job = null; restReady = false; cacheReady = false; drawnKey = ''; bankScale = rDev / bank.R;
-      api.stats.bankMs = bank.ms; api.stats.bankMaxTask = bank.maxTask; api.stats.atlas = !!bank.atlas;
+      api.stats.bankMs = bank.ms; api.stats.bankMaxTask = bank.maxTask; api.stats.atlas = !!bank.atlas; api.stats.bankMB = bankBytes(bank) / 1048576;
       if (sized && !!bank.atlas !== tabAtlas) buildBodyTables();   // stamp spacing follows the sprite source
       return true;
+    }
+    function bankBytes(B) { // backing-store size of the sprite bank
+      var t = 0, a = [B.floor, B.occl, B.head, [B.cap, B.eye, B.headShadow, B.lensB, B.lensS]], i, j, k;
+      for (i = 0; i < 3; i++) a.push.apply(a, B.big[i].concat(B.small[i]));
+      for (i = 0; i < a.length; i++) for (j = 0; j < a[i].length; j++) { k = a[i][j]; if (k && k.c) k = k.c; if (k && k.width) t += k.width * k.height * 4; }
+      if (B.headBase) t += B.headBase.W * B.headBase.H * 32;   // procedural head fields: 6 float maps + 2 canvases
+      return t;
     }
     // bank build while the frame loop is not running (reduced motion): small chunks on timers, then the static pose
     function pumpJob() {
@@ -1657,7 +1669,7 @@
     }
 
     /* ---------------- draw plan (layer-sorted runs, occlusion shadows) ---------------- */
-    function op(PL, kind, i, a) { var n = PL.n; PL.k[n] = kind; PL.i[n] = i; PL.a[n] = a; PL.n = n + 1; }
+    function op(PL, kind, i, a) { var n = PL.n; if (n >= PL.k.length) return; PL.k[n] = kind; PL.i[n] = i; PL.a[n] = a; PL.n = n + 1; }
     // Seams follow the live pose: a layer boundary whose tail side is on top must start in plain pink. While the
     // bands slide past fixed layer tags (writing, returning, chasing) the boundary moves to the nearest such stamp,
     // at most ~2.2r away and never across another boundary.
@@ -1698,6 +1710,12 @@
         // seam: this run lies over its head-side neighbour (drawn earlier) -> fade its head end in
         var seam = B > kFrom && rank[B - 1] < rank[B];
         if (A === n - 1) op(PL, OP_CAP, n - 1, 0);
+        // the tail-side neighbour run fades in over this one (its seam): carry this run on under the fade, so the
+        // seam is never see-through (sparse atlas stamps leave a translucent gap there otherwise)
+        if (A < n - 1 && A >= kFrom && rank[A + 1] > rank[A]) {
+          for (j = A + 1; j < n - 1 && stS[j] - stS[A + 1] < seamLen; j++);
+          for (; j > A; j--) op(PL, OP_BODY, j, 1);
+        }
         k = A;
         while (k >= B) {
           var e = Math.max(B, k - chunkN + 1);
