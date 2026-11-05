@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "generator": "Blender 4.2 Cycles (CPU, OIDN), numpy-groomed hair curves; see scratchpad/blender/sprites.py",
+  "ref_R": 64,
+  "light_screen": [
+    -0.42,
+    -0.58,
+    0.7
+  ],
+  "fuzz": 0.578,
+  "grade": {
+    "exposure_ev": 0.6,
+    "black_tint_linear": [
+      0.56,
+      0.31,
+      0.29
+    ]
+  },
+  "body": {
+    "file": "body.webp",
+    "angles": 16,
+    "cell": [
+      202,
+      202
+    ],
+    "origin": [
+      101,
+      101
+    ],
+    "rows": [
+      {
+        "kind": "pink",
+        "variant": 0
+      },
+      {
+        "kind": "pink",
+        "variant": 1
+      },
+      {
+        "kind": "pink",
+        "variant": 2
+      },
+      {
+        "kind": "cream",
+        "variant": 0
+      },
+      {
+        "kind": "cream",
+        "variant": 1
+      },
+      {
+        "kind": "black",
+        "variant": 0
+      },
+      {
+        "kind": "black",
+        "variant": 1
+      }
+    ],
+    "oriented": true,
+    "mask": "feather",
+    "along": 0.62,
+    "feather": 0.16,
+    "recommended_step_R": 0.3,
+    "notes": "column k is pre-rotated to screen angle k/angles*PI (body axis (cos, sin), y down) and lit by the fixed screen light; rotate by the residual (<= half a bucket). Each cell is a window cut from a continuous rendered fur tube: |along| <= along*R*(1-(|across|/1.5R)^4)^0.25 with a +-feather*R smoothstep cross-fade, the sides keep the real silhouette fuzz (fuzz = reach beyond R). Stamp it every ~0.3R (dense 0.075R stamping only shows a thin rim slice of each cell and smears the fur into streaks). Straight alpha."
+  },
+  "head": {
+    "file": "head.webp",
+    "buckets": 32,
+    "rh_ref": 87.04,
+    "cell": [
+      284,
+      232
+    ],
+    "origin": [
+      130,
+      116
+    ],
+    "cols": 8,
+    "eyes": false,
+    "fade_baked": true,
+    "notes": "cell b is at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI; snake.js headBase() neck fade already applied to alpha; no eyes/tongue."
+  },
+  "cap": {
+    "file": "cap.webp",
+    "rc_ref": 40,
+    "cell": [
+      120,
+      120
+    ],
+    "origin": [
+      60,
+      60
+    ],
+    "notes": "furry ball of radius rc_ref px with body-scale fur (scale by rc/rc_ref)."
+  },
+  "bytes": {
+    "body": 757218,
+    "head": 411766,
+    "cap": 4832,
+    "total": 1173816
+  }
+}
