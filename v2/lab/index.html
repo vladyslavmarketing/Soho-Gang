@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake lab — storyboard</title>
+<style>
+  :root { --bg: #F4EBE8; }
+  html, body { margin: 0; height: 100%; background: #1E1618; color: #F4EADB; font: 13px/1.4 system-ui, sans-serif; }
+  #stage { position: relative; width: 1260px; height: 720px; max-width: 100vw; background: radial-gradient(ellipse at 50% 45%, #FBF4F1 0%, var(--bg) 62%, #EEDFDB 100%); }
+  #stage.water { --bg: #DDEBEA; background: repeating-linear-gradient(180deg, #DCEAEA 0 14px, #D5E5E5 14px 15px); }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #ui { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button, select, input { font: inherit; }
+  #ui label { margin-left: 8px; }
+  #info { font-family: ui-monospace, monospace; opacity: .8; }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+<div id="ui">
+  <select id="scene"></select>
+  <button id="play">▶︎/❚❚</button>
+  <input id="time" type="range" min="0" max="1" step="0.001" value="0" style="width:320px">
+  <span id="info"></span>
+  <label><input id="orbit" type="checkbox"> orbit</label>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>
+<script src="../assets/js/snake3d.js"></script>
+<script>
+(function () {
+  'use strict';
+  var S3 = window.SohoSnake3D, THREE = window.THREE, PI = Math.PI;
+  var canvas = document.getElementById('c'), stage = document.getElementById('stage');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true, premultipliedAlpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0); renderer.outputEncoding = THREE.sRGBEncoding;
+  var scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xfff2f0, 0xb98a90, 0.75));
+  var dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(-4, 5, 7); scene.add(dl);
+  var camera = new THREE.PerspectiveCamera(32, 1260 / 720, 0.1, 200); camera.up.set(0, 0, 1);
+  var rig = new S3.Rig(), view = new S3.View(THREE, { shells: 20, density: 38 });
+  scene.add(view.group);
+  var props = new THREE.Group(); scene.add(props);
+  var wood = new THREE.MeshLambertMaterial({ color: 0x9a7560 });
+
+  // camera presets: [eye, target, fov] matched to the storyboard frames (Кадры/*)
+  var CAM = {
+    '01-breath': [[-0.4, -13.5, 13.0], [-0.4, 0.2, 0], 34],
+    '02-head-yaw': { head: [0.75, -1.3, 4.6], look: [0.85, 0.55, 0], fov: 34 },
+    '03-head-pitch': [[-0.4, -24, 4.2], [-0.4, 0, 1.2], 30],
+    '04-head-roll': { head: [-4.8, -0.5, 1.4], look: [0.3, 0, 0], fov: 26 },
+    '05-tail': [[-0.4, -13.5, 12.5], [-0.4, 0.2, 0], 34],
+    '06-tongue': { head: [0.4, -4.6, 0.45], look: [0.25, 0, -0.25], fov: 30 },
+    '07-jaw': { head: [0.4, -4.6, 0.45], look: [0.25, 0, -0.25], fov: 30 },
+    '08-undulation': [[-1.5, -11.5, 15], [-1.5, 0.3, 0], 34],
+    '09-concertina': [[-4.5, -8, 20], [-4.5, 0, 0], 34],
+    '10-sidewinding': [[-1, -15, 15], [-1, 0.6, 0], 34],
+    '11-rectilinear': [[0, -16, 11], [0, 0, 0], 32],
+    '12-turn': [[0, -12, 24], [0, -0.5, 0], 34],
+    '13-obstacle': [[0, -19, 14], [0, 0, 0], 32],
+    '14-coil': [[0, -11.5, 10], [0, 0.6, 0], 34],
+    '15-constrict': [[-1, -12, 4.8], [-0.6, 0, 1.6], 34],
+    '16-climb': [[0, -16, 5.5], [0, 0, 1.5], 32],
+    '17-bridge': [[-1.5, -18, 6.5], [-1.5, 0, 0.6], 32],
+    '18-swim': [[-1.0, -10, 16], [-1.0, 0.4, 0], 34],
+    '19-strike': [[0.2, -12.5, 8.5], [0.2, -1.0, 0.5], 34],
+    '20-righting': [[-0.4, -13.5, 13.0], [-0.4, 0.2, 0], 34]
+  };
+  var sel = document.getElementById('scene'), tIn = document.getElementById('time'), info = document.getElementById('info');
+  S3.Scenes.forEach(function (s) { var o = document.createElement('option'); o.value = s.id; o.textContent = s.id + ' — ' + s.title; sel.appendChild(o); });
+  var cur = null, playing = true, t = 0, orbit = null;
+
+  function buildProps(sc) {
+    while (props.children.length) props.remove(props.children[0]);
+    (sc.props || []).forEach(function (p) {
+      var m;
+      if (p.type === 'log') { m = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.len, 28), wood); m.position.set(p.x, p.y, p.r); }
+      if (p.type === 'post') { m = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.h, 28), wood); m.rotation.x = PI / 2; m.position.set(p.x, p.y, p.h / 2); }
+      if (p.type === 'branch') {
+        m = new THREE.Mesh(new THREE.CylinderGeometry(p.r, p.r, p.len, 20), wood);
+        m.rotation.set(0, 0, 0); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(Math.cos(p.ang), 0, Math.sin(p.ang)));
+        m.position.set(p.x + Math.cos(p.ang) * 3.2, 0, p.z + Math.sin(p.ang) * 3.2 + 1.1 - 0.0);
+      }
+      if (p.type === 'plank') { m = new THREE.Mesh(new THREE.BoxGeometry(p.x1 - p.x0, 1.2, 0.3), wood); m.position.set((p.x0 + p.x1) / 2, 0, p.z - 0.15); }
+      if (m) { m.renderOrder = 1; props.add(m); }
+    });
+  }
+  function setScene(id) {
+    cur = S3.Scenes.filter(function (s) { return s.id === id; })[0];
+    stage.classList.toggle('water', !!cur.bg);
+    buildProps(cur);
+    t = 0; seek(0);
+    var c = CAM[id];
+    if (c.head) {   // close-ups: framed on the head's rest position (key 0)
+      var hp = rig.head.pos;
+      c = [[hp[0] + c.head[0], hp[1] + c.head[1], hp[2] + c.head[2]], [hp[0] + c.look[0], hp[1] + c.look[1], hp[2] + c.look[2]], c.fov];
+    }
+    camera.position.set(c[0][0], c[0][1], c[0][2]); camera.lookAt(c[1][0], c[1][1], c[1][2]); camera.fov = c[2]; camera.updateProjectionMatrix();
+    orbit = { tgt: new THREE.Vector3(c[1][0], c[1][1], c[1][2]) };
+  }
+  // deterministic seek: restart and simulate at 240 Hz
+  function seek(time) {
+    rig = new S3.Rig();
+    rig.setState(cur, { snap: true });
+    var dt = 1 / 240, n = Math.round(time / dt);
+    for (var i = 0; i < n; i++) rig.update(dt);
+    t = time;
+  }
+  function draw() {
+    camera.updateMatrixWorld();
+    view.uniforms.uVP.value.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    view.uniforms.uEye.value.set(camera.position.x, camera.position.y, camera.position.z, 1);
+    view.update(rig);
+    renderer.render(scene, camera);
+    info.textContent = cur.id + '  t=' + t.toFixed(3) + 's  keys ' + cur.keys.join(' / ');
+  }
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  var last = performance.now();
+  function loop(now) {
+    if (window.lab && window.lab.frozen) { requestAnimationFrame(loop); return; }
+    var dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (playing) {
+      rig.update(dt); t += dt;
+      var span = cur.dur + (cur.hold || 0.4);
+      if (t > span) setScene(cur.id);
+      tIn.value = Math.min(t / cur.dur, 1);
+    }
+    if (document.getElementById('orbit').checked && orbit) {
+      var a = now / 4000; camera.position.set(orbit.tgt.x + Math.cos(a) * 14, orbit.tgt.y + Math.sin(a) * 14, orbit.tgt.z + 7); camera.lookAt(orbit.tgt);
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+  sel.onchange = function () { setScene(sel.value); };
+  document.getElementById('play').onclick = function () { playing = !playing; };
+  tIn.oninput = function () { playing = false; seek(+tIn.value * cur.dur); };
+  window.addEventListener('resize', resize);
+  resize();
+  var q = new URLSearchParams(location.search);
+  setScene(q.get('scene') || S3.Scenes[0].id);
+  if (q.has('static')) playing = false;
+  // automation hook (tools/storyboard-compare.js)
+  window.lab = {
+    scenes: S3.Scenes.map(function (s) { return { id: s.id, keys: s.keys, dur: s.dur }; }),
+    frozen: false,
+    show: function (id, time) { this.frozen = true; playing = false; sel.value = id; setScene(id); seek(time); draw(); return true; },
+    rig: function () { return rig; }
+  };
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
