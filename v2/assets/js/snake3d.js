@@ -270,9 +270,13 @@
     tgt = tgt || this.B;
     var P = this.P, i, j, k;
     P.set(this.S);
+    // length projection, self-collision and the ground, alternated; the last word is the length
+    for (k = 0; k < 2; k++) {
+      project(P, this.anchor);
+      if (this.collide) collide(P, 2);
+      for (i = 0; i < N; i++) if (P[i * 3 + 2] < RAD[i] * 0.98) P[i * 3 + 2] = RAD[i] * 0.98;
+    }
     project(P, this.anchor);
-    if (this.collide) { collide(P, 2); project(P, this.anchor); }
-    for (i = 0; i < N; i++) if (P[i * 3 + 2] < radius(i * SEG) * 0.98) P[i * 3 + 2] = radius(i * SEG) * 0.98;
     var Q = this.Q; Q.set(P);
     // ---- neck look (yaw) and lift (pitch): head first, then a short stretch of the neck
     var nY = this.nYaw.x, nP = this.nPitch.x, cn = 9, cl = 18;
@@ -406,7 +410,7 @@
     var m = keyAt(STRIKE_M, t), px = Q[SC * 3], py = Q[SC * 3 + 1], pz = Q[SC * 3 + 2];
     var th0 = Math.atan2(Q[(SC - 2) * 3 + 1] - Q[SC * 3 + 1], Q[(SC - 2) * 3] - Q[SC * 3]);   // body heading at the pivot
     var thD = th0 + clamp(wrapA(dir - th0), -1.25, 1.25);
-    var amp = 1.45 * (1 - m), base = lerp(th0, thD, sstep(0, 0.35, m) * 0.6 + 0.4);
+    var amp = 1.2 * (1 - m), base = lerp(th0, thD, sstep(0, 0.35, m) * 0.6 + 0.4);
     var x = px, y = py, z = pz;
     for (var k = 0; k < SC; k++) {
       var sg = (k + 0.5) / SC;
@@ -1008,10 +1012,11 @@
       var pitch = keyAt([[0, 1.3], [0.4, 1.18], [0.8, 1.08], [1.2, 1.03]], t);
       // head part on the ground to the left, then a helix around the post rising toward the tail
       var pts = [], u, headLen = 3.0, cx = 0.6;
+      // the free head stretch lies in front of the post heading +x and joins the helix tangentially at its front
       for (u = 0; u <= 40; u += 0.03) {
-        if (u < headLen) pts.push(cx - R - (headLen - u) * 0.95, -0.35 - (headLen - u) * 0.3, 0);
+        if (u < headLen) pts.push(cx - (headLen - u), -R, 0);
         else {
-          var a = (u - headLen) / R, z = Math.min(pitch * a / TAU, 3.6);
+          var a = (u - headLen) / R + PI / 2, z = Math.min(pitch * (a - PI / 2) / TAU, 3.6);
           pts.push(cx - R * Math.cos(a), -R * Math.sin(a), z);
         }
       }
@@ -1030,15 +1035,15 @@
     var c = Math.cos(a) * BR.rad, s = Math.sin(a) * BR.rad;
     return [dir[0] * along + side[0] * c + up[0] * s, dir[1] * along + side[1] * c + up[1] * s, dir[2] * along + side[2] * c + up[2] * s];
   }
+  // helix around the branch as an arc-length path (the body slides along it without stretching)
+  var CLIMB_PATH = pathFrom(function (u) { var p = branchPt(u / 1.85, 0); return [p[0] - 3.2, p[1], p[2] - 2.6 + 1.1]; }, 0, 40, 0.02);
   scene({ id: '16-climb', title: 'Подъём по наклонной ветке', dur: 1.05, loop: 0, keys: [0, 0.35, 0.7, 1.05], omega: 30, collide: false,
     props: [{ type: 'branch', ang: BR.ang, r: BR.r, len: 11, x: -3.2, z: -2.6 }],
     pose: function (t, o) {
       // grip zones hold while the neighbour moves: the head advances in steps
       var adv = 0.9 * (t / 1.05) + 0.12 * Math.sin(TAU * t / 0.7);
-      for (var i = 0; i < N; i++) {
-        var u = 9 - i * SEG + adv * 2.2, p = branchPt(u, 0);
-        o.pos[i * 3] = p[0] - 3.2; o.pos[i * 3 + 1] = p[1]; o.pos[i * 3 + 2] = p[2] - 2.6 + 1.1;
-      }
+      layPath(o.pos, CLIMB_PATH, 16.5 + adv * 4);
+      for (var i = 0; i < N; i++) o.pos[i * 3 + 2] -= radius(i * SEG);   // the helix carries its own height
     } });
   var PLANK = { z: 0.55, gapL: -3.6, gapR: -2.0 };
   scene({ id: '17-bridge', title: 'Переход между опорами', dur: 1.18, loop: 0, keys: [0, 0.36, 0.75, 1.18], omega: 30,
