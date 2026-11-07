@@ -1565,38 +1565,22 @@
     syncContact();
   }
 
-  /* ================================================================== FIT CHECKLIST («Кому подойдёт») */
-  function initFit() {
-    var list = $('[data-fit]');
-    if (!list) return;
-    var boxes = $$('input[type="checkbox"]', list);
-    var nOut = $('[data-fit-n]');
-    var bar = $('[data-fit-bar]');
-    var msg = $('[data-fit-msg]');
-    var go = $('[data-fit-go]');
-    var ask = $('[data-fit-ask]');
-    var result = $('[data-fit-result]');
-    var total = boxes.length || 10;
-    var last = -1;
-    var COPY = {
-      none: 'Отмечай всё, что про тебя,' + NBSP + '— честно, никто не' + NBSP + 'видит.',
-      low: 'Возможно, стрим' + NBSP + '— это не' + NBSP + 'совсем твоё, и' + NBSP + 'это нормально. Остались вопросы' + NBSP + '— напиши нам.',
-      high: 'Похоже, тебе к' + NBSP + 'нам. Начнём мягко?'
-    };
-    function update() {
-      var n = boxes.filter(function (b) { return b.checked; }).length;
-      if (n === last) return;
-      last = n;
-      if (nOut) nOut.textContent = n;
-      if (bar) bar.style.transform = 'scaleX(' + (n / total).toFixed(3) + ')';
-      var tier = n === 0 ? 'none' : n >= 5 ? 'high' : 'low';
-      if (msg && msg.textContent !== COPY[tier]) msg.textContent = COPY[tier];
-      if (go) go.hidden = tier !== 'high';
-      if (ask) ask.hidden = tier !== 'low';
-      if (result) result.setAttribute('data-tier', tier);
-    }
-    list.addEventListener('change', update);
-    update();
+  /* ================================================================== PLATFORM LOGOS
+     Each marquee item shows its name until data-logo points at a file; then the logo replaces it
+     (no request is made for platforms without a file, so the console stays clean). */
+  function initPlatformLogos() {
+    $$('.plat[data-logo]').forEach(function (p) {
+      var src = (p.getAttribute('data-logo') || '').trim();
+      if (!src) return;
+      var name = $('.plat__name', p);
+      var img = doc.createElement('img');
+      img.className = 'plat__logo';
+      img.alt = '';
+      img.decoding = 'async';
+      img.addEventListener('load', function () { p.classList.add('has-logo'); });
+      img.src = src;
+      p.insertBefore(img, name);
+    });
   }
 
   /* ================================================================== REVIEWS (hidden until real screenshots exist) */
@@ -1643,8 +1627,8 @@
   function initFloatTg() {
     var btn = $('[data-float-tg]');
     if (!btn || !win.IntersectionObserver) return;
-    /* out of the way over the hero, the checklist, the calculator, the form and the footer (they have their own controls / links) */
-    var zones = ['#top', '[data-fit]', '#income', '#apply', '[data-footer]'].map(function (s) { return $(s); }).filter(Boolean);
+    /* out of the way over the hero, the calculator, the form and the footer (they have their own controls / links) */
+    var zones = ['#top', '#income', '#apply', '[data-footer]'].map(function (s) { return $(s); }).filter(Boolean);
     var on = {};
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { on[zones.indexOf(e.target)] = e.isIntersecting; });
@@ -1810,7 +1794,7 @@
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['alerts', initAlerts],
     ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
-    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['fit', initFit], ['reviews', initReviews], ['floatTg', initFloatTg], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
+    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['reviews', initReviews], ['platformLogos', initPlatformLogos], ['floatTg', initFloatTg], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
     ['motionToggle', initMotionToggle], ['offscreen', initOffscreen]
   ];
   function boot() {

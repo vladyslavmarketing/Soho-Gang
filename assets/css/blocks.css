@@ -1087,31 +1087,18 @@ html:not(.js) .float-tg { display: none; }
   gap: 10px;
   counter-reset: none;
 }
-.check-card {
-  position: relative;
+.fit-card {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 14px;
   min-height: 64px;
-  padding: 12px 16px 12px 12px;
+  padding: 12px 18px 12px 12px;
   border-radius: 16px;
   background: rgba(251, 246, 238, .96);
   box-shadow: 0 0 0 1px rgba(30, 22, 24, .08), 0 14px 22px -20px rgba(90, 30, 45, .6);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color .3s, box-shadow .3s, scale .35s var(--ease-soft);
 }
-.check-card input {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.check-card:active { scale: .985; }
-.check-card__no {
+.fit-card__no {
   display: grid;
   place-items: center;
   width: 38px; height: 38px;
@@ -1119,98 +1106,16 @@ html:not(.js) .float-tg { display: none; }
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
-  color: var(--cream);
-  background: var(--ink);
-  box-shadow: 0 0 0 2px var(--cream), 0 0 0 3.5px rgba(30, 22, 24, .25);
-  transition: background .3s, color .3s;
-}
-.check-card__text {
-  grid-column: 2;
-  grid-row: 1;
-  font-size: 15.5px;
-  line-height: 1.4;
   color: var(--ink);
-}
-.check-card__box {
-  grid-column: 3;
-  grid-row: 1;
-  display: grid;
-  place-items: center;
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(30, 22, 24, .45);
-  background: var(--cream);
-  transition: background .35s, border-color .35s, scale .45s var(--ease-soft);
-}
-.check-card__box svg {
-  width: 18px; height: 18px;
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 22;
-  stroke-dashoffset: 22;
-  transition: stroke-dashoffset .4s var(--ease-out) .05s;
-}
-/* checked: the badge turns into a plush pom-pom with an ink tick */
-.check-card:has(input:checked) { background: #F9E4E9; box-shadow: 0 0 0 1.5px var(--ink), 0 16px 24px -20px rgba(90, 30, 45, .7); }
-.check-card input:checked ~ .check-card__box {
-  border-color: var(--ink);
   background: var(--plush-ball);
-  scale: 1.08;
+  box-shadow: 0 0 0 2px var(--cream), 0 0 0 3.5px rgba(30, 22, 24, .3);
 }
-.check-card input:checked ~ .check-card__box svg { stroke-dashoffset: 0; }
-.check-card input:checked ~ .check-card__no { background: var(--fur-text); }
-.check-card:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 3px; }
-@media (hover: hover) and (pointer: fine) {
-  .check-card:hover { box-shadow: 0 0 0 1.5px rgba(30, 22, 24, .4), 0 16px 24px -20px rgba(90, 30, 45, .7); }
-}
+.fit-card__text { font-size: 15.5px; line-height: 1.4; color: var(--ink); }
 
 .fit__side { display: grid; gap: 28px; justify-items: center; align-content: start; }
 .fit__snap { --snap-w: min(78%, 280px); --r: 3deg; --tape-r: -4deg; }
 .fit__snap .snap__shot { filter: none; }
 .fit__snap .snap__shot::after { background-color: rgba(214, 208, 200, 0); }
-.fit__result {
-  width: 100%;
-  padding: 22px 20px 20px;
-  border-radius: 20px;
-  color: var(--cream);
-  background: var(--ink);
-  box-shadow: 0 24px 40px -28px rgba(30, 22, 24, .9);
-}
-.fit__count {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -.02em;
-}
-.fit__count b { font-size: 1.5em; color: #F3B8C6; font-variant-numeric: tabular-nums; }
-.fit__meter {
-  position: relative;
-  display: block;
-  height: 12px;
-  margin: 14px 0 12px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(244, 234, 219, .14);
-}
-.fit__meter span {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--snake-body);
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-  transition: transform .6s var(--ease-soft);
-}
-.fit__msg { font-size: 15.5px; line-height: 1.5; color: var(--cream-70); }
-.fit__result[data-tier="high"] .fit__msg { color: var(--cream); font-weight: 600; }
-.fit__result .btn { margin-top: 16px; }
-.fit__result .btn--light { background: var(--cream); color: var(--ink); }
-.fit__result .btn--ghost { color: var(--cream); border-color: var(--cream-70); }
-.fit__result :focus-visible { outline-color: var(--cream); box-shadow: 0 0 0 3px var(--ink); }
-
 /* polaroid «2026 · где угодно»: pink dusk, sea, a suitcase with a snake band, phone on a tripod */
 .snap--trip { --shot: linear-gradient(180deg, #F6C9D3 0%, #F3D9DD 46%, #E7A9B8 47%, #D98FA2 70%, #C97A8F 100%); }
 .art-sun {
@@ -1275,10 +1180,7 @@ html:not(.js) .float-tg { display: none; }
 
 @media (min-width: 640px) {
   .checks { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(5, auto); }
-  .check-card { height: 100%; }
-}
-@media (min-width: 640px) and (max-width: 959px) {
-  .fit__side { grid-template-columns: minmax(0, 220px) minmax(0, 1fr); align-items: center; }
+  .fit-card { height: 100%; }
 }
 @media (min-width: 960px) {
   .fit__grid { grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: clamp(32px, 4vw, 64px); align-items: start; }
@@ -1675,8 +1577,7 @@ html:not(.js) .float-tg { display: none; }
 
 /* forced colours: the plush badges and checks keep a visible edge */
 @media (forced-colors: active) {
-  .check-card { border: 1px solid CanvasText; }
-  .check-card__box { forced-color-adjust: none; border-color: CanvasText; }
+  .fit-card { border: 1px solid CanvasText; }
 }
 /* phones / tablets: perk text runs under the icon row (full width) */
 @media (max-width: 959px) {
@@ -1685,9 +1586,6 @@ html:not(.js) .float-tg { display: none; }
 }
 @media (max-width: 399px) {
   .hero__eyebrow { letter-spacing: .08em; font-size: 11px; }
-}
-@media (max-width: 959px) {
-  .fit__result { order: -1; }   /* the score sits right under the list on phones and tablets */
 }
 
 /* ---------- 7b · STUDIO EQUIPMENT (replaces the multicam) ---------- */
@@ -1811,20 +1709,8 @@ html:not(.js) .float-tg { display: none; }
   opacity: 0;
   pointer-events: none;
 }
-.alert__meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--a-dim);
-}
-.alert__meta i { width: 6px; height: 6px; border-radius: 50%; background: var(--fur); }
 .alert__title {
-  margin-top: 6px;
+  margin-top: 2px;
   font-size: clamp(19px, 1.7vw, 23px);
   font-weight: 800;
   line-height: 1.1;
@@ -1881,3 +1767,13 @@ html.reduced-motion .alert.is-waiting { opacity: 1; transform: none; }
 .gear .section-title--sub { font-size: clamp(1.9rem, 7.4vw, 2.2rem); overflow-wrap: break-word; hyphens: auto; }
 @media (min-width: 960px) { .gear .section-title--sub { font-size: clamp(2.2rem, 2.9vw, 2.9rem); } }
 @media (min-width: 1180px) { .feed__list--values { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; } }
+
+/* platforms: name (fallback) or logo, monochrome cream on the ink band */
+.plat { display: inline-flex; align-items: center; height: 32px; }
+.plat__logo { display: block; height: 28px; width: auto; max-width: 180px; filter: brightness(0) invert(.92) sepia(.12); }
+.plat:not(.has-logo) .plat__logo { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.plat.has-logo .plat__name { display: none; }
+/* «Индивидуально» instead of a percent */
+.share-card__pct--word { font-size: clamp(20px, 6.6vw, 64px); min-width: 0; overflow-wrap: anywhere; line-height: .95; letter-spacing: -.045em; }
+.share-card { min-width: 0; }
+@media (min-width: 720px) { .share-card__pct--word { font-size: clamp(28px, 3.3vw, 50px); overflow-wrap: normal; } }

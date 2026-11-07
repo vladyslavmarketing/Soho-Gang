@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ae studio — вебкам-студия</title>
-<meta name="description" content="ae studio — вебкам-студия для девушек 18+. В студии или из дома: обучение с нуля, доля 50% или 70%, выплаты каждую неделю и защита анонимности.">
+<meta name="description" content="ae studio — вебкам-студия для девушек 18+. В студии или из дома: обучение с нуля, выплаты каждую неделю и защита анонимности.">
 <meta name="theme-color" content="#F1D6DA">
 <meta property="og:title" content="ae studio — Мягкий старт. Большой доход.">
 <meta property="og:description" content="Вебкам-студия для девушек 18+. В студии или из дома. Обучение с нуля, выплаты каждую неделю, защита анонимности.">
@@ -167,31 +167,30 @@
     <p class="hero__hint" data-hero-hint aria-hidden="true">Наведи курсор&nbsp;— она следит. Кликни&nbsp;— и&nbsp;поползёт за&nbsp;тобой.</p>
   </section>
 
-  <!-- ============ 2. FIT: «Кому подойдёт» — an interactive checklist (main.js initFit) ============ -->
+  <!-- ============ 2. FIT: «Кому подойдёт» — ten numbered cards + a polaroid ============ -->
   <section class="section fit" id="fit" aria-labelledby="fit-title">
     <div class="container">
       <header class="section-head" data-reveal>
         <p class="eyebrow">Кому подойдёт</p>
         <h2 class="section-title" id="fit-title">Кому подойдёт эта работа</h2>
-        <p class="section-lead">Отметь пункты, в&nbsp;которых узнаёшь себя,&nbsp;— и&nbsp;посмотри, насколько тебе подходит стрим.</p>
+        <p class="section-lead">Найди себя в&nbsp;этих пунктах. Не&nbsp;обязательно совпадать во&nbsp;всём&nbsp;— главное, чтобы тебе было интересно.</p>
       </header>
 
       <div class="fit__grid">
-        <fieldset class="fit__list" data-fit data-reveal>
-          <legend class="sr-only">Отметь пункты, в&nbsp;которых узнаёшь себя</legend>
+        <div class="fit__list" data-reveal>
           <ol class="checks">
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">01</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Ты любишь общаться и&nbsp;легко находишь общий язык с&nbsp;новыми людьми</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">02</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Тебе нравится красиво одеваться и&nbsp;делать макияж</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">03</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Ты любишь менять образы&nbsp;— и&nbsp;при этом остаёшься собой</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">04</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Ты спокойно говоришь на&nbsp;откровенные темы и&nbsp;умеешь держать свои границы</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">05</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Тебе интересно учиться выстраивать долгое общение с&nbsp;постоянными зрителями</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">06</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Ты ценишь дисциплину и&nbsp;взаимное уважение</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">07</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Тебе приятны подарки и&nbsp;внимание&nbsp;— и&nbsp;ты понимаешь, что их&nbsp;приносит живое, тёплое общение</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">08</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Чужое мнение и&nbsp;стереотипы тебя не&nbsp;останавливают</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">09</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Для тебя важен хороший уровень жизни</span></label></li>
-            <li><label class="check-card"><input type="checkbox" name="fit"><span class="check-card__no" aria-hidden="true">10</span><span class="check-card__box" aria-hidden="true"><svg><use href="#i-check"/></svg></span><span class="check-card__text">Ты мечтаешь путешествовать и&nbsp;работать из&nbsp;любой точки мира</span></label></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">01</span><span class="fit-card__text">Ты любишь общаться и&nbsp;легко находишь общий язык с&nbsp;новыми людьми</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">02</span><span class="fit-card__text">Тебе нравится красиво одеваться и&nbsp;делать макияж</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">03</span><span class="fit-card__text">Ты любишь менять образы&nbsp;— и&nbsp;при этом остаёшься собой</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">04</span><span class="fit-card__text">Ты спокойно говоришь на&nbsp;откровенные темы и&nbsp;умеешь держать свои границы</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">05</span><span class="fit-card__text">Тебе интересно учиться выстраивать долгое общение с&nbsp;постоянными зрителями</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">06</span><span class="fit-card__text">Ты ценишь дисциплину и&nbsp;взаимное уважение</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">07</span><span class="fit-card__text">Тебе приятны подарки и&nbsp;внимание&nbsp;— и&nbsp;ты понимаешь, что их&nbsp;приносит живое, тёплое общение</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">08</span><span class="fit-card__text">Чужое мнение и&nbsp;стереотипы тебя не&nbsp;останавливают</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">09</span><span class="fit-card__text">Для тебя важен хороший уровень жизни</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">10</span><span class="fit-card__text">Ты мечтаешь путешествовать и&nbsp;работать из&nbsp;любой точки мира</span></li>
           </ol>
-        </fieldset>
+        </div>
 
         <aside class="fit__side" data-reveal style="--i:1">
           <figure class="snap snap--trip fit__snap" aria-hidden="true">
@@ -204,13 +203,6 @@
             </span>
             <figcaption class="snap__cap">2026 · где&nbsp;угодно</figcaption>
           </figure>
-          <div class="fit__result" data-fit-result>
-            <p class="fit__count" aria-live="polite">Ты узнала себя в&nbsp;<b data-fit-n>0</b> из&nbsp;10</p>
-            <span class="fit__meter" aria-hidden="true"><span data-fit-bar></span></span>
-            <p class="fit__msg" data-fit-msg aria-live="polite">Отмечай всё, что про тебя,&nbsp;— честно, никто не&nbsp;видит.</p>
-            <a class="btn btn--light btn--small" href="#conditions" data-fit-go hidden>Узнать условия</a>
-            <a class="btn btn--ghost btn--small" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-fit-ask hidden>Написать нам</a>
-          </div>
         </aside>
       </div>
     </div>
@@ -259,44 +251,44 @@
   </section>
 
   <!-- ============ 4. PLATFORMS: the ink marquee (names as text, no third-party logos) ============ -->
-  <!-- ⚑ platform list: confirm with the studio -->
+  <!-- ⚑ platform list: confirm with the studio (OnlyFans removed on request) -->
   <section class="platforms" aria-labelledby="platforms-title">
     <div class="container">
       <h2 class="platforms__title" id="platforms-title">Работаем с&nbsp;площадками</h2>
       <ul class="sr-only">
-        <li>Stripchat</li><li>Chaturbate</li><li>LiveJasmin</li><li>BongaCams</li><li>Streamate</li><li>Flirt4Free</li><li>Dreamcam</li><li>OnlyFans</li>
+        <li>Stripchat</li><li>Chaturbate</li><li>LiveJasmin</li><li>BongaCams</li><li>Streamate</li><li>Flirt4Free</li><li>Dreamcam</li>
       </ul>
     </div>
+    <!-- Logos: put the file in assets/img/platforms/ and set data-logo="assets/img/platforms/<name>.svg" on BOTH copies
+         of the platform below (main.js initPlatformLogos swaps the name for the logo). See README «Логотипы площадок». -->
     <div class="marquee" aria-hidden="true">
       <div class="marquee__track">
-        <span>Stripchat</span><i class="scale"></i>
-        <span>Chaturbate</span><i class="scale"></i>
-        <span>LiveJasmin</span><i class="scale"></i>
-        <span>BongaCams</span><i class="scale"></i>
-        <span>Streamate</span><i class="scale"></i>
-        <span>Flirt4Free</span><i class="scale"></i>
-        <span>Dreamcam</span><i class="scale"></i>
-        <span>OnlyFans</span><i class="scale"></i>
-        <span>Stripchat</span><i class="scale"></i>
-        <span>Chaturbate</span><i class="scale"></i>
-        <span>LiveJasmin</span><i class="scale"></i>
-        <span>BongaCams</span><i class="scale"></i>
-        <span>Streamate</span><i class="scale"></i>
-        <span>Flirt4Free</span><i class="scale"></i>
-        <span>Dreamcam</span><i class="scale"></i>
-        <span>OnlyFans</span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Stripchat</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Chaturbate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">LiveJasmin</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">BongaCams</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Streamate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Flirt4Free</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Dreamcam</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Stripchat</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Chaturbate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">LiveJasmin</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">BongaCams</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Streamate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Flirt4Free</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Dreamcam</span></span><i class="scale"></i>
       </div>
     </div>
   </section>
 
-  <!-- ============ 5. FORMAT: studio 50% / home 70% (same numbers as the calculator and FAQ) ============ -->
-  <!-- ⚑ shares 50% / 70%: confirm with the studio -->
+  <!-- ============ 5. FORMAT: studio 50% / home individual (same as the calculator and FAQ) ============ -->
+  <!-- ⚑ studio share 50% (home: individual): confirm with the studio -->
   <section class="section format" id="format" aria-labelledby="format-title">
     <div class="container">
       <header class="section-head" data-reveal>
         <p class="eyebrow">Студия или дом</p>
         <h2 class="section-title" id="format-title">Стримь у&nbsp;нас в&nbsp;студии или из&nbsp;любой точки мира</h2>
-        <p class="section-lead">Нужны компьютер, камера и&nbsp;стабильный интернет. Твоя доля с&nbsp;аккаунтов:</p>
+        <p class="section-lead">Для работы из&nbsp;дома нужны компьютер, камера и&nbsp;стабильный интернет. Твоя доля с&nbsp;аккаунтов:</p>
       </header>
 
       <div class="share">
@@ -309,10 +301,9 @@
         </article>
         <article class="share-card share-card--home" data-reveal style="--i:1">
           <span class="share-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span>
-          <p class="share-card__pct"><b>70</b>%</p>
+          <p class="share-card__pct share-card__pct--word">Индивидуально</p>
           <h3 class="share-card__title">Если стримишь из&nbsp;дома</h3>
-          <p class="share-card__text">Своя техника и&nbsp;интернет, обучение и&nbsp;поддержка&nbsp;— от&nbsp;нас.</p>
-          <span class="share-card__bar" aria-hidden="true"><span style="--p:.7"></span></span>
+          <p class="share-card__text">Доля обсуждается лично. Своя техника и&nbsp;интернет, обучение и&nbsp;поддержка&nbsp;— от&nbsp;нас.</p>
         </article>
       </div>
       <div class="cta-row" data-reveal>
@@ -328,16 +319,9 @@
       <div class="income__copy" data-reveal>
         <p class="eyebrow">Калькулятор</p>
         <h2 class="section-title" id="income-title">Сколько ты можешь зарабатывать</h2>
-        <p class="section-lead">Расчёт примерный: сумма уже после доли студии. Итог зависит от&nbsp;площадки, графика и&nbsp;твоей активности.</p>
+        <p class="section-lead">Расчёт примерный, для работы в&nbsp;студии: сумма уже после доли студии (твоя часть&nbsp;— 50%). Итог зависит от&nbsp;площадки, графика и&nbsp;твоей активности. Из&nbsp;дома доля обсуждается индивидуально.</p>
 
         <form class="calc" data-calc>
-          <fieldset class="calc__group">
-            <legend class="calc__legend">Где стримишь · твоя доля</legend>
-            <div class="segmented segmented--rates">
-              <label class="segmented__opt"><input type="radio" id="place-studio" name="place" value="0.5" checked><span>Студия<small class="segmented__rate">50%</small></span></label>
-              <label class="segmented__opt"><input type="radio" id="place-home" name="place" value="0.7"><span>Дом<small class="segmented__rate">70%</small></span></label>
-            </div>
-          </fieldset>
           <fieldset class="calc__group">
             <legend class="calc__legend">Опыт · средний заработок аккаунта в&nbsp;час</legend>
             <div class="segmented segmented--rates">
@@ -454,7 +438,6 @@
         <li class="alert" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-sprout"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 01</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Работа и&nbsp;рост</h3>
             <p class="alert__text">В&nbsp;индустрии, где хорошо платят и&nbsp;есть куда расти.</p>
           </div>
@@ -463,7 +446,6 @@
         <li class="alert alert--pink" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 02</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h3>
             <p class="alert__text">Стримь из&nbsp;любой точки мира или из&nbsp;уютной студии с&nbsp;современной техникой.</p>
           </div>
@@ -472,7 +454,6 @@
         <li class="alert" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cal"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 03</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Выплаты каждую неделю</h3>
             <p class="alert__text">Без задержек&nbsp;— на&nbsp;карту или в&nbsp;USDT.</p>
           </div>
@@ -481,7 +462,6 @@
         <li class="alert alert--pink" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-heart"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 04</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Поддержка</h3>
             <p class="alert__text">Психолог и&nbsp;команда рядом, когда тяжело.</p>
           </div>
@@ -490,7 +470,6 @@
         <li class="alert" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cap"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 05</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Обучение</h3>
             <p class="alert__text">Профессиональное обучение и&nbsp;развитие&nbsp;— бесплатно.</p>
           </div>
@@ -499,7 +478,6 @@
         <li class="alert alert--pink" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-star"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 06</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Личный бренд</h3>
             <p class="alert__text">Свой образ, стиль и&nbsp;узнаваемое имя.</p>
           </div>
@@ -508,7 +486,6 @@
         <li class="alert" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-chat"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 07</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Тёплое общение</h3>
             <p class="alert__text">Навык долгого тёплого общения с&nbsp;постоянными зрителями.</p>
           </div>
@@ -517,7 +494,6 @@
         <li class="alert alert--pink" data-alert>
           <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-coins"/></svg></span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 08</p>
             <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Больше возможностей</h3>
             <p class="alert__text">Чем больше опыта и&nbsp;аудитории&nbsp;— тем больше возможностей расти.</p>
           </div>
@@ -825,7 +801,6 @@
         <li class="alert alert--cream" data-alert>
           <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 01</p>
             <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h4>
             <p class="alert__text">Здесь тебя не&nbsp;осуждают.</p>
           </div>
@@ -834,7 +809,6 @@
         <li class="alert alert--cream" data-alert>
           <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 02</p>
             <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Честность и&nbsp;прозрачность</h4>
             <p class="alert__text">С&nbsp;первой встречи говорим прямо о&nbsp;деньгах, мотивах и&nbsp;правилах.</p>
           </div>
@@ -843,7 +817,6 @@
         <li class="alert alert--cream" data-alert>
           <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 03</p>
             <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Чёткие правила</h4>
             <p class="alert__text">На&nbsp;них держится взаимное уважение.</p>
           </div>
@@ -852,7 +825,6 @@
         <li class="alert alert--cream" data-alert>
           <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 04</p>
             <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Забота о&nbsp;тебе</h4>
             <p class="alert__text">Твоё состояние важнее любых денег.</p>
           </div>
@@ -861,7 +833,6 @@
         <li class="alert alert--cream" data-alert>
           <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
           <div class="alert__body">
-            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 05</p>
             <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Дисциплина</h4>
             <p class="alert__text">Самый короткий путь к&nbsp;цифрам, о&nbsp;которых ты мечтаешь.</p>
           </div>
@@ -955,7 +926,7 @@
           </details>
           <details class="acc">
             <summary class="acc__q">Можно работать из&nbsp;дома?<span class="acc__icon" aria-hidden="true"></span></summary>
-            <div class="acc__a"><p>Да. Нужны компьютер, камера и&nbsp;стабильный интернет. Из&nbsp;дома твоя доля&nbsp;— 70% с&nbsp;аккаунтов, обучение и&nbsp;поддержка от&nbsp;нас. В&nbsp;студии&nbsp;— 50%: комната, свет, техника, админ и&nbsp;охрана на&nbsp;нас.</p></div>
+            <div class="acc__a"><p>Да. Нужны компьютер, камера и&nbsp;стабильный интернет. Из&nbsp;дома доля с&nbsp;аккаунтов обсуждается индивидуально, обучение и&nbsp;поддержка от&nbsp;нас. В&nbsp;студии твоя доля&nbsp;— 50%: комната, свет, техника, админ и&nbsp;охрана на&nbsp;нас.</p></div>
           </details>
         </div>
       </div>
