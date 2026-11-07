@@ -45,90 +45,6 @@
   }
 
   /* ============================================================== A · MULTICAM */
-  function initMulticam() {
-    var mc = $('[data-mc]');
-    if (!mc) return;
-    var radios = $$('input[name="mc-cam"]', mc);
-    var light = $('[data-mc-light]', mc);
-    var strip = $('[data-mc-strip]', mc);
-
-    function current() {
-      for (var i = 0; i < radios.length; i++) if (radios[i].checked) return radios[i];
-      return null;
-    }
-    function reveal(radio, smooth) {
-      if (!strip || !radio) return;
-      if (strip.scrollWidth <= strip.clientWidth + 2) return;      // desktop grid: nothing to scroll
-      var card = radio.closest('.cam');
-      if (!card) return;
-      var left = card.offsetLeft - (strip.clientWidth - card.offsetWidth) / 2;
-      strip.scrollTo({ left: clamp(left, 0, strip.scrollWidth - strip.clientWidth), behavior: smooth && !reduced() ? 'smooth' : 'auto' });
-    }
-
-    radios.forEach(function (r) {
-      r.addEventListener('change', function () {
-        if (!r.checked) return;
-        if (!reduced()) pulseClass(mc, 'is-cut', 260, '_cutT');
-        reveal(r, true);
-      });
-      /* Enter selects too (Space and arrows are native for radios) */
-      r.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter' || r.checked) return;
-        e.preventDefault();
-        r.checked = true;
-        r.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    });
-
-    if (light) {
-      light.addEventListener('change', function () {
-        mc.classList.remove('is-flicker');
-        if (light.checked && !reduced()) pulseClass(mc, 'is-flicker', 1000, '_flickT');
-      });
-    }
-
-    /* keep the on-air preview visible on the mobile strip after layout changes; only a real width change
-       counts (mobile browsers fire resize when the URL bar shows / hides, which must not undo a swipe) */
-    var resizeT = 0, lastW = win.innerWidth;
-    win.addEventListener('resize', function () {
-      clearTimeout(resizeT);
-      resizeT = setTimeout(function () {
-        if (win.innerWidth === lastW) return;
-        lastW = win.innerWidth;
-        reveal(current(), false);
-      }, 150);
-    });
-
-    /* REC timecode, 25 fps, only while the console is on screen */
-    var tcs = $$('[data-mc-timecode]', mc);
-    if (!tcs.length) return;
-    var t0 = now() - 754000;               // start "12:34" into the take — feels live
-    var inView = false, loopId = 0, lastText = '';
-    function render() {
-      var ms = now() - t0;
-      var s = Math.floor(ms / 1000);
-      var ff = reduced() ? 0 : Math.floor(ms / 40) % 25;
-      var text = pad(Math.floor(s / 3600) % 100) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60) + ':' + pad(ff);
-      if (text === lastText) return;
-      lastText = text;
-      for (var i = 0; i < tcs.length; i++) tcs[i].textContent = text;
-    }
-    /* 25 fps display: one tick per timecode frame (40 ms), not a 60 fps loop; frozen while paused */
-    function loop() {
-      render();
-      if (!inView || paused()) { loopId = 0; return; }
-      loopId = setTimeout(loop, reduced() ? 500 : 40);
-    }
-    render();
-    if (win.IntersectionObserver) {
-      new IntersectionObserver(function (entries) {
-        inView = entries[entries.length - 1].isIntersecting;
-        if (inView && !loopId) loop();
-      }).observe(mc);
-    }
-    doc.addEventListener('ae:motion', function () { if (inView && !loopId) loop(); });
-  }
-
   /* ============================================================== B · CHAT */
   function initChat() {
     var chat = $('[data-chat]');
@@ -435,7 +351,7 @@
   }
 
   /* ============================================================== BOOT */
-  var inits = [['multicam', initMulticam], ['chat', initChat], ['pass', initPass]];
+  var inits = [['chat', initChat], ['pass', initPass]];
   function boot() {
     for (var i = 0; i < inits.length; i++) {
       try { inits[i][1](); } catch (e) { warn(inits[i][0], e); }

@@ -395,7 +395,7 @@
     </div>
   </section>
 
-  <!-- ============ 7. FORMATS + ROOMS: three ways to work, then the studio's multicam switcher (blocks.js) ============ -->
+  <!-- ============ 7. FORMATS + STUDIO EQUIPMENT ============ -->
   <section class="section rooms" id="rooms" aria-labelledby="rooms-title">
     <div class="container">
       <header class="section-head" data-reveal>
@@ -423,198 +423,108 @@
         </li>
       </ul>
 
-      <header class="section-head section-head--split rooms__head" data-reveal>
-        <div>
-          <p class="eyebrow">Студия · комнаты</p>
-          <h3 class="section-title section-title--sub">Четыре комнаты. Четыре настроения.</h3>
+      <!-- ⚑ equipment list: confirm with the studio -->
+      <div class="gear" data-reveal>
+        <div class="gear__copy">
+          <p class="eyebrow">Студия</p>
+          <h3 class="section-title section-title--sub">Профессиональное оборудование</h3>
+          <p class="section-lead">Все комнаты сделаны для работы: свет выставлен, камера и&nbsp;компьютер настроены. Тебе остаётся прийти и&nbsp;включить эфир.</p>
         </div>
-        <p class="section-lead">Звукоизоляция, 4K-камеры, кольцевой и&nbsp;мягкий свет. Переключай камеры, как&nbsp;режиссёр эфира, и&nbsp;заглядывай в&nbsp;каждую комнату.</p>
-      </header>
-
-      <div class="mc" data-mc data-reveal style="--i:1">
-        <div class="mc__bar" aria-hidden="true">
-          <span class="mc__brand"><b>ae</b>multicam</span>
-          <span class="mc__bar-mid">4 входа · 4K · 60 fps</span>
-          <span class="mc__bar-tc"><span class="rec-dot"></span><span data-mc-timecode>00:00:00:00</span></span>
-        </div>
-
-        <div class="mc__program">
-          <p class="mc__label" aria-hidden="true"><b class="mc__label-tag mc__label-tag--pgm">PGM</b>В&nbsp;эфире</p>
-          <div class="mc__monitor">
-            <div class="mc__screen" aria-hidden="true">
-              <div class="mc__feed">
-                <span class="set set--zefir" data-for="zefir"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span>
-                <span class="set set--silk" data-for="silk"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span>
-                <span class="set set--midnight" data-for="midnight"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span>
-                <span class="set set--caramel" data-for="caramel"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span>
-              </div>
-              <span class="mc__scan"></span>
-              <span class="mc__vf">
-                <span class="mc__corner mc__corner--tl"></span><span class="mc__corner mc__corner--tr"></span><span class="mc__corner mc__corner--bl"></span><span class="mc__corner mc__corner--br"></span>
-                <span class="mc__cross"></span>
-                <span class="mc__chip mc__rec"><span class="rec-dot"></span>REC <span data-mc-timecode>00:00:00:00</span></span>
-                <span class="mc__chip mc__onair">On air</span>
-                <span class="mc__chip mc__tag" data-for="zefir">CAM 01 · 4300K</span>
-                <span class="mc__chip mc__tag" data-for="silk">CAM 02 · 3800K</span>
-                <span class="mc__chip mc__tag" data-for="midnight">CAM 03 · 6500K</span>
-                <span class="mc__chip mc__tag" data-for="caramel">CAM 04 · 3200K</span>
-              </span>
-              <span class="mc__cut"></span>
-            </div>
-            <label class="mc__light">
-              <input type="checkbox" role="switch" checked data-mc-light>
-              <span class="mc__light-ui" aria-hidden="true"></span>
-              <span class="mc__light-text">Свет</span><span class="mc__light-state" aria-hidden="true"><span class="mc__light-on">вкл</span><span class="mc__light-off">выкл</span></span>
-            </label>
-          </div>
-        </div>
-
-        <fieldset class="mc__cams">
-          <legend class="mc__label"><b class="mc__label-tag">PVW</b>Камеры<span class="mc__label-hint"> — выбери, какую комнату вывести в&nbsp;эфир</span></legend>
-          <div class="mc__strip" data-mc-strip>
-            <label class="cam">
-              <input class="cam__input" type="radio" name="mc-cam" value="zefir" checked>
-              <span class="cam__screen" aria-hidden="true"><span class="set set--zefir"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span><span class="cam__tally"></span><span class="cam__pgm">PGM</span></span>
-              <span class="cam__meta"><span class="cam__no">CAM 01</span> <span class="cam__name">Зефир</span><span class="cam__k" aria-hidden="true">4300K</span></span>
-            </label>
-            <label class="cam">
-              <input class="cam__input" type="radio" name="mc-cam" value="silk">
-              <span class="cam__screen" aria-hidden="true"><span class="set set--silk"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span><span class="cam__tally"></span><span class="cam__pgm">PGM</span></span>
-              <span class="cam__meta"><span class="cam__no">CAM 02</span> <span class="cam__name">Шёлк</span><span class="cam__k" aria-hidden="true">3800K</span></span>
-            </label>
-            <label class="cam">
-              <input class="cam__input" type="radio" name="mc-cam" value="midnight">
-              <span class="cam__screen" aria-hidden="true"><span class="set set--midnight"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span><span class="cam__tally"></span><span class="cam__pgm">PGM</span></span>
-              <span class="cam__meta"><span class="cam__no">CAM 03</span> <span class="cam__name">Полночь</span><span class="cam__k" aria-hidden="true">6500K</span></span>
-            </label>
-            <label class="cam">
-              <input class="cam__input" type="radio" name="mc-cam" value="caramel">
-              <span class="cam__screen" aria-hidden="true"><span class="set set--caramel"><span class="set__floor"></span><span class="set__key"><i></i></span><span class="set__ring"><i></i></span><span class="set__prop set__prop--a"></span><span class="set__prop set__prop--b"></span><span class="set__prop set__prop--c"></span><span class="set__prop set__prop--d"></span><span class="set__glow"></span></span><span class="cam__tally"></span><span class="cam__pgm">PGM</span></span>
-              <span class="cam__meta"><span class="cam__no">CAM 04</span> <span class="cam__name">Карамель</span><span class="cam__k" aria-hidden="true">3200K</span></span>
-            </label>
-          </div>
-        </fieldset>
-
-        <div class="mc__info">
-          <article class="mc-room" data-for="zefir" aria-labelledby="mc-room-zefir">
-            <p class="mc-room__cam" aria-hidden="true"><span>CAM 01</span><span>/ 04</span></p>
-            <h3 class="mc-room__name" id="mc-room-zefir">Зефир</h3>
-            <p class="mc-room__mood">Настроение: нежность</p>
-            <p class="mc-room__text">Розовый мех, мягкий рассеянный свет и&nbsp;пуфы.</p>
-            <dl class="mc-room__specs">
-              <div><dt>Площадь</dt><dd>15&nbsp;м²</dd></div>
-              <div><dt>Свет</dt><dd>Кольцо + октобокс</dd></div>
-              <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
-              <div class="mc-room__kelvin" style="--k:.325"><dt>Цвет света</dt><dd>4300K <span class="kelvin" aria-hidden="true"><i></i></span></dd></div>
-            </dl>
-          </article>
-          <article class="mc-room" data-for="silk" aria-labelledby="mc-room-silk">
-            <p class="mc-room__cam" aria-hidden="true"><span>CAM 02</span><span>/ 04</span></p>
-            <h3 class="mc-room__name" id="mc-room-silk">Шёлк</h3>
-            <p class="mc-room__mood">Настроение: утончённость</p>
-            <p class="mc-room__text">Сливочный шёлк, зеркала и&nbsp;тёплый заполняющий свет.</p>
-            <dl class="mc-room__specs">
-              <div><dt>Площадь</dt><dd>16&nbsp;м²</dd></div>
-              <div><dt>Свет</dt><dd>Кольцо + LED-панель</dd></div>
-              <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
-              <div class="mc-room__kelvin" style="--k:.2"><dt>Цвет света</dt><dd>3800K <span class="kelvin" aria-hidden="true"><i></i></span></dd></div>
-            </dl>
-          </article>
-          <article class="mc-room" data-for="midnight" aria-labelledby="mc-room-midnight">
-            <p class="mc-room__cam" aria-hidden="true"><span>CAM 03</span><span>/ 04</span></p>
-            <h3 class="mc-room__name" id="mc-room-midnight">Полночь</h3>
-            <p class="mc-room__mood">Настроение: загадка</p>
-            <p class="mc-room__text">Чёрный бархат, розовый неон и&nbsp;глубокие тени.</p>
-            <dl class="mc-room__specs">
-              <div><dt>Площадь</dt><dd>12&nbsp;м²</dd></div>
-              <div><dt>Свет</dt><dd>RGB-трубки + кольцо</dd></div>
-              <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
-              <div class="mc-room__kelvin" style="--k:.875"><dt>Цвет света</dt><dd>6500K <span class="kelvin" aria-hidden="true"><i></i></span></dd></div>
-            </dl>
-          </article>
-          <article class="mc-room" data-for="caramel" aria-labelledby="mc-room-caramel">
-            <p class="mc-room__cam" aria-hidden="true"><span>CAM 04</span><span>/ 04</span></p>
-            <h3 class="mc-room__name" id="mc-room-caramel">Карамель</h3>
-            <p class="mc-room__mood">Настроение: уют</p>
-            <p class="mc-room__text">Карамельный велюр, тёплое дерево и&nbsp;мягкий контровой свет.</p>
-            <dl class="mc-room__specs">
-              <div><dt>Площадь</dt><dd>14&nbsp;м²</dd></div>
-              <div><dt>Свет</dt><dd>Кольцо + 2&nbsp;софтбокса</dd></div>
-              <div><dt>Камера</dt><dd>4K · 60 fps</dd></div>
-              <div class="mc-room__kelvin" style="--k:.05"><dt>Цвет света</dt><dd>3200K <span class="kelvin" aria-hidden="true"><i></i></span></dd></div>
-            </dl>
-          </article>
-        </div>
+        <ul class="gear__list">
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-camera"/></svg></span><b>Камеры 4K</b><span>Чёткая картинка в&nbsp;любом свете</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-ring"/></svg></span><b>Профессиональный свет</b><span>Кольцевые лампы и&nbsp;мягкие софтбоксы</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span><b>Звукоизоляция</b><span>Отдельные уютные комнаты</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span><b>Компьютер и&nbsp;интернет</b><span>Стабильное соединение для&nbsp;эфира</span></li>
+        </ul>
       </div>
     </div>
   </section>
 
-  <!-- ============ 8. BENEFITS: «Что ты получаешь в итоге» — eight sewn care-label tags (main.js initTags) ============ -->
-  <section class="section studio" id="benefits" aria-labelledby="benefits-title">
+  <!-- ============ 8. BENEFITS: «Что ты получаешь в итоге» — stream alerts that pop in on scroll (main.js initAlerts) ============ -->
+  <section class="section benefits" id="benefits" aria-labelledby="benefits-title">
     <div class="container">
-      <header class="section-head studio__head" data-reveal>
-        <p class="eyebrow">Состав: сплошная забота</p>
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Новые уведомления</p>
         <h2 class="section-title" id="benefits-title">Что ты получаешь в&nbsp;итоге</h2>
       </header>
 
-      <ul class="tags tags--8" data-tags>
-        <li class="tags__slot"><div class="tag tag--cream" data-tag style="--rest:-2.4deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">01</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-sprout"/></svg>
-          <h3 class="tag__title">Работа и&nbsp;рост</h3>
-          <p class="tag__text">В&nbsp;индустрии, где хорошо платят и&nbsp;есть куда расти.</p>
-          <p class="tag__care" aria-hidden="true">индустрия · рост</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--pink" data-tag style="--rest:1.8deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">02</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-globe"/></svg>
-          <h3 class="tag__title">Свобода</h3>
-          <p class="tag__text">Стримь из&nbsp;любой точки мира или из&nbsp;уютной студии с&nbsp;современной техникой.</p>
-          <p class="tag__care" aria-hidden="true">студия · дом · мир</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--ink" data-tag style="--rest:-1.3deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">03</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-cal"/></svg>
-          <h3 class="tag__title">Выплаты каждую неделю</h3>
-          <p class="tag__text">Без задержек&nbsp;— на&nbsp;карту или в&nbsp;USDT.</p>
-          <p class="tag__care" aria-hidden="true">каждый понедельник</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--cream" data-tag style="--rest:2.6deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">04</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-heart"/></svg>
-          <h3 class="tag__title">Поддержка</h3>
-          <p class="tag__text">Психолог и&nbsp;команда рядом, когда тяжело.</p>
-          <p class="tag__care" aria-hidden="true">психолог · куратор</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--pink" data-tag style="--rest:-1.9deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">05</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-cap"/></svg>
-          <h3 class="tag__title">Обучение</h3>
-          <p class="tag__text">Профессиональное обучение и&nbsp;развитие&nbsp;— бесплатно.</p>
-          <p class="tag__care" aria-hidden="true">уроки 2&nbsp;раза в&nbsp;неделю</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--cream" data-tag style="--rest:1.2deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">06</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-star"/></svg>
-          <h3 class="tag__title">Личный бренд</h3>
-          <p class="tag__text">Свой образ, стиль и&nbsp;узнаваемое имя.</p>
-          <p class="tag__care" aria-hidden="true">образ · стиль · имя</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--ink" data-tag style="--rest:-2deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">07</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-chat"/></svg>
-          <h3 class="tag__title">Тёплое общение</h3>
-          <p class="tag__text">Навык долгого тёплого общения с&nbsp;постоянными зрителями.</p>
-          <p class="tag__care" aria-hidden="true">постоянные зрители</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--pink" data-tag style="--rest:1.5deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">08</span>
-          <svg class="tag__icon tag__icon--sym" aria-hidden="true" focusable="false"><use href="#i-coins"/></svg>
-          <h3 class="tag__title">Больше возможностей</h3>
-          <p class="tag__text">Чем больше опыта и&nbsp;аудитории&nbsp;— тем больше возможностей расти.</p>
-          <p class="tag__care" aria-hidden="true">опыт + аудитория</p>
-        </div></div></li>
-      </ul>
+      <div class="feed" data-alerts>
+        <p class="feed__bar" aria-hidden="true"><span class="feed__live"><span class="rec-dot"></span>Live</span><span>уведомления · 8</span></p>
+        <ul class="feed__list feed__list--benefits">
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-sprout"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 01</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Работа и&nbsp;рост</h3>
+            <p class="alert__text">В&nbsp;индустрии, где хорошо платят и&nbsp;есть куда расти.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 02</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h3>
+            <p class="alert__text">Стримь из&nbsp;любой точки мира или из&nbsp;уютной студии с&nbsp;современной техникой.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cal"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 03</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Выплаты каждую неделю</h3>
+            <p class="alert__text">Без задержек&nbsp;— на&nbsp;карту или в&nbsp;USDT.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-heart"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 04</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Поддержка</h3>
+            <p class="alert__text">Психолог и&nbsp;команда рядом, когда тяжело.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cap"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 05</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Обучение</h3>
+            <p class="alert__text">Профессиональное обучение и&nbsp;развитие&nbsp;— бесплатно.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-star"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 06</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Личный бренд</h3>
+            <p class="alert__text">Свой образ, стиль и&nbsp;узнаваемое имя.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-chat"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 07</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Тёплое общение</h3>
+            <p class="alert__text">Навык долгого тёплого общения с&nbsp;постоянными зрителями.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-coins"/></svg></span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 08</p>
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Больше возможностей</h3>
+            <p class="alert__text">Чем больше опыта и&nbsp;аудитории&nbsp;— тем больше возможностей расти.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -909,33 +819,56 @@
       </div>
 
       <h3 class="about__values-title" data-reveal>Наши ценности</h3>
-      <ul class="tags tags--5" data-tags>
-        <li class="tags__slot"><div class="tag tag--pink" data-tag style="--rest:-1.6deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">01</span>
-          <h4 class="tag__title">Свобода</h4>
-          <p class="tag__text">Здесь тебя не&nbsp;осуждают.</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--cream" data-tag style="--rest:1.4deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">02</span>
-          <h4 class="tag__title">Честность и&nbsp;прозрачность</h4>
-          <p class="tag__text">С&nbsp;первой встречи говорим прямо о&nbsp;деньгах, мотивах и&nbsp;правилах.</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--ink" data-tag style="--rest:-2.2deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">03</span>
-          <h4 class="tag__title">Чёткие правила</h4>
-          <p class="tag__text">На&nbsp;них держится взаимное уважение.</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--cream" data-tag style="--rest:2deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">04</span>
-          <h4 class="tag__title">Забота о&nbsp;тебе</h4>
-          <p class="tag__text">Твоё состояние важнее любых денег.</p>
-        </div></div></li>
-        <li class="tags__slot"><div class="tag tag--pink" data-tag style="--rest:-1deg"><div class="tag__face">
-          <span class="tag__brand" aria-hidden="true">ae</span><span class="tag__no" aria-hidden="true">05</span>
-          <h4 class="tag__title">Дисциплина</h4>
-          <p class="tag__text">Самый короткий путь к&nbsp;цифрам, о&nbsp;которых ты мечтаешь.</p>
-        </div></div></li>
-      </ul>
+      <div class="feed" data-alerts>
+        <p class="feed__bar" aria-hidden="true"><span class="feed__live"><span class="rec-dot"></span>Live</span><span>ценности · 5</span></p>
+        <ul class="feed__list feed__list--values">
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 01</p>
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h4>
+            <p class="alert__text">Здесь тебя не&nbsp;осуждают.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 02</p>
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Честность и&nbsp;прозрачность</h4>
+            <p class="alert__text">С&nbsp;первой встречи говорим прямо о&nbsp;деньгах, мотивах и&nbsp;правилах.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 03</p>
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Чёткие правила</h4>
+            <p class="alert__text">На&nbsp;них держится взаимное уважение.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 04</p>
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Забота о&nbsp;тебе</h4>
+            <p class="alert__text">Твоё состояние важнее любых денег.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <p class="alert__meta" aria-hidden="true"><i></i>ae studio · 05</p>
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Дисциплина</h4>
+            <p class="alert__text">Самый короткий путь к&nbsp;цифрам, о&nbsp;которых ты мечтаешь.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        </ul>
+      </div>
       <div class="cta-row" data-reveal>
         <a class="btn btn--light" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-magnetic>Написать нам</a>
       </div>
