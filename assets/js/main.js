@@ -496,9 +496,9 @@
      Drive: a mouse brushing across the labels (velocity-weighted, stronger lower down the label),
      a press (squish + poke), a gentle sway with scroll on touch devices, and a drop-in on first view.
      Only `transform` on the tag is written; reduced motion → static labels at their resting tilt. */
-  function initTags() {
-    var rack = $('[data-tags]');
-    if (!rack) return;
+  /* every [data-tags] rack (benefits, values) gets its own spring bundle */
+  function initTags() { $$('[data-tags]').forEach(function (rack) { safe(initTagRack, rack); }); }
+  function initTagRack(rack) {
     var els = $$('[data-tag]', rack);
     if (!els.length) return;
 
@@ -794,11 +794,11 @@
     function money(n) { return '$' + groupNum(Math.round(n / 10) * 10); }
     function announce(v) {
       if (!srOut) return;
-      var t = money(v.m) + ', примерно ' + money(v.w) + ' в' + NBSP + 'неделю';
+      var t = 'Твоя часть: ' + money(v.m) + ' в' + NBSP + 'месяц, примерно ' + money(v.w) + ' в' + NBSP + 'неделю';
       if (srOut.textContent !== t) srOut.textContent = t;
     }
 
-    var MAX = 12000;
+    var MAX = 4800;                          // ≈ top rate × 8 h × 5 shifts × 70% × 4.33 weeks
     var R = 160;
     var C = 2 * Math.PI * R;                 // ≈ 1005.3
     var HEAD_AHEAD = 12;                     // head centre sits beyond the tip so it swallows the round cap
@@ -815,14 +815,19 @@
       var r = $('input[name="level"]:checked', form);
       return r ? num(r, 12) : 12;
     }
+    /* the model's part after the studio's share: studio 50% / home 70% (same numbers as #format and the FAQ) */
+    function share() {
+      var r = $('input[name="place"]:checked', form);
+      return r ? num(r, 0.5) : 0.5;
+    }
     function compute() {
-      var weekly = rate() * num(hoursIn, 6) * num(daysIn, 5);
+      var weekly = rate() * num(hoursIn, 6) * num(daysIn, 5) * share();
       return { m: Math.round(weekly * 4.33 / 10) * 10, w: Math.round(weekly / 10) * 10 };
     }
 
     var shown = { m: 0, w: 0 };
     function renderGauge(m) {
-      var p = clamp(m / MAX, 0, 1);
+      var p = Math.sqrt(clamp(m / MAX, 0, 1));   // square-root scale: a beginner's month still reads on the ring
       if (gauge) gauge.style.setProperty('--p', p.toFixed(4));
       var L = p * C;
       var off = (C - L).toFixed(2);
@@ -1503,44 +1508,20 @@
   function initForm() {
     var form = $('[data-form]');
     if (!form) return;
-    var steps = $$('[data-form-step]', form);
-    var prevBtn = $('[data-form-prev]', form);
-    var nextBtn = $('[data-form-next]', form);
+    var fields = $('[data-form-fields]', form);
     var submitBtn = $('[data-form-submit]', form);
-    var label = $('[data-step-label]', form);
     var formErr = $('[data-form-error]', form);          // role="alert": submit failures go here
-    var bar = $('[data-form-progress]', form);
     var success = $('[data-form-success]', form);
-    var head = $('.form__head', form);
     var navRow = $('.form__nav', form);
-    var contact = form.elements.namedItem('contact');
-    var contactLabel = $('[data-contact-label]', form);
-    var TOTAL = steps.length || 3;
-    var current = 1;
-    var DRAFT_KEY = 'ae-studio:apply-draft';
+    var DRAFT_KEY = 'ae-studio:apply-draft-v2';
+    var VALIDATE = ['name', 'contact', 'adult', 'consent'];
     var sending = false;
 
     function field(name) { return form.elements.namedItem(name); }
     function val(name) { var el = field(name); return el && typeof el.value === 'string' ? el.value : ''; }
-    function channel() { var r = $('input[name="channel"]:checked', form); return r ? r.value : 'telegram'; }
-
-    /* ---- contact channel switch */
-    var CHANNELS = {
-      telegram: { label: 'Ник в' + NBSP + 'Telegram', ph: '@username', mode: 'text', ac: 'username', type: 'text' },
-      whatsapp: { label: 'Номер WhatsApp', ph: '+380 67 000 00 00', mode: 'tel', ac: 'tel', type: 'tel' },
-      phone: { label: 'Номер телефона', ph: '+380 67 000 00 00', mode: 'tel', ac: 'tel', type: 'tel' }
-    };
-    function applyChannel() {
-      var c = CHANNELS[channel()] || CHANNELS.telegram;
-      if (contactLabel) contactLabel.textContent = c.label;
-      if (contact) {
-        contact.placeholder = c.ph;
-        contact.setAttribute('inputmode', c.mode);
-        contact.setAttribute('autocomplete', c.ac);
-        try { contact.type = c.type; } catch (e) { /* ignore */ }
-        if (contact.getAttribute('aria-invalid') === 'true') check(contact);
-      }
-    }
+    function place() { var r = $('input[name="place"]:checked', form); return r ? r.value : 'studio'; }
+    /* one field takes a phone (+380…) or a Telegram nick: anything with a letter or an «@» is a nick */
+    function contactKind(v) { return /[@a-zA-Z_]/.test(v) ? 'telegram' : 'phone'; }
 
     /* ---- validation (Russian copy) */
     function message(el) {
@@ -1551,25 +1532,16 @@
           if (!v) return 'Укажи имя или псевдоним';
           if (v.length < 2) return 'Имя слишком короткое' + NBSP + '— нужно хотя бы 2' + NBSP + 'буквы';
           return '';
-        case 'age':
-          if (!v) return 'Укажи возраст';
-          if (!/^\d{1,3}$/.test(v)) return 'Укажи возраст цифрами, например 23';
-          var n = parseInt(v, 10);
-          if (n < 18) return 'Мы работаем только с' + NBSP + 'совершеннолетними' + NBSP + '— анкету можно отправить с' + NBSP + '18' + NBSP + 'лет';
-          if (n > 60) return 'Укажи возраст от' + NBSP + '18 до' + NBSP + '60';
-          return '';
-        case 'city':
-          return v ? '' : 'Укажи город';
         case 'contact':
-          var ch = channel();
-          if (ch === 'telegram') {
-            if (!v) return 'Укажи ник в' + NBSP + 'Telegram';
+          if (!v) return 'Оставь телефон или ник в' + NBSP + 'Telegram' + NBSP + '— так мы сможем написать';
+          if (contactKind(v) === 'telegram') {
             return /^@?[a-zA-Z0-9_]{4,32}$/.test(v) ? '' : 'Проверь ник: латиница, цифры и' + NBSP + 'нижнее подчёркивание, 4–32' + NBSP + 'символа. Например, @anna_pink' + NBSP + '— без' + NBSP + 'ссылки t.me';
           }
-          if (!v) return ch === 'whatsapp' ? 'Укажи номер WhatsApp' : 'Укажи номер телефона';
-          return v.replace(/\D/g, '').length >= 10 ? '' : 'Проверь номер: нужно не' + NBSP + 'меньше 10' + NBSP + 'цифр вместе с' + NBSP + 'кодом страны, например +7' + NBSP + '900' + NBSP + '000-00-00';
+          return v.replace(/\D/g, '').length >= 10 ? '' : 'Проверь номер: нужно не' + NBSP + 'меньше 10' + NBSP + 'цифр вместе с' + NBSP + 'кодом страны, например +380' + NBSP + '67' + NBSP + '000' + NBSP + '00' + NBSP + '00';
+        case 'adult':
+          return el.checked ? '' : 'Мы работаем только с' + NBSP + 'совершеннолетними' + NBSP + '— отметь, что тебе есть 18' + NBSP + 'лет';
         case 'consent':
-          return el.checked ? '' : 'Отметь галочку' + NBSP + '— так ты подтверждаешь, что тебе есть 18' + NBSP + 'лет и' + NBSP + 'ты согласна на' + NBSP + 'обработку данных';
+          return el.checked ? '' : 'Отметь согласие' + NBSP + '— без него мы не' + NBSP + 'можем сохранить твой контакт';
         default:
           return '';
       }
@@ -1591,15 +1563,11 @@
       if (f) f.classList.toggle('has-error', !!msg);
     }
     function check(el) { var m = message(el); setError(el, m); return !m; }
-    var VALIDATE = ['name', 'age', 'city', 'contact', 'consent'];
-    function validateStep(n) {
-      var fs = steps[n - 1];
-      if (!fs) return true;
+    function validateAll() {
       var firstBad = null;
       VALIDATE.forEach(function (name) {
         var el = field(name);
-        if (!el || !fs.contains(el)) return;
-        if (!check(el) && !firstBad) firstBad = el;
+        if (el && !check(el) && !firstBad) firstBad = el;
       });
       if (firstBad) {
         try { firstBad.focus({ preventScroll: true }); } catch (e) { firstBad.focus(); }
@@ -1612,67 +1580,30 @@
       return true;
     }
 
-    /* live re-check once a field has shown an error */
-    form.addEventListener('input', function (e) {
-      var el = e.target;
-      if (el && el.getAttribute && el.getAttribute('aria-invalid') === 'true') check(el);
-    });
-    form.addEventListener('change', function (e) {
-      var el = e.target;
-      if (!el) return;
-      if (el.name === 'channel') applyChannel();
-      if (el.getAttribute && el.getAttribute('aria-invalid') === 'true') check(el);
-    });
-
-    /* ---- steps */
-    function goTo(n, focus) {
-      current = clamp(n, 1, TOTAL);
-      steps.forEach(function (fs, i) { fs.hidden = i !== current - 1; });
-      if (prevBtn) prevBtn.hidden = current === 1;
-      if (nextBtn) nextBtn.hidden = current === TOTAL;
-      if (submitBtn) submitBtn.hidden = current !== TOTAL;
-      if (label) label.textContent = 'Шаг ' + current + ' из ' + TOTAL;
-      if (formErr) formErr.textContent = '';
-      if (bar) bar.style.transform = 'scaleX(' + (current / TOTAL).toFixed(4) + ')';
-      if (focus) {
-        var fs = steps[current - 1];
-        var first = fs && $('input:not([type="hidden"]):not([disabled]), textarea, select', fs);
-        if (first) {
-          try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
-        }
-        var fr = form.getBoundingClientRect();
-        if (fr.top < 72) form.scrollIntoView({ block: 'start', behavior: state.reduced ? 'auto' : 'smooth' });
-      }
+    /* phone vs nick: the keyboard follows what she types */
+    var contact = field('contact');
+    function syncContact() {
+      if (!contact) return;
+      var v = contact.value.trim();
+      contact.setAttribute('autocomplete', v && contactKind(v) === 'telegram' ? 'username' : 'tel');
     }
-    function next() { if (validateStep(current)) goTo(current + 1, true); }
 
-    if (nextBtn) nextBtn.addEventListener('click', next);
-    if (prevBtn) prevBtn.addEventListener('click', function () { goTo(current - 1, true); });
+    /* live re-check once a field has shown an error */
+    function recheck(e) {
+      var el = e.target;
+      if (el === contact) syncContact();
+      if (el && el.getAttribute && el.getAttribute('aria-invalid') === 'true') check(el);
+    }
+    form.addEventListener('input', recheck);
+    form.addEventListener('change', recheck);
 
-    /* Enter in a single-line field moves forward instead of submitting early */
-    form.addEventListener('keydown', function (e) {
-      if (e.key !== 'Enter' || e.isComposing) return;
-      var t = e.target;
-      if (!t || t.tagName !== 'INPUT') return;
-      if (/^(checkbox|radio|submit|button)$/.test(t.type)) return;
-      if (current < TOTAL) { e.preventDefault(); next(); }
-    });
-
-    /* ---- draft (localStorage, best-effort) */
+    /* ---- draft (localStorage, best-effort; never the checkboxes) */
     function readDraft() {
       try { var raw = win.localStorage.getItem(DRAFT_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
     }
     function collect() {
-      return {
-        name: val('name').trim(),
-        age: val('age').trim(),
-        city: val('city').trim(),
-        channel: channel(),
-        contact: val('contact').trim(),
-        shift: $$('input[name="shift"]:checked', form).map(function (c) { return c.value; }),
-        experience: ($('input[name="experience"]:checked', form) || {}).value || '',
-        about: val('about').trim()
-      };
+      var v = val('contact').trim();
+      return { name: val('name').trim(), contact: v, contactType: v ? contactKind(v) : '', place: place() };
     }
     var saveTimer = 0;
     function saveDraft() {
@@ -1688,17 +1619,11 @@
     function restoreDraft() {
       var d = readDraft();
       if (!d || typeof d !== 'object') return;
-      ['name', 'age', 'city', 'contact', 'about'].forEach(function (k) {
+      ['name', 'contact'].forEach(function (k) {
         var el = field(k);
         if (el && typeof d[k] === 'string' && d[k]) el.value = d[k];
       });
-      [['channel', d.channel], ['experience', d.experience]].forEach(function (pair) {
-        if (!pair[1]) return;
-        $$('input[name="' + pair[0] + '"]', form).forEach(function (r) { r.checked = r.value === pair[1]; });
-      });
-      if (Array.isArray(d.shift)) {
-        $$('input[name="shift"]', form).forEach(function (c) { c.checked = d.shift.indexOf(c.value) !== -1; });
-      }
+      if (d.place) $$('input[name="place"]', form).forEach(function (r) { r.checked = r.value === d.place; });
     }
     form.addEventListener('input', saveDraft);
     form.addEventListener('change', saveDraft);
@@ -1706,9 +1631,8 @@
     /* ---- submit */
     function showSuccess() {
       clearDraft();
-      steps.forEach(function (fs) { fs.hidden = true; });
+      if (fields) fields.hidden = true;
       if (navRow) navRow.hidden = true;
-      if (head) head.hidden = true;
       if (success) {
         success.hidden = false;
         try { success.focus({ preventScroll: true }); } catch (e) { success.focus(); }
@@ -1732,15 +1656,9 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (sending) return;
-      if (current < TOTAL) { next(); return; }
-      /* re-check every step; jump back to the first one with a problem */
-      for (var n = 1; n <= TOTAL; n++) {
-        var fs = steps[n - 1];
-        var bad = fs && VALIDATE.some(function (name) { var el = field(name); return el && fs.contains(el) && message(el); });
-        if (bad) { if (n !== current) goTo(n, false); validateStep(n); return; }
-      }
+      if (!validateAll()) return;
       var data = collect();
-      data.age = parseInt(data.age, 10);
+      data.adult = true;
       data.consent = true;
       var endpoint = (form.getAttribute('data-endpoint') || '').trim();
       setSending(true);
@@ -1756,17 +1674,102 @@
         showSuccess();
       }, function () {
         setSending(false);
-        /* the step label («Шаг 3 из 3») stays; the alert slot explains and offers another way */
-        var msg = 'Не получилось отправить анкету. Проверь интернет и' + NBSP + 'нажми «Отправить анкету» ещё раз' + NBSP +
+        if (formErr) formErr.textContent = 'Не получилось отправить. Проверь интернет и' + NBSP + 'нажми «Написать нам» ещё раз' + NBSP +
           '— или напиши нам в' + NBSP + 'Telegram: @ae_studio_cam';
-        if (formErr) formErr.textContent = msg;
-        else if (label) label.textContent = msg;
       });
     });
 
     restoreDraft();
-    applyChannel();
-    goTo(1, false);
+    syncContact();
+  }
+
+  /* ================================================================== FIT CHECKLIST («Кому подойдёт») */
+  function initFit() {
+    var list = $('[data-fit]');
+    if (!list) return;
+    var boxes = $$('input[type="checkbox"]', list);
+    var nOut = $('[data-fit-n]');
+    var bar = $('[data-fit-bar]');
+    var msg = $('[data-fit-msg]');
+    var go = $('[data-fit-go]');
+    var ask = $('[data-fit-ask]');
+    var result = $('[data-fit-result]');
+    var total = boxes.length || 10;
+    var last = -1;
+    var COPY = {
+      none: 'Отмечай всё, что про тебя,' + NBSP + '— честно, никто не' + NBSP + 'видит.',
+      low: 'Возможно, стрим' + NBSP + '— это не' + NBSP + 'совсем твоё, и' + NBSP + 'это нормально. Остались вопросы' + NBSP + '— напиши нам.',
+      high: 'Похоже, тебе к' + NBSP + 'нам. Начнём мягко?'
+    };
+    function update() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      if (n === last) return;
+      last = n;
+      if (nOut) nOut.textContent = n;
+      if (bar) bar.style.transform = 'scaleX(' + (n / total).toFixed(3) + ')';
+      var tier = n === 0 ? 'none' : n >= 5 ? 'high' : 'low';
+      if (msg && msg.textContent !== COPY[tier]) msg.textContent = COPY[tier];
+      if (go) go.hidden = tier !== 'high';
+      if (ask) ask.hidden = tier !== 'low';
+      if (result) result.setAttribute('data-tier', tier);
+    }
+    list.addEventListener('change', update);
+    update();
+  }
+
+  /* ================================================================== REVIEWS (hidden until real screenshots exist) */
+  function initReviews() {
+    var sec = $('[data-reviews]');
+    if (!sec) return;
+    var data = [];
+    var src = $('[data-reviews-data]', sec);
+    try { data = JSON.parse(src ? src.textContent : '[]'); } catch (e) { data = []; }
+    data = Array.isArray(data) ? data.filter(function (d) { return d && typeof d.src === 'string' && d.src; }) : [];
+    if (!data.length) return;                      // nothing real to show: the block stays hidden
+    var track = $('[data-reviews-track]', sec);
+    if (!track) return;
+    data.forEach(function (d, i) {
+      var fig = doc.createElement('figure');
+      fig.className = 'reel__item';
+      var img = doc.createElement('img');
+      img.src = d.src;
+      img.alt = d.alt || ('Скриншот переписки ' + (i + 1));
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      if (d.width && d.height) { img.width = d.width; img.height = d.height; }
+      fig.appendChild(img);
+      if (d.caption) {
+        var cap = doc.createElement('figcaption');
+        cap.textContent = d.caption;
+        fig.appendChild(cap);
+      }
+      track.appendChild(fig);
+    });
+    sec.hidden = false;
+    function step(dir) {
+      var item = $('.reel__item', track);
+      var w = item ? item.getBoundingClientRect().width + 16 : track.clientWidth * 0.8;
+      track.scrollBy({ left: dir * w, behavior: state.reduced ? 'auto' : 'smooth' });
+    }
+    var prev = $('[data-reviews-prev]', sec), next = $('[data-reviews-next]', sec);
+    if (prev) prev.addEventListener('click', function () { step(-1); });
+    if (next) next.addEventListener('click', function () { step(1); });
+    queueLayout();
+  }
+
+  /* ================================================================== FLOATING TELEGRAM BUTTON */
+  function initFloatTg() {
+    var btn = $('[data-float-tg]');
+    if (!btn || !win.IntersectionObserver) return;
+    /* out of the way over the hero, the checklist, the calculator, the form and the footer (they have their own controls / links) */
+    var zones = ['#top', '[data-fit]', '#income', '#apply', '[data-footer]'].map(function (s) { return $(s); }).filter(Boolean);
+    var on = {};
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { on[zones.indexOf(e.target)] = e.isIntersecting; });
+      var hide = Object.keys(on).some(function (k) { return on[k]; });
+      btn.classList.toggle('is-hidden', hide);      // CSS: visibility hidden → out of the tab order too
+    }, { rootMargin: '0px 0px -20% 0px' });
+    zones.forEach(function (z) { io.observe(z); });
   }
 
   /* ================================================================== FOOTER (wander snake) */
@@ -1925,7 +1928,7 @@
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['tags', initTags],
     ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
-    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
+    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['fit', initFit], ['reviews', initReviews], ['floatTg', initFloatTg], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
     ['motionToggle', initMotionToggle], ['offscreen', initOffscreen]
   ];
   function boot() {

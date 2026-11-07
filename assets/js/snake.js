@@ -217,9 +217,9 @@
   // HERO formula shared with the CSS (see brief): logo box in canvas px
   function logoBox(W, H) {
     var bw, bh, x, y;
-    if (W >= 960) {
-      bw = Math.min(0.52 * W, ASPECT * 0.56 * H); bh = bw / ASPECT;
-      x = W - Math.max(48, 0.05 * W) - bw; y = 0.46 * H - bh / 2;
+    if (W >= 960) {   // keep in sync with style.css (.hero, min-width: 960px); H = the first screen, not the whole hero
+      bw = Math.min(0.5 * W, ASPECT * 0.5 * H); bh = bw / ASPECT;
+      x = W - Math.max(48, 0.05 * W) - bw; y = 0.4 * H - bh / 2;
     } else {
       bw = W - 32; bh = bw / ASPECT; x = 16; y = 72 + 20;
     }
@@ -1237,7 +1237,7 @@
         return;
       }
       if (furWaitTimer) { clearTimeout(furWaitTimer); furWaitTimer = 0; }
-      var m = measure(), hb = m.hero, nb = logoBox(hb.w, hb.h);
+      var m = measure(), hb = m.hero, nb = logoBox(hb.w, Math.min(hb.h, h));   // a hero taller than the screen (perks below) keeps the logo on screen 1
       nb.x += hb.x; nb.y += hb.y;
       var hc = sized && w === W && d === dprRaw && h <= Hmax && Hmax - h < 140 ? Hmax : h;
       var same = sized && !force && w === W && d === dprRaw && Math.abs(nb.x - box.x) < 0.5 && Math.abs(nb.y - box.y) < 0.5 && Math.abs(nb.w - box.w) < 0.5;

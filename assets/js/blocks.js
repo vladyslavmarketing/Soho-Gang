@@ -140,7 +140,7 @@
     var countEl = $('[data-chat-count]', chat);
     if (!log || !chipsBox) return;
 
-    var items = $$('details', acc).map(function (d, i) {
+    var items = $$('details', acc).filter(function (d) { return !d.hidden; }).map(function (d, i) {
       var sum = $('summary', d);
       var ans = $('.acc__a', d) || d;
       var q = sum ? sum.textContent.replace(/\s+/g, ' ').trim() : '';
