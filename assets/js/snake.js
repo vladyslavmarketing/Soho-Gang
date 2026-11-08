@@ -46,7 +46,7 @@
  *          band (cream | black, then the regular bands), the forked tongue and the soft shadow.
  *   Depth  Trail points carry a layer tag; the body is drawn in layer-sorted runs and every part that
  *          lies over another part casts a soft occlusion shadow onto it.
- *   Cost   While resting, the body is cached (re-rendered progressively so it can breathe) and only
+ *   Cost   While resting, the body is cached once (built over a few frames) and only
  *          the head + neck are drawn live.
  */
 (function () {
@@ -67,6 +67,12 @@
   // length behind the head point (= egg centre): cream from .575 (its front hides under the head's back fur),
   // black from 1.195, pink from 1.345; the regular black | cream | black bands resume at 2.0.
   var NECK_BAND = [0.575, 1.195, 1.345], NECK_NEXT = 2.0;
+  // The cream | black collar right behind the head made the head read as a separate piece: off, so pink fur runs
+  // from the head into the body and the regular bands start at NECK_NEXT.
+  var NECK_COLLAR = false;
+  var NECK_TOP = 2.4;          // head + this many body widths of neck are always drawn on top
+  // atlas head fur is lighter than the body fur: multiply the head cells by this to match (measured on the atlases)
+  var HEAD_TINT = 'rgb(232,204,212)';
   var TIP = 0.36;             // tail-tip radius / body radius
   var SMALL = 0.6;            // radius of the low-res sprite set used by the thin tail
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
@@ -626,6 +632,12 @@
     var s = (M.head_scale > 0 ? rh / HEAD * M.head_scale : rh) / M.rh_ref;
     var c = canvasEl(w * s + 2, h * s + 2), g = hqContext(c), ox = (M.origin ? M.origin[0] : w * 0.46) * s + 1, oy = (M.origin ? M.origin[1] : h / 2) * s + 1;
     g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
+    if (HEAD_TINT) {   // multiply to the body's fur colour, then restore the cell's own alpha
+      g.globalCompositeOperation = 'multiply'; g.fillStyle = HEAD_TINT; g.fillRect(0, 0, c.width, c.height);
+      g.globalCompositeOperation = 'destination-in';
+      g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
+      g.globalCompositeOperation = 'source-over';
+    }
     if (!M.fade_baked) { // back of the head melts into the neck (same ramp as headBase)
       var rb = rh / HEAD, x0 = ox + HEAD_FADE[0] * rb, fo = g.createLinearGradient(x0, 0, ox + HEAD_FADE[1] * rb, 0);
       fo.addColorStop(0, 'rgba(0,0,0,0)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.6)'); fo.addColorStop(1, 'rgba(0,0,0,1)');
@@ -1212,7 +1224,7 @@
       // source, so a late atlas swap never moves a band.
       var uN0 = uAt(NECK_BAND[0] * w), uN1 = uAt(NECK_BAND[1] * w), uN2 = uAt(NECK_BAND[2] * w);
       var uStart = uAt(NECK_NEXT * w), uEnd = uAt(L), tipU = 1.5;
-      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1, neck = uN2 < uEnd - tipU;
+      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1, neck = NECK_COLLAR && uN2 < uEnd - tipU;
       if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + bw);
       function colorAtU(u) {
         if (u < uN2) return neck && u >= uN0 ? (u < uN1 ? 1 : 2) : 0;
@@ -1777,8 +1789,11 @@
       var n = nSt, nr = 0, k, i, j, z;
       PL.n = 0;
       reseat(P, kFrom);
+      // the head and its neck always lie on top: crossing over its own body, the snake never ducks its head under
+      var topS = NECK_TOP * 2 * r;
+      function zk(q) { return stS[q] < topS ? 255 : P.z[q]; }
       k = n - 1;
-      while (k >= kFrom && nr < runA.length) { z = P.z[k]; runA[nr] = k; while (k >= kFrom && P.z[k] === z) k--; runB[nr] = k + 1; runZ[nr] = z; nr++; }
+      while (k >= kFrom && nr < runA.length) { z = zk(k); runA[nr] = k; while (k >= kFrom && zk(k) === z) k--; runB[nr] = k + 1; runZ[nr] = z; nr++; }
       for (i = 1; i < nr; i++) { // stable insertion sort by layer
         var ra = runA[i], rb = runB[i], rz = runZ[i]; j = i - 1;
         while (j >= 0 && runZ[j] > rz) { runA[j + 1] = runA[j]; runB[j + 1] = runB[j]; runZ[j + 1] = runZ[j]; j--; }
@@ -2006,17 +2021,18 @@
       state = ST_REST;
     }
     function snapRest() { enterRest(); }
-    function breathNow() { return 1 + 0.03 * Math.sin(Math.max(0, clock - restT0) * TAU / 4.6); }
+    function breathNow() { return 1; }   // breathing off: its progressive cache rebuilds showed seams on phones
     function startCacheRebuild() {
       var g = cacheB.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, cacheB.width, cacheB.height);
       g.setTransform(1, 0, 0, 1, -cacheX, -cacheY);
       cacheCursor = 0; cacheBreath = breathNow();
     }
-    function stepCache() { // progressive rebuild of the resting body so it can breathe
+    function stepCache() { // the resting body is cached once (built over a few frames), then only blitted
+      if (cacheReady) return;
       var per = Math.ceil(planR.n / 9), g = cacheB.getContext('2d'), to = Math.min(planR.n, cacheCursor + per);
       execPlan(g, planR, poseR, cacheCursor, to, cacheBreath);
       cacheCursor = to;
-      if (cacheCursor >= planR.n) { var t = cacheA; cacheA = cacheB; cacheB = t; cacheReady = true; startCacheRebuild(); }
+      if (cacheCursor >= planR.n) { var t = cacheA; cacheA = cacheB; cacheB = t; cacheReady = true; }
     }
     function renderRest() {
       if (!restReady) enterRest();
@@ -2294,6 +2310,7 @@
       viewY = scrollCache = scrollNow();
       var y = cy + viewY;
       if (y < zoneTop || y > zoneBot) return;
+      if (touch && meas && y > meas.hero.y + meas.hero.h) return;
       chaseIdle = touch ? CHASE_IDLE_TOUCH : CHASE_IDLE;
       startChase(cx, y);
     }
