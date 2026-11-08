@@ -1406,7 +1406,7 @@
       var o = jAt(uA, jTmp), tx = o[0], ty = o[1], i0 = o[3], i1 = Math.min(jN - 1, i0 + 8);
       var ax = jX[i1] - tx, ay = jY[i1] - ty, al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
       var hx = trail.headX(), hy = trail.headY();
-      var D = Math.hypot(tx - hx, ty - hy), m = Math.max(D * 0.9, 5 * r);
+      var D = Math.hypot(tx - hx, ty - hy), m = Math.max(D * 0.9, 9 * r);
       var m0x = Math.cos(heading) * m, m0y = Math.sin(heading) * m, m1x = ax * m, m1y = ay * m;
       var nJ = jIndex(uS) - i0 + 2, steps = Math.max(4, Math.min(Math.ceil((D + m) / 1.5) + 8, rX.length - nJ - 8));
       rN = 0;
@@ -1643,7 +1643,7 @@
       // Hermite curve from the head (current heading) to the tail tip, arriving along the path
       var hx = trail.headX(), hy = trail.headY(), tx = pX[pN - 1], ty = pY[pN - 1];
       var ax = pX[pN - 8] - tx, ay = pY[pN - 8] - ty, al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al;
-      var D = Math.hypot(tx - hx, ty - hy), m = Math.max(D * 1.15, 5 * r);
+      var D = Math.hypot(tx - hx, ty - hy), m = Math.max(D * 1.15, 9 * r);
       var m0x = Math.cos(heading) * m, m0y = Math.sin(heading) * m, m1x = ax * m, m1y = ay * m;
       var steps = Math.min(Math.ceil((D + m) / 1.5) + 8, rX.length - pN - 8);
       rN = 0;
@@ -1682,14 +1682,17 @@
     function steer(dt, tx, ty, vMax, omega, minR, amp, wave) {
       var hx = trail.headX(), hy = trail.headY(), w = 2 * r;
       var dist = Math.hypot(tx - hx, ty - hy);
-      var vt = vMax * clamp(dist / (3 * w), 0.22, 1);
+      // arrive: slow to a stop ~1.5 body widths short of the target (circling it folded the body into knots)
+      var vt = vMax * clamp((dist - 1.5 * w) / (3 * w), 0, 1);
       speed += (vt - speed) * (1 - Math.exp(-dt * 3));
       var total = speed * dt, nSub = Math.max(1, Math.ceil(total / (0.22 * r))), ds = total / nSub;
       var turnMax = Math.min(omega, speed / (minR * w)) * dt / nSub;
       var a = amp * clamp(speed / vMax * 1.4, 0.25, 1);
+      if (total < 0.02 * r) return;                       // parked at the target
       for (var i = 0; i < nSub; i++) {
-        var want = Math.atan2(ty - hy, tx - hx);
-        heading += clamp(wrapA(want - heading), -turnMax, turnMax);
+        var want = Math.atan2(ty - hy, tx - hx), dh = wrapA(want - heading);
+        // a target behind the head: keep the turn wide (no hairpin) until it is in front
+        heading += clamp(dh, -turnMax, turnMax);
         undPhase += ds / (wave * w) * TAU;
         var mv = heading + a * Math.sin(undPhase);
         hx += Math.cos(mv) * ds; hy += Math.sin(mv) * ds;
@@ -2188,7 +2191,7 @@
           chaseX = clamp(ptr.x, 0.6 * rh, W - 0.6 * rh); chaseY = clamp(ptr.y, zoneTop + rh, zoneBot - rh);
         }
         if (clock - lastChaseMove > chaseIdle || chaseLeft) { if (jm) startReturnJ(); else startReturn(); }
-        else steer(dt, chaseX, chaseY, 1.5 * box.h, 4.2, 1.1, 0.38, 4.5);
+        else steer(dt, chaseX, chaseY, 1.3 * box.h, 3.2, 2.0, 0.22, 5.5);
       } else if (state === ST_WANDER) {
         var tw = wTmp, fast = pointerActive && clock - ptr.t < 3;
         if (fast) { tw[0] = ptr.x; tw[1] = ptr.y; } else wanderTarget(tw);
