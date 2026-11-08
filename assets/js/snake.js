@@ -2158,8 +2158,9 @@
       // look target: the pointer; coiled at the gauge with no pointer around -> the readout
       var lkX = NaN, lkY = NaN, lkMax = 0.5;
       if (state === ST_REST && poseR) {
-        if (pointerActive && (!jm || Math.abs(ptr.y - poseR.hy / dpr) < 1.2 * Hview)) { lkX = ptr.x; lkY = ptr.y; }
-        else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.55; }
+        // a finger is not a cursor: on touch the head never turns to the last tap / scroll point
+        if (pointerActive && ptr.type === 'mouse' && (!jm || Math.abs(ptr.y - poseR.hy / dpr) < 1.2 * Hview)) { lkX = ptr.x; lkY = ptr.y; lkMax = 0.32; }
+        else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.12; }   // a slight nod to the readout, no kink
       }
       if (lkX === lkX) {
         var hx = poseR.hx / dpr, hy = poseR.hy / dpr, dx = lkX - hx, dy = lkY - hy, d = Math.hypot(dx, dy) || 1;
