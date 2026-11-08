@@ -717,6 +717,29 @@
     };
     return job;
   }
+  function getHeadB(bank, b) {
+    b = ((b % HB) + HB) % HB;
+    if (bank.head[b]) return bank.head[b];
+    if (bank.atlas) return (bank.head[b] = atlasHead(bank.atlas, b, bank.RH));
+    if (!bank.headBase) bank.headBase = headBase(bank.RH, bank.fur);
+    return (bank.head[b] = headSprite(bank.headBase, b));
+  }
+  // Atlas v2 bakes a top view (both eyes) into the cells where the head points up / down, a profile (one eye)
+  // elsewhere: stepping through them made an eye pop in and out. Those cells are skipped; across them the head
+  // cross-fades between the nearest one-eye cells on each side, so the eye glides from one side to the other.
+  function headPick(bank, ang) {
+    var A = bank.atlas, pb = A && bank.eyesBaked && A.m.head.eye && A.m.head.eye.per_bucket;
+    if (!pb || pb.length !== HB) return null;
+    var p = ((ang / TAU) * HB % HB + HB) % HB, n = Math.round(p) % HB;
+    if (pb[n].length === 1) return { a: n, b: n, mix: 0 };
+    var lo = Math.floor(p), hi = Math.ceil(p) === lo ? lo + 1 : Math.ceil(p), g = 0;
+    while (pb[((lo % HB) + HB) % HB].length !== 1 && g++ < HB) lo--;
+    g = 0;
+    while (pb[hi % HB].length !== 1 && g++ < HB) hi++;
+    var t = hi > lo ? (p - lo) / (hi - lo) : 0;
+    t = t * t * (3 - 2 * t);
+    return { a: ((lo % HB) + HB) % HB, b: hi % HB, mix: t };
+  }
   function getHead(bank, ang) {
     var b = Math.round((ang / TAU) * HB) % HB; if (b < 0) b += HB;
     if (bank.head[b]) return bank.head[b];
@@ -770,6 +793,13 @@
     var heroEl = jm ? (opts.hero || opts.pointerTarget || canvas.parentElement) : null;
     var target = opts.pointerTarget || heroEl || canvas.parentElement || canvas;
     var reduced = typeof opts.reducedMotion === 'boolean' ? opts.reducedMotion : prefersReduced();
+    // Touch screens scroll on the compositor while JS draws a frame later: a fixed canvas lags and the snake
+    // jitters against the page (iOS). 'Anchored': the canvas is a page-space slab ~1.8 screens tall that scrolls
+    // natively with the content; it is re-placed (and fully redrawn in the same frame) only near its edges.
+    var anchored = jm && (typeof opts.anchored === 'boolean' ? opts.anchored
+      : !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches));
+    var orgY = -1, forceDraw = false;
+    if (anchored) canvas.classList.add('is-anchored');
     var ignoreSel = jm ? JOURNEY_IGNORE + (opts.ignoreSelector ? ',' + opts.ignoreSelector : '') : (opts.ignoreSelector || DEFAULT_IGNORE);
     var debug = !!opts.debug;
     var useAtl = opts.atlas !== false;    // Blender atlases (opts.atlas: false = procedural sprites only)
@@ -1142,6 +1172,22 @@
       o = jAt(u, jTmp); trail.push(o[0], o[1], o[2]);
     }
     function scrollNow() { return window.pageYOffset || document.documentElement.scrollTop || 0; }
+    // canvas origin in document px -> oyDev. Fixed canvas: the scroll offset. Anchored: the slab's top, moved only
+    // when the viewport nears its edge (the move and a full redraw land in the same frame).
+    function syncOrigin() {
+      if (!anchored) { oyDev = Math.round(viewY * dpr); return; }
+      var slack = Math.max(0, H - Hview), m = slack * 0.12, docH = meas ? meas.docH : 1e9, maxY = Math.max(0, docH - H);
+      var off = orgY < 0 || (viewY < orgY + m && orgY > 0) || (viewY + Hview > orgY + H - m && orgY < maxY);
+      if (off) {
+        var ny = Math.round(clamp(viewY - slack / 2, 0, maxY));
+        if (ny !== orgY) {
+          orgY = ny;
+          canvas.style.transform = 'translate3d(0,' + orgY + 'px,0)';
+          dirty = null; drawnKey = ''; forceDraw = true;   // old pixels moved with the slab: clear all, draw now
+        }
+      }
+      oyDev = Math.round(orgY * dpr);
+    }
     function setLogo(v) { if (atLogo === v) return; atLogo = v; if (v) written = true; emit(canvas, v ? 'snake:written' : 'snake:unwritten'); }
     function setEnd(v) { if (atEnd === v) return; atEnd = v; emit(canvas, v ? 'snake:arrived' : 'snake:departed'); }
 
@@ -1240,11 +1286,12 @@
       var m = measure(), hb = m.hero, nb = logoBox(hb.w, Math.min(hb.h, h));   // a hero taller than the screen (perks below) keeps the logo on screen 1
       nb.x += hb.x; nb.y += hb.y;
       var hc = sized && w === W && d === dprRaw && h <= Hmax && Hmax - h < 140 ? Hmax : h;
+      if (anchored) { var hs = Math.round(h * 1.8); hc = sized && w === W && d === dprRaw && Math.abs(hs - H) < 0.2 * H ? H : hs; }
       var same = sized && !force && w === W && d === dprRaw && Math.abs(nb.x - box.x) < 0.5 && Math.abs(nb.y - box.y) < 0.5 && Math.abs(nb.w - box.w) < 0.5;
       var oldHv = Hview;
       Hview = h; meas = m; viewY = scrollCache = scrollNow();
       if (same) {
-        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; dirty = [0, 0, 0, 0]; }
+        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; dirty = [0, 0, 0, 0]; orgY = -1; }
         if (m.sig !== measSig || Math.abs(oldHv - h) > 0.5) rebuildJourney();
         if (reduced) renderStatic(); else kick();
         return;
@@ -1255,7 +1302,7 @@
       box = nb; r = THICK * 0.5 * box.h; rh = r * HEAD;
       dpr = devScale(dprRaw, W, r);
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
-      canvas.width = cw; canvas.height = ch; drawn = false; dirty = [0, 0, 0, 0]; drawnKey = '';
+      canvas.width = cw; canvas.height = ch; drawn = false; dirty = [0, 0, 0, 0]; drawnKey = ''; orgY = -1;
       rDev = r * dpr;
       needBank();
       var oldRest = uRest, oldEnd = uEnd;
@@ -1389,7 +1436,7 @@
     // reduced motion: the static logo scrolls with the page (blitted from its cache)
     function blitStatic() {
       if (!cacheA || state !== ST_STATIC) return;
-      viewY = scrollCache; oyDev = Math.round(viewY * dpr);
+      viewY = scrollCache; syncOrigin(); forceDraw = false;
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clearRect(0, 0, cw, ch); dirty = null;
       if (cacheY - oyDev < ch && cacheY + cacheA.height - oyDev > 0) ctx.drawImage(cacheA, cacheX, cacheY - oyDev);
     }
@@ -1866,12 +1913,14 @@
       }
     }
     function drawHead(c, x, y, ang, tongue, breath) {
-      var hs = getHead(bank, ang), co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
+      var pk = headPick(bank, ang), hs = pk ? getHeadB(bank, pk.a) : getHead(bank, ang), hs2 = pk && pk.mix > 0.01 ? getHeadB(bank, pk.b) : null;
+      var co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
       var up = co < 0 ? 1 : -1;                     // local y sign that points up on screen
       c.setTransform(co * k, si * k, -si * k, co * k, x + baseX, y + baseY);
       c.lineCap = 'round'; c.lineJoin = 'round';
       if (tongue > 0.01) drawTongue(c, tongue, up);
       c.drawImage(hs.c, -hs.ox, -hs.oy);
+      if (hs2) { c.globalAlpha = pk.mix; c.drawImage(hs2.c, -hs2.ox, -hs2.oy); c.globalAlpha = 1; }
       c.setTransform(1, 0, 0, 1, baseX, baseY);
       headCX = x / dpr; headCY = y / dpr; headAng = ang;
       if (bank.eyesBaked) return;   // atlas v2 cells carry their bead eyes (screen-up one; both facing us)
@@ -2173,7 +2222,7 @@
         warmFrames = 2;
       }
       if (jm) {
-        viewY = scrollCache; oyDev = Math.round(viewY * dpr);
+        viewY = scrollCache; syncOrigin();
         inZone = viewY < zoneBot + 40 && viewY + Hview > zoneTop - 40;
       }
       update(dt);
@@ -2184,10 +2233,10 @@
       }
       if (state === ST_REST) {
         // calm rest (no pointer near, no tongue): the slow breathing is drawn at half rate; the cache keeps building
-        if (cacheReady && tongueT < 0 && !(ptr.inside && clock - ptr.t < 1.2) && (restTick = 1 - restTick)) {
+        if (!forceDraw && cacheReady && tongueT < 0 && !(ptr.inside && clock - ptr.t < 1.2) && (restTick = 1 - restTick)) {
           stepCache(); raf = requestAnimationFrame(frame); return;
         }
-        renderRest(); drawnKey = '';
+        renderRest(); drawnKey = ''; forceDraw = false;
       } else {
         var key = '';
         if (jm && state === ST_JOURNEY) {
@@ -2198,7 +2247,7 @@
           }
           fillTrailJ(uJ);
         }
-        renderMoving();
+        renderMoving(); forceDraw = false;
         drawnKey = tongueT >= 0 || lookingNow() ? '' : key;
       }
       if (debug) drawDebug();

@@ -2851,6 +2851,8 @@ html.reduced-motion .hero__hint { display: none; }
   height: 100%;
   pointer-events: none;
 }
+/* touch screens (snake.js 'anchored'): a page-space slab that scrolls with the content; JS moves it with translate3d */
+.snake-layer.is-anchored { position: absolute; top: 0; right: auto; bottom: auto; left: 0; will-change: transform; }
 .section > .container { position: relative; z-index: 4; }
 
 /* With the travelling plush snake on the page, the flat SVG snake on the income
