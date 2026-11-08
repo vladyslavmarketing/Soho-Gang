@@ -70,9 +70,9 @@
   // The cream | black collar right behind the head made the head read as a separate piece: off, so pink fur runs
   // from the head into the body and the regular bands start at NECK_NEXT.
   var NECK_COLLAR = false;
-  var NECK_TOP = 2.4;          // head + this many body widths of neck are always drawn on top
+  var NECK_TOP = 1.7;          // head + this many body widths of neck (inside the pink neck) are always drawn on top
   // atlas head fur is lighter than the body fur: multiply the head cells by this to match (measured on the atlases)
-  var HEAD_TINT = 'rgb(232,204,212)';
+  var HEAD_TINT = [0.91, 0.8, 0.83];
   var TIP = 0.36;             // tail-tip radius / body radius
   var SMALL = 0.6;            // radius of the low-res sprite set used by the thin tail
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
@@ -627,17 +627,20 @@
   }
   // Head for lighting bucket b (heading b / HB * TAU), pointing +x, origin = the head point; {c, ox, oy} like
   // headSprite. Drawn at the size the atlas was made for (head_scale x body radius), whatever HEAD says.
-  function atlasHead(A, b, rh) {
+  function atlasHead(A, b, rh, flip) {
     var M = A.m.head, n = M.buckets, q = Math.round(b / HB * n) % n, w = M.cell[0], h = M.cell[1];
     var s = (M.head_scale > 0 ? rh / HEAD * M.head_scale : rh) / M.rh_ref;
     var c = canvasEl(w * s + 2, h * s + 2), g = hqContext(c), ox = (M.origin ? M.origin[0] : w * 0.46) * s + 1, oy = (M.origin ? M.origin[1] : h / 2) * s + 1;
+    if (flip) g.setTransform(1, 0, 0, -1, 0, 2 * oy);   // mirror about the head axis (y = oy)
     g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
-    if (HEAD_TINT) {   // multiply to the body's fur colour, then restore the cell's own alpha
-      g.globalCompositeOperation = 'multiply'; g.fillStyle = HEAD_TINT; g.fillRect(0, 0, c.width, c.height);
-      g.globalCompositeOperation = 'destination-in';
-      g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
-      g.globalCompositeOperation = 'source-over';
+    if (HEAD_TINT) {   // match the body's fur colour: scale RGB only, so the soft fur edge keeps its own alpha
+      try {
+        var id = g.getImageData(0, 0, c.width, c.height), d = id.data, tr = HEAD_TINT[0], tg = HEAD_TINT[1], tb = HEAD_TINT[2];
+        for (var i = 0; i < d.length; i += 4) { if (d[i + 3]) { d[i] *= tr; d[i + 1] *= tg; d[i + 2] *= tb; } }
+        g.putImageData(id, 0, 0);
+      } catch (e) { /* tainted canvas (file://): keep the cell as rendered */ }
     }
+    g.setTransform(1, 0, 0, 1, 0, 0);
     if (!M.fade_baked) { // back of the head melts into the neck (same ramp as headBase)
       var rb = rh / HEAD, x0 = ox + HEAD_FADE[0] * rb, fo = g.createLinearGradient(x0, 0, ox + HEAD_FADE[1] * rb, 0);
       fo.addColorStop(0, 'rgba(0,0,0,0)'); fo.addColorStop(0.5, 'rgba(0,0,0,0.6)'); fo.addColorStop(1, 'rgba(0,0,0,1)');
@@ -713,7 +716,11 @@
     });
     if (!A) tasks.push(function () { bank.headBase = headBase(bank.RH, furDev); });
     for (var h = 0; h < HB; h++) (function (b) {
-      tasks.push(A ? function () { bank.head[b] = atlasHead(A, b, bank.RH); } : function () { bank.head[b] = headSprite(bank.headBase, b); });
+      tasks.push(A ? function () {
+        bank.head[b] = atlasHead(A, b, bank.RH);
+        var pb = A.m.head.eye && A.m.head.eye.per_bucket;
+        if (pb && pb[b] && pb[b].length === 1 && pb[b][0] === 0) (bank.headF || (bank.headF = new Array(HB)))[b] = atlasHead(A, b, bank.RH, true);
+      } : function () { bank.head[b] = headSprite(bank.headBase, b); });
     })(h);
     var job = { bank: bank, tasks: tasks, i: 0 };
     job.step = function (budget) {
@@ -729,28 +736,24 @@
     };
     return job;
   }
-  function getHeadB(bank, b) {
-    b = ((b % HB) + HB) % HB;
-    if (bank.head[b]) return bank.head[b];
-    if (bank.atlas) return (bank.head[b] = atlasHead(bank.atlas, b, bank.RH));
-    if (!bank.headBase) bank.headBase = headBase(bank.RH, bank.fur);
-    return (bank.head[b] = headSprite(bank.headBase, b));
-  }
-  // Atlas v2 bakes a top view (both eyes) into the cells where the head points up / down, a profile (one eye)
-  // elsewhere: stepping through them made an eye pop in and out. Those cells are skipped; across them the head
-  // cross-fades between the nearest one-eye cells on each side, so the eye glides from one side to the other.
-  function headPick(bank, ang) {
+  // Head cell for a heading, with ONE bead eye that never switches: always on the head's local +y side (the side
+  // that faces up when the snake crawls left, as in the logo). Atlas cells that bake the eye on the other side are
+  // mirrored about the head axis; the top-view cells (both eyes, head pointing up / down) are replaced by the
+  // nearest one-eye cell. {cell, flip} or null without atlas eye data.
+  function headPick(bank, b) {
     var A = bank.atlas, pb = A && bank.eyesBaked && A.m.head.eye && A.m.head.eye.per_bucket;
     if (!pb || pb.length !== HB) return null;
-    var p = ((ang / TAU) * HB % HB + HB) % HB, n = Math.round(p) % HB;
-    if (pb[n].length === 1) return { a: n, b: n, mix: 0 };
-    var lo = Math.floor(p), hi = Math.ceil(p) === lo ? lo + 1 : Math.ceil(p), g = 0;
-    while (pb[((lo % HB) + HB) % HB].length !== 1 && g++ < HB) lo--;
-    g = 0;
-    while (pb[hi % HB].length !== 1 && g++ < HB) hi++;
-    var t = hi > lo ? (p - lo) / (hi - lo) : 0;
-    t = t * t * (3 - 2 * t);
-    return { a: ((lo % HB) + HB) % HB, b: hi % HB, mix: t };
+    b = ((b % HB) + HB) % HB;
+    for (var d = 0; d < HB / 2 && pb[b].length !== 1; d++) {   // nearest one-eye cell
+      var lo = (b - d - 1 + HB) % HB, hi = (b + d + 1) % HB;
+      if (pb[hi].length === 1) { b = hi; break; }
+      if (pb[lo].length === 1) { b = lo; break; }
+    }
+    return { cell: b, flip: pb[b][0] === 0 };
+  }
+  function getHeadCell(bank, cell, flip) {
+    var arr = flip ? (bank.headF || (bank.headF = new Array(HB))) : bank.head;
+    return arr[cell] || (arr[cell] = atlasHead(bank.atlas, cell, bank.RH, flip));
   }
   function getHead(bank, ang) {
     var b = Math.round((ang / TAU) * HB) % HB; if (b < 0) b += HB;
@@ -1809,6 +1812,8 @@
         var A = runA[i], B = runB[i];
         // seam: this run lies over its head-side neighbour (drawn earlier) -> fade its head end in
         var seam = B > kFrom && rank[B - 1] < rank[B];
+        // the top neck run fades out at its tail end; the run behind it carries on under that fade (no gap)
+        var neckRun = runZ[i] === 255 && A < n - 1, underNeck = B > 0 && B > kFrom && runZ[i] !== 255 && zk(B - 1) === 255;
         if (A === n - 1) op(PL, OP_CAP, n - 1, 0);
         // the tail-side neighbour run fades in over this one (its seam): carry this run on under the fade, so the
         // seam is never see-through (sparse atlas stamps leave a translucent gap there otherwise)
@@ -1820,9 +1825,10 @@
         while (k >= B) {
           var e = Math.max(B, k - chunkN + 1);
           for (j = k; j >= e; j--) if (j % ovStep === 0 && ov[j] > 0.02) op(PL, OP_OCCL, j, ov[j] * (seam ? smooth(0.6 * r, 2.2 * r, stS[j] - stS[B]) : 1));
-          for (j = k; j >= e; j--) op(PL, OP_BODY, j, seam ? smooth(0, seamLen, stS[j] - stS[B]) : 1);
+          for (j = k; j >= e; j--) op(PL, OP_BODY, j, (seam ? smooth(0, seamLen, stS[j] - stS[B]) : 1) * (neckRun ? smooth(0, seamLen, topS - stS[j]) : 1));
           k = e - 1;
         }
+        if (underNeck) for (j = B - 1; j >= 0 && stS[B] - stS[j] < seamLen; j--) op(PL, OP_BODY, j, 1);
         if (withHead && B === 0) op(PL, OP_HEAD, 0, 0);
       }
     }
@@ -1928,19 +1934,23 @@
       }
     }
     function drawHead(c, x, y, ang, tongue, breath) {
-      var pk = headPick(bank, ang), hs = pk ? getHeadB(bank, pk.a) : getHead(bank, ang), hs2 = pk && pk.mix > 0.01 ? getHeadB(bank, pk.b) : null;
+      // the 32 lighting cells are cross-faded by the exact heading, so the fur never snaps as the head turns
+      var p = ((ang / TAU) * HB % HB + HB) % HB, i0 = Math.floor(p), fr = p - i0;
+      var pk = headPick(bank, i0), pk1 = pk && headPick(bank, i0 + 1);
+      var hs = pk ? getHeadCell(bank, pk.cell, pk.flip) : getHead(bank, ang);
+      var hs2 = pk1 && fr > 0.02 && (pk1.cell !== pk.cell || pk1.flip !== pk.flip) ? getHeadCell(bank, pk1.cell, pk1.flip) : null;
       var co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
       var up = co < 0 ? 1 : -1;                     // local y sign that points up on screen
       c.setTransform(co * k, si * k, -si * k, co * k, x + baseX, y + baseY);
       c.lineCap = 'round'; c.lineJoin = 'round';
       if (tongue > 0.01) drawTongue(c, tongue, up);
       c.drawImage(hs.c, -hs.ox, -hs.oy);
-      if (hs2) { c.globalAlpha = pk.mix; c.drawImage(hs2.c, -hs2.ox, -hs2.oy); c.globalAlpha = 1; }
+      if (hs2) { c.globalAlpha = fr; c.drawImage(hs2.c, -hs2.ox, -hs2.oy); c.globalAlpha = 1; }
       c.setTransform(1, 0, 0, 1, baseX, baseY);
       headCX = x / dpr; headCY = y / dpr; headAng = ang;
       if (bank.eyesBaked) return;   // atlas v2 cells carry their bead eyes (screen-up one; both facing us)
       // procedural: one bead on the upper side; the second appears when the head points up/down (faces us)
-      var R = bank.R, rH = R * HEAD, e = bank.eye, two = smooth(0.42, 0.12, Math.abs(co));
+      var R = bank.R, rH = R * HEAD, e = bank.eye, two = 0;   // one bead only (no second eye popping in)
       for (var s = 0; s < 2; s++) {
         var a = s ? two : 1; if (a < 0.02) continue;
         var ly = (s ? -up : up) * EYE_Y * R + eyeY * rH, lx = EYE_X * R + eyeX * rH;
