@@ -70,6 +70,7 @@
   // The cream | black collar right behind the head made the head read as a separate piece: off, so pink fur runs
   // from the head into the body and the regular bands start at NECK_NEXT.
   var NECK_COLLAR = false;
+  var NATURAL_Z = true;        // free motion draws the body in natural order (see buildPlan)
   var NECK_TOP = 1.7;          // head + this many body widths of neck (inside the pink neck) are always drawn on top
   // atlas head fur is lighter than the body fur: multiply the head cells by this to match (measured on the atlases)
   var HEAD_TINT = [0.91, 0.8, 0.83];
@@ -1797,7 +1798,11 @@
       reseat(P, kFrom);
       // the head and its neck always lie on top: crossing over its own body, the snake never ducks its head under
       var topS = NECK_TOP * 2 * r;
-      function zk(q) { return stS[q] < topS ? 255 : P.z[q]; }
+      // free motion (chase, wander, the way back): one natural layer order, the head side always over the tail side.
+      // Mixed layer tags (old logo / route trail vs new free trail) split the body into runs whose joints showed as
+      // cut fur and stepped bands where the body crosses itself.
+      var nat = NATURAL_Z && (state === ST_CHASE || state === ST_WANDER || (state === ST_ROUTE && !initialWrite));
+      function zk(q) { return stS[q] < topS ? 255 : nat ? 0 : P.z[q]; }
       k = n - 1;
       while (k >= kFrom && nr < runA.length) { z = zk(k); runA[nr] = k; while (k >= kFrom && zk(k) === z) k--; runB[nr] = k + 1; runZ[nr] = z; nr++; }
       for (i = 1; i < nr; i++) { // stable insertion sort by layer
