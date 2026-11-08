@@ -580,7 +580,7 @@
 
     /* hint copy for touch devices */
     var hint = $('[data-hero-hint]', hero);
-    if (hint && !state.hover) hint.textContent = 'Коснись экрана' + NBSP + '— и' + NBSP + 'она поползёт за' + NBSP + 'тобой.';
+    if (hint && !state.hover) hint.hidden = true;        /* touch: no chase, so no «tap and she follows» hint */
 
     /* timecode HH:MM:SS:FF @ 25 fps, only ticking while the hero is on screen */
     var tc = $('[data-timecode]', hero);

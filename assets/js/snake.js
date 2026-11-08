@@ -70,7 +70,9 @@
   // The cream | black collar right behind the head made the head read as a separate piece: off, so pink fur runs
   // from the head into the body and the regular bands start at NECK_NEXT.
   var NECK_COLLAR = false;
-  var NATURAL_Z = true;        // free motion draws the body in natural order (see buildPlan)
+  var NATURAL_Z = true;
+  var SLAB_SCREENS = 3;        // touch slab height, in screens
+  var SLAB_PX = 9e6;           // touch slab: max device pixels (iOS canvas memory)        // free motion draws the body in natural order (see buildPlan)
   var NECK_TOP = 1.7;          // head + this many body widths of neck (inside the pink neck) are always drawn on top
   // atlas head fur is lighter than the body fur: multiply the head cells by this to match (measured on the atlases)
   var HEAD_TINT = [0.91, 0.8, 0.83];
@@ -1192,10 +1194,11 @@
     // when the viewport nears its edge (the move and a full redraw land in the same frame).
     function syncOrigin() {
       if (!anchored) { oyDev = Math.round(viewY * dpr); return; }
-      var slack = Math.max(0, H - Hview), m = slack * 0.12, docH = meas ? meas.docH : 1e9, maxY = Math.max(0, docH - H);
-      var off = orgY < 0 || (viewY < orgY + m && orgY > 0) || (viewY + Hview > orgY + H - m && orgY < maxY);
-      if (off) {
-        var ny = Math.round(clamp(viewY - slack / 2, 0, maxY));
+      // moved only when the screen comes within a quarter screen of the slab's edge (rare: ~ every 1.5 screens)
+      var docH = meas ? meas.docH : 1e9, maxY = Math.max(0, docH - H), m = 0.25 * Hview;
+      var inside = orgY >= 0 && (viewY >= orgY + m || orgY <= 0) && (viewY + Hview <= orgY + H - m || orgY >= maxY);
+      if (!inside) {
+        var ny = Math.round(clamp(viewY - (H - Hview) / 2, 0, maxY));
         if (ny !== orgY) {
           orgY = ny;
           canvas.style.transform = 'translate3d(0,' + orgY + 'px,0)';
@@ -1302,12 +1305,19 @@
       var m = measure(), hb = m.hero, nb = logoBox(hb.w, Math.min(hb.h, h));   // a hero taller than the screen (perks below) keeps the logo on screen 1
       nb.x += hb.x; nb.y += hb.y;
       var hc = sized && w === W && d === dprRaw && h <= Hmax && Hmax - h < 140 ? Hmax : h;
-      if (anchored) { var hs = Math.round(h * 1.8); hc = sized && w === W && d === dprRaw && Math.abs(hs - H) < 0.2 * H ? H : hs; }
+      if (anchored) {   // a slab of SLAB_SCREENS screens, moved rarely (only when the screen nears its edge)
+        var hs = Math.round(h * SLAB_SCREENS);
+        hc = sized && w === W && d === dprRaw && Math.abs(hs - H) < 2 ? H : hs;
+      }
       var same = sized && !force && w === W && d === dprRaw && Math.abs(nb.x - box.x) < 0.5 && Math.abs(nb.y - box.y) < 0.5 && Math.abs(nb.w - box.w) < 0.5;
       var oldHv = Hview;
       Hview = h; meas = m; viewY = scrollCache = scrollNow();
       if (same) {
-        if (hc !== H) { H = Hmax = hc; canvas.style.height = H + 'px'; ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; dirty = [0, 0, 0, 0]; orgY = -1; }
+        if (hc !== H) {
+          H = Hmax = hc; canvas.style.height = H + 'px';
+          if (anchored && W * H * dpr * dpr > SLAB_PX) { force = true; layoutJ(true); return; }   // re-plan the density
+          ch = Math.max(1, Math.round(H * dpr)); canvas.height = ch; sizeGrid(); drawn = false; dirty = [0, 0, 0, 0]; orgY = -1;
+        }
         if (m.sig !== measSig || Math.abs(oldHv - h) > 0.5) rebuildJourney();
         if (reduced) renderStatic(); else kick();
         return;
@@ -1317,6 +1327,7 @@
       canvas.style.height = H + 'px';
       box = nb; r = THICK * 0.5 * box.h; rh = r * HEAD;
       dpr = devScale(dprRaw, W, r);
+      if (anchored && W * H * dpr * dpr > SLAB_PX) dpr = Math.max(0.75, Math.sqrt(SLAB_PX / (W * H)));   // canvas memory cap
       cw = Math.max(1, Math.round(W * dpr)); ch = Math.max(1, Math.round(H * dpr));
       canvas.width = cw; canvas.height = ch; drawn = false; dirty = [0, 0, 0, 0]; drawnKey = ''; orgY = -1;
       rDev = r * dpr;
@@ -1878,7 +1889,9 @@
     }
     function drawStamp(c, P, k, breath) {
       var f = stF[k] * breath * bankScale, kind = stCol[k], spr, sc, set, v, b = P.bk[k];
-      if (f >= 0.62) { set = bank.big[kind]; sc = f; } else { set = bank.small[kind]; sc = f / SMALL; }
+      // atlas: the thin tail uses the full-size cells scaled down (the low-res small cells sat off-centre and cut the
+      // tail tip off bluntly)
+      if (f >= 0.62 || bank.atlas) { set = bank.big[kind]; sc = f; } else { set = bank.small[kind]; sc = f / SMALL; }
       v = stVar[k] % set.length; spr = set[v][b];
       if (!spr) {   // not built yet (atlas bank adopted early): build it now
         if (!bank.atlas) return;
@@ -1979,6 +1992,10 @@
       if (jm) { // world = document: draw with an offset of -scrollY; skip stamps outside the viewport
         baseX = 0; baseY = -oyDev; ctx.setTransform(1, 0, 0, 1, 0, baseY);
         var pad = HEAD_REACH * rDev; cullY0 = oyDev - pad; cullY1 = oyDev + ch + pad; drawn = true;
+        if (anchored) {   // tall slab: draw only around the screen (+0.6 screen each way, so fast scrolls never show a gap)
+          var vm = 0.6 * Hview * dpr;
+          cullY0 = Math.max(cullY0, viewY * dpr - vm - pad); cullY1 = Math.min(cullY1, (viewY + Hview) * dpr + vm + pad);
+        }
       }
     }
     // device-px box (canvas coords) of a pose drawn this frame, padded for the head, tongue, fuzz and shadows
@@ -2329,7 +2346,7 @@
       viewY = scrollCache = scrollNow();
       var y = cy + viewY;
       if (y < zoneTop || y > zoneBot) return;
-      if (touch && meas && y > meas.hero.y + meas.hero.h) return;
+      if (touch) return;   // phones: no tap-to-chase (taps on the copy dragged the snake over the text and folded its tail)
       chaseIdle = touch ? CHASE_IDLE_TOUCH : CHASE_IDLE;
       startChase(cx, y);
     }
