@@ -65,8 +65,8 @@
   "notes": "column k is pre-rotated to screen angle k/angles*PI (body axis (cos, sin), y down) and lit by the fixed screen light; rotate by the residual (<= half a bucket). Each cell is a window cut from a continuous rendered fur tube: |along| <= along*R*(1-(|across|/1.5R)^4)^0.25 with a +-feather*R smoothstep cross-fade, the sides keep the real silhouette fuzz (fuzz = reach beyond R). Stamp it every ~0.3R (dense 0.075R stamping only shows a thin rim slice of each cell and smears the fur into streaks). Straight alpha."
  },
  "head": {
-  "version": 2,
-  "generator": "Blender 4.2 Cycles (CPU, OIDN); head v2 measured from the client photo; scratchpad/blender/head-v2/atlas_head.py",
+  "version": 3,
+  "generator": "Blender 4.2 Cycles (CPU, OIDN), numpy-groomed hair curves; head v3 = plush head in profile after the client photo; dev/blender/head_v3.py + head_v3_pack.py",
   "file": "head.webp",
   "buckets": 32,
   "cols": 8,
@@ -85,12 +85,23 @@
   "fade_baked": true,
   "tongue": false,
   "light_screen": [
-   -0.41941323192584123,
-   -0.5791897012309236,
-   0.6990220532097353
+   -0.4194,
+   -0.5792,
+   0.699
   ],
   "grade": {
-   "exposure_ev": 0.6
+   "exposure_ev": 0.6,
+   "gain_srgb": [
+    0.9667,
+    0.9242,
+    0.933
+   ],
+   "head_tint": [
+    0.91,
+    0.8,
+    0.83
+   ],
+   "notes": "gain_srgb (after the exposure) makes head x head_tint (snake.js HEAD_TINT) equal the body.webp pink at the neck (x -1.0..-0.45 R) under the same light; residual mean [0.6, -0.6, -0.6] sRGB"
   },
   "neck_fade_R": [
    -1.0,
@@ -99,47 +110,15 @@
   "eye": {
    "centres": [
     [
-     0.3269,
-     -0.938
-    ],
-    [
-     0.3269,
-     0.938
+     0.355,
+     -0.428
     ]
    ],
-   "radius": 0.27,
+   "radius": 0.248,
+   "bead_radius_3d": 0.31,
+   "measured": "centre + visible radius (dark bead incl. glint, fur ring excluded) on the 2x render of cell 0",
    "per_bucket": [
     [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0
-    ],
-    [
-     0,
-     1
-    ],
-    [
-     0,
-     1
-    ],
-    [
-     0,
      1
     ],
     [
@@ -182,79 +161,194 @@
      1
     ],
     [
-     0,
      1
     ],
     [
-     0,
      1
     ],
     [
-     0,
      1
     ],
     [
-     0
+     1
     ],
     [
-     0
+     1
     ],
     [
-     0
+     1
     ],
     [
-     0
+     1
     ],
     [
-     0
+     1
     ],
     [
-     0
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
     ]
    ],
-   "two_eyes_below_abs_cos": 0.3,
-   "notes": "head-local units of R (body radius), x forward, y down (sprite space, before rotation). Eye 0 is drawn when the screen-up side is local -y (cos th > 0), eye 1 when cos th < 0, both when |cos th| < two_eyes_below_abs_cos. Use for a pointer glint overlay; the beads + key-light glint are already baked.",
-   "moved_to": [
-    0.327,
-    0.2,
-    "u: + = jaw side (opposite the eye side of the source cell)"
-   ]
+   "per_bucket_note": "every cell is [1] = draw as stored (snake.js headPick mirrors a cell only for [0]); the single bead is centres[0]. Unlike v2, the values do not index centres.",
+   "notes": "one glossy bead, baked in every cell on the side facing the camera; centre (x, y) in R, cell frame (x forward, image y down = -u). Never flipped (engine headPick: per_bucket [1])."
   },
-  "neck_band": {
-   "start_w": 0.575,
-   "cream_w": 0.62,
-   "black_w": 0.15,
-   "leading_black": false,
-   "visible_from_w": 0.66,
-   "next_band_w": 2.0,
-   "units": "body widths (w = 2R) of arc length behind the head origin (head centre = path head point)",
-   "photo": "pink head fur -> cream -> black -> pink (no black edge on the head side); measured cream ~0.4-0.5 w visible, black ~0.12-0.18 w, next regular band's leading black ~1.4 R after the neck band",
-   "notes": "Not baked into head.webp. Engine: first band = cream at start_w (its front ~0.1 w hides under the head's back fur / fade), black right after it, then pink; regular black|cream|black bands resume at next_band_w. Equivalently uStart = uAt(start_w * w) with the first period starting at its cream (skip BAND[0])."
-  },
-  "scale": {
-   "draw_scale": "cell px * (R / ref_R)",
-   "head_scale_vs_R": 1.2,
-   "notes": "the head is 2*1.20 R wide (skin) / ~3.46 R incl. fur; draw the cell at R/ref_R with the origin on the path's head point (head centre). Equivalent: rh = head_scale * R, scale = rh / rh_ref."
-  },
-  "bytes": 419560,
-  "webp_quality": 82,
-  "render": {
-   "spp": 48,
-   "per_cell_s": 16.98,
-   "render_s": 543.5,
-   "strands_head": 109702,
-   "strands_neck": 71471
-  },
-  "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R). Eyes baked (see eye). No tongue (engine draws it; base at the snout tip, see tongue_base_R). Straight alpha.",
   "tongue_base_R": [
    1.95,
    1.45
   ],
   "shape": {
-   "reshaped": "dev/head-reshape.py (client photo)",
-   "front_R": 2.33,
-   "jaw_R": 2.0
-  }
+   "source": "client plush photo, side view (outer fur edge traced by the site session)",
+   "frame": "units of R; x forward from the head point; u across, + = jaw side, - = brow side; cell image y = -u (jaw toward -y, brow toward +y)",
+   "outer_fur_edge": {
+    "brow": {
+     "x": [
+      -1.9,
+      -0.29,
+      0.4,
+      0.96,
+      1.55,
+      2.05,
+      2.24,
+      2.33
+     ],
+     "u": [
+      -1.14,
+      -1.14,
+      -1.02,
+      -0.8,
+      -0.3,
+      0.35,
+      0.83,
+      1.25
+     ]
+    },
+    "jaw": {
+     "x": [
+      -1.9,
+      -1.18,
+      -0.64,
+      0.6,
+      1.38,
+      1.86,
+      2.19,
+      2.33
+     ],
+     "u": [
+      1.2,
+      1.24,
+      1.62,
+      1.86,
+      2.0,
+      1.81,
+      1.33,
+      1.25
+     ]
+    },
+    "alpha_threshold": 0.5
+   },
+   "eye": {
+    "x": 0.36,
+    "u": 0.42,
+    "r": [
+     0.25,
+     0.27
+    ]
+   },
+   "tongue_root": [
+    1.95,
+    1.45
+   ],
+   "brow_neck_shoulder": {
+    "u": 1.4,
+    "x_back0": -1.25,
+    "x_back1": -0.5,
+    "x_front": 0.0,
+    "x_join": 0.6,
+    "notes": "deviation from the traced brow, x < x_join only: the brow is widened to the body fur edge (|u| = u) over [x_back1, x_front], tapering back to the traced brow by x_back0 and rounding into it by x_join (C1 Hermite). It covers the front end of snake.js's first body stamp (0.3 R behind the head point, lens cut at x ~ +0.06 R), which showed as a square tab above the traced 1.14 R brow. Body-style grooming on that band. See dev/blender/head_v3_spec.py BROW_SHOULDER."
+   },
+   "fit_R": {
+    "brow[-1,2.33)": {
+     "max_abs": 0.07,
+     "mean": 0.006,
+     "rms": 0.026,
+     "worst_x": 0.09
+    },
+    "jaw[-1,2.33)": {
+     "max_abs": 0.067,
+     "mean": -0.011,
+     "rms": 0.03,
+     "worst_x": -0.55
+    },
+    "edge_to_target": {
+     "max": 0.092,
+     "mean": 0.03,
+     "p95": 0.067,
+     "worst_xu": [
+      0.09,
+      -1.27
+     ]
+    },
+    "brow_vs_traced_in_shoulder": {
+     "x": [
+      -1.25,
+      0.6
+     ],
+     "max": 0.258,
+     "mean": 0.153,
+     "worst_x": -0.37
+    }
+   },
+   "notes": "fit_R on the packed cell 0, x >= -1.0 R, alpha >= 0.5 edge vs the target (outer_fur_edge + brow_neck_shoulder): brow/jaw = signed normal deviation target -> edge (+ = outside); edge_to_target = distance edge -> nearest target point (max / mean / p95; max includes stray fur strands); brow_vs_traced_in_shoulder = the brow vs the traced polyline inside the shoulder. See dev/blender/head_v3_check.py"
+  },
+  "scale": {
+   "draw_scale": "cell px * (R / ref_R)",
+   "head_scale_vs_R": 1.2,
+   "notes": "rh_ref = ref_R * head_scale, so the engine draws the cell at R / ref_R with the origin on the path's head point"
+  },
+  "bytes": 419668,
+  "webp_quality": 82,
+  "render": {
+   "spp": 48,
+   "supersample": 2,
+   "per_cell_s": 28.28,
+   "render_s": 905.1,
+   "build_s": 1.5,
+   "strands": 126590,
+   "seed": 7,
+   "sun": 4.2,
+   "sun_angle_deg": 28,
+   "world": [
+    "#FFE8EE",
+    0.45
+   ]
+  },
+  "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R); pink fur runs into the body (no collar). Eye baked (see eye). No tongue (engine draws it from tongue_base_R). Straight alpha."
  },
  "cap": {
   "file": "cap.webp",
@@ -271,8 +365,8 @@
  },
  "bytes": {
   "body": 757218,
-  "head": 351294,
+  "head": 419668,
   "cap": 4832,
-  "total": 1181610
+  "total": 1181718
  }
 }
