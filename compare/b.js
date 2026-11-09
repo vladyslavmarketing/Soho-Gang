@@ -12,7 +12,7 @@
   var SRC = window.SNAKE_SOURCES || {};
   var q = new URLSearchParams(location.search);
   if (q.has('embed')) document.body.classList.add('embed');
-  if (q.has('transparent')) document.body.style.background = 'transparent';
+  if (q.has('transparent')) document.documentElement.style.background = document.body.style.background = 'transparent';
   var CAPTURE = q.has('capture'), DEBUG_STRANDS = q.has('debugStrands');   // frame capture: draw only on seek (tools/capture)
   var BASE = q.get('base') || SRC.exportBase || null;
 
@@ -44,10 +44,12 @@
 
   var camera = new THREE.PerspectiveCamera(30, 16 / 9, 0.1, 200);
   var mixer = null, action = null, duration = 6, fps = 30, time = 0, playing = !q.has('paused');
-  var settings = { furLength: 0.1, shells: 24, tile: 2, gravity: 0.35, sheen: '#e98aa4', sheenAmount: 0.7, envIntensity: 0.3, exposure: 1.1 };
+  var settings = { cover: 1, furLength: 0.1, shells: 24, tile: 2, gravity: 0.35, sheen: '#e98aa4', sheenAmount: 0.7, envIntensity: 0.3, exposure: 1.1 };
 
-  ['furLength', 'shells', 'tile', 'gravity', 'exposure', 'sheenAmount', 'envIntensity'].forEach(function (k) { if (q.has(k)) settings[k] = +q.get(k); });   // tuning from the URL
-  var URLSET = {}; ['furLength', 'shells', 'tile', 'gravity', 'exposure'].forEach(function (k) { if (q.has(k)) URLSET[k] = 1; });
+  // tuning matched to clip A (sources.js bTuning), URL parameters win
+  if (SRC.bTuning) Object.keys(SRC.bTuning).forEach(function (k) { settings[k] = SRC.bTuning[k]; });
+  ['furLength', 'shells', 'tile', 'gravity', 'exposure', 'sheenAmount', 'envIntensity', 'cover'].forEach(function (k) { if (q.has(k)) settings[k] = +q.get(k); });   // tuning from the URL
+  var URLSET = {}; ['furLength', 'shells', 'tile', 'gravity', 'exposure'].forEach(function (k) { if (q.has(k) || (SRC.bTuning && SRC.bTuning[k] != null)) URLSET[k] = 1; });
 
   /* ---------------- fur shells ---------------- */
   var strandsTex = null;
@@ -75,6 +77,8 @@
     return t;
   }
   // strand masks must not be averaged by mipmaps (the shells would lose their tips at a distance)
+  // strands per uv unit: the export gives tileD (D per tile) and the body's length / girth; placeholder: square
+  function tileVec() { return settings.tileUV ? new THREE.Vector2(settings.tileUV[0], settings.tileUV[1]) : new THREE.Vector2(settings.tile, settings.tile); }
   function strandFilter(t) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; }
   function furMaterial(src, h) {
     var m = new THREE.MeshPhysicalMaterial({
@@ -85,17 +89,17 @@
     m.userData.h = h;
     m.onBeforeCompile = function (s) {
       s.uniforms.uShell = { value: h }; s.uniforms.uFur = { value: settings.furLength };
-      s.uniforms.uStrands = { value: strandsTex }; s.uniforms.uTile = { value: settings.tile }; s.uniforms.uGrav = { value: settings.gravity };
+      s.uniforms.uStrands = { value: strandsTex }; s.uniforms.uCover = { value: settings.cover }; s.uniforms.uTile = { value: tileVec() }; s.uniforms.uGrav = { value: settings.gravity };
       m.userData.shader = s;
-      s.vertexShader = 'uniform float uShell; uniform float uFur; uniform float uTile; uniform float uGrav; varying vec2 vFurUv;\n' +
+      s.vertexShader = 'uniform float uShell; uniform float uFur; uniform vec2 uTile; uniform float uGrav; varying vec2 vFurUv;\n' +
         s.vertexShader
           .replace('#include <skinning_vertex>', '#include <skinning_vertex>\n  transformed += normalize(objectNormal) * uFur * uShell;\n  transformed.y -= uGrav * uFur * uShell * uShell;')
           .replace('#include <uv_vertex>', '#include <uv_vertex>\n  vFurUv = uv * uTile;');
-      s.fragmentShader = 'uniform float uShell; uniform sampler2D uStrands; varying vec2 vFurUv;\n' +
+      s.fragmentShader = 'uniform float uShell; uniform float uCover; uniform sampler2D uStrands; varying vec2 vFurUv;\n' +
         s.fragmentShader.replace('#include <map_fragment>', [
           '#include <map_fragment>',
           '  vec4 fs = texture2D(uStrands, vFurUv);',
-          '  if (uShell > 0.001 && fs.r < uShell) discard;',
+          '  if (uShell > 0.001 && fs.r < uShell * uCover) discard;',
           '  diffuseColor.rgb *= mix(0.36, 1.08, pow(uShell, 0.7)) * mix(0.92, 1.08, fs.g) * mix(0.94, 1.04, fs.b);',
           DEBUG_STRANDS ? '  diffuseColor.rgb = vec3(fs.r);' : ''
         ].join('\n'));
@@ -218,9 +222,18 @@
   }
 
   /* ---------------- setup from a glTF (or the placeholder) ---------------- */
-  var furMeshes = [];
+  var furMeshes = [], EXTRA = {};
   function setup(gltf, man) {
     man = man || {};
+    var fu = man.fur || {}, tx = (man.textures || {})['fur_strands.webp'] || {};
+    if (fu.depthD && !URLSET.furLength) settings.furLength = fu.depthD;
+    if (tx.tileD && man.mesh && man.mesh.lengthD && !URLSET.tile) {
+      // u = arc / L, v = angle / 2pi: girth of the skin = pi * (1 - 2 * fur depth)
+      var girth = PI * (1 - 2 * settings.furLength);
+      settings.tileUV = [man.mesh.lengthD / tx.tileD, girth / tx.tileD];
+    }
+    if (man.axes && man.axes.floorY != null) ground.position.y = man.axes.floorY;
+    if (man.animation && man.animation.fps) fps = man.animation.fps;
     if (man.furLength && !URLSET.furLength) settings.furLength = man.furLength;
     if (man.shells && !URLSET.shells) settings.shells = man.shells;
     if (man.strandsTiling && !URLSET.tile) settings.tile = man.strandsTiling;
@@ -233,11 +246,19 @@
       if (o.isLight) lights.push(o);
       if (o.isMesh) {
         var nm = (o.name + ' ' + (o.material && o.material.name || '')).toLowerCase();
-        if (skip.some(function (s) { return nm.indexOf(s) >= 0; })) { o.castShadow = true; return; }
+        if (skip.some(function (s) { return nm.indexOf(s) >= 0; })) {
+          o.castShadow = true;
+          if (nm.indexOf('eye') >= 0 && settings.eyeScale) o.scale.multiplyScalar(settings.eyeScale);   // beads poke out of the fur shells
+          return;
+        }
         targets.push(o);
       }
     });
     if (lights.length) { rig.visible = false; lights.forEach(function (l) { if (l.isDirectionalLight || l.isSpotLight) l.castShadow = true; }); }
+    if (EXTRA.albedo) targets.forEach(function (o) {
+      var m = o.material; m.map = EXTRA.albedo; m.color.set(0xffffff);
+      if (EXTRA.normal) { m.normalMap = EXTRA.normal; m.normalScale = new THREE.Vector2(0.35, 0.35); }
+    });
     targets.forEach(function (o) { furMeshes = furMeshes.concat(furify(o)); });
     var cam = null;
     (gltf.cameras || []).forEach(function (c) { if (!cam || c.name === 'CamHero' || (c.parent && c.parent.name === 'CamHero')) cam = c; });
@@ -301,11 +322,31 @@
   strandsTex = makeStrands();
   if (!BASE) { setup(buildPlaceholder(), null); }
   else {
-    var man = SRC.manifest || {};
     var tl = new THREE.TextureLoader();
-    var strandsUrl = BASE + (man.furStrands || 'fur_strands.webp');
-    tl.load(strandsUrl, function (t) { t.wrapS = t.wrapT = THREE.RepeatWrapping; strandFilter(t); t.needsUpdate = true; strandsTex = t; furMeshes.forEach(function (m) { var s = m.material.userData.shader; if (s) s.uniforms.uStrands.value = t; }); });
-    new THREE.GLTFLoader().load(BASE + (man.model || 'snake.glb'), function (g) { setup(g, man); }, undefined, function () { setup(buildPlaceholder(), null); });
+    function tex(url, srgb) {
+      return new Promise(function (res) {
+        tl.load(url, function (t) { t.flipY = false; if (srgb) t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; res(t); }, undefined, function () { res(null); });
+      });
+    }
+    fetch(BASE + 'manifest.json').then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }).then(function (man) {
+      var tx = man.textures || {};
+      return Promise.all([
+        tex(BASE + 'snake_albedo.webp', true), tex(BASE + 'snake_normal.webp', false), tex(BASE + 'fur_strands.webp', false)
+      ]).then(function (t) {
+        EXTRA.albedo = t[0]; EXTRA.normal = t[1];
+        if (t[2]) { t[2].wrapS = t[2].wrapT = THREE.RepeatWrapping; strandFilter(t[2]); strandsTex = t[2]; }
+        var fail = function () { setup(buildPlaceholder(), null); };
+        if (SRC.glbScript) {   // hosts that do not serve .glb: the model ships base64 inside a .js file
+          var sc = document.createElement('script'); sc.src = SRC.glbScript;
+          sc.onload = function () {
+            var bin = atob(window.SNAKE_GLB_B64 || ''), buf = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+            new THREE.GLTFLoader().parse(buf.buffer, BASE, function (g) { setup(g, man); }, fail);
+          };
+          sc.onerror = fail; document.head.appendChild(sc);
+        } else new THREE.GLTFLoader().load(BASE + 'snake.glb', function (g) { setup(g, man); }, undefined, fail);
+      });
+    });
   }
   requestAnimationFrame(loop);
 })();
