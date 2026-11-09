@@ -453,8 +453,35 @@ def fur_tile(res=1024, n=7500, clumps=150, seed=5):
     save_image(np.clip(a, 0, 1), os.path.join(EXPORT, 'fur_strands.webp'), False, 100)
 
 
+def bench():
+    """seconds per Cycles frame: CamHero 1408x768, --samples (64), OptiX denoiser, full fur, persistent data;
+    renders --bench-frames (default 30,60,90,120,150) of the animation one after another"""
+    sc = open_anim()
+    use_gpu(sc)
+    sc.render.resolution_x, sc.render.resolution_y = 1408, 768
+    sc.render.resolution_percentage = 100
+    sc.cycles.samples = int(arg('--samples', 64))
+    sc.cycles.use_denoising = True
+    sc.cycles.denoiser = 'OPTIX' if '--cpu' not in argv else 'OPENIMAGEDENOISE'
+    sc.render.use_persistent_data = True
+    frames = [int(v) for v in arg('--bench-frames', '30,60,90,120,150').split(',')]
+    times = []
+    for f in frames:
+        sc.frame_set(f)
+        t0 = time.time()
+        bpy.ops.render.render(write_still=False)
+        times.append(time.time() - t0)
+        log('frame %d: %.1f s' % (f, times[-1]))
+    warm = times[1:] or times
+    log('BENCH 1408x768, %d samples, OptiX denoise, %d strands, %d bounces: first %.1f s, then %.1f s/frame' % (
+        sc.cycles.samples, len(bpy.data.objects['Fur'].data.curves), sc.cycles.max_bounces, times[0],
+        sum(warm) / len(warm)))
+
+
 if '--bake' in argv:
     bake()
+if '--bench' in argv:
+    bench()
 if '--clip' in argv:
     clip()
 if '--encode' in argv:
