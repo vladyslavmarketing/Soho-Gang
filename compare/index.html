@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Змея A и B</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;600;800&display=swap">
+<style>
+  /* Layout: a control strip over a 16:9 stage; A (Cycles clip) and B (real time) side by side or stacked under a curtain. */
+  :root {
+    --bg: #F6E9EB; --paper: #F1D6DA; --ink: #1E1618; --muted: #5A3540; --line: #E2BFC6; --accent: #A3506A; --chip: #FFF8F9;
+    --display: "Onest", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1E1618; --ink: #F4EADB; --muted: #D9B8C1; --line: #4A3036; --accent: #E59AB0; --chip: #2B2023; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #1E1618; --ink: #F4EADB; --muted: #D9B8C1; --line: #4A3036; --accent: #E59AB0; --chip: #2B2023; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--display);
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 28px; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between; max-width: 1400px; margin: 0 auto 14px; }
+  h1 { margin: 0; font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -.03em; text-wrap: balance; }
+  .note { margin: 0; color: var(--muted); font-size: 14px; max-width: 70ch; }
+  .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    max-width: 1400px; margin: 0 auto 12px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; }
+  button, .seg label { font: 500 13px/1 var(--mono); letter-spacing: .04em; color: var(--ink); background: var(--chip); border: 1px solid var(--line);
+    border-radius: 999px; padding: 9px 14px; min-height: 36px; cursor: pointer; }
+  button:hover, .seg label:hover { border-color: var(--accent); }
+  button:focus-visible, .seg input:focus-visible + label, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .seg { display: inline-flex; gap: 4px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg input:checked + label { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .readout { font: 12px/1.3 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; text-align: right; }
+  .readout b { color: var(--ink); font-weight: 500; }
+  #scrub { flex: 1 1 220px; accent-color: var(--accent); min-width: 0; }
+  .stage { position: relative; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pane { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border-radius: 12px; overflow: hidden; }
+  .pane video, .pane iframe, .pane img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; object-fit: contain; }
+  .tag { position: absolute; z-index: 3; left: 10px; top: 10px; font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+    color: #1E1618; background: rgba(255, 248, 249, .85); border-radius: 999px; padding: 6px 9px; }
+  /* curtain: both panes in one cell, A on top clipped to the left of the handle */
+  .stage.curtain { grid-template-columns: 1fr; }
+  .stage.curtain .pane { grid-area: 1 / 1; }
+  .stage.curtain .pane--a { z-index: 2; clip-path: inset(0 calc(100% - var(--cut, 50%)) 0 0); }
+  .handle { display: none; position: absolute; z-index: 4; top: 0; bottom: 0; left: var(--cut, 50%); width: 2px; background: #FFF8F9; box-shadow: 0 0 0 1px rgba(30, 22, 24, .25); pointer-events: none; }
+  .stage.curtain .handle { display: block; }
+  .stage.curtain .pane--b .tag { left: auto; right: 10px; }
+  #cut { display: none; width: 100%; accent-color: var(--accent); }
+  .stage.curtain + #cut { display: block; max-width: 1400px; margin: 10px auto 0; }
+  @media (max-width: 760px) { .stage { grid-template-columns: 1fr; } .readout { margin-left: 0; text-align: left; width: 100%; } }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Змея: Cycles и браузер</h1>
+  <p class="note" id="note">A — клип, отрендеренный в Blender Cycles. B — та же модель в реальном времени (three.js, мех слоями). Оба играют синхронно: B берёт время из клипа A.</p>
+</header>
+
+<div class="bar" role="toolbar" aria-label="Управление">
+  <div class="seg" role="radiogroup" aria-label="Режим">
+    <input type="radio" name="mode" id="m-side" value="side" checked><label for="m-side">Рядом</label>
+    <input type="radio" name="mode" id="m-curtain" value="curtain"><label for="m-curtain">Шторка</label>
+  </div>
+  <button id="prev" type="button" aria-label="Кадр назад">◀ кадр</button>
+  <button id="play" type="button" aria-label="Пауза">❚❚ пауза</button>
+  <button id="next" type="button" aria-label="Кадр вперёд">кадр ▶</button>
+  <input id="scrub" type="range" min="0" max="179" step="1" value="0" aria-label="Кадр">
+  <div class="readout" aria-live="off"><b id="frame">кадр 0 / 180</b> · <span id="time">0.000 с</span><br><span id="bstat">B: —</span></div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="pane pane--a">
+    <video id="va" muted playsinline loop preload="auto"></video>
+    <span class="tag">A · Cycles</span>
+  </div>
+  <div class="pane pane--b">
+    <iframe id="fb" title="B — реальное время" loading="eager"></iframe>
+    <span class="tag">B · браузер</span>
+  </div>
+  <div class="handle" aria-hidden="true"></div>
+</div>
+<input id="cut" type="range" min="0" max="100" value="50" aria-label="Положение шторки">
+
+<script src="sources.js"></script>
+<script src="compare.js"></script>
+</body>
+</html>
