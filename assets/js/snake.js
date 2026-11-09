@@ -650,7 +650,7 @@
       g.globalCompositeOperation = 'destination-out'; g.fillStyle = fo; g.fillRect(0, 0, Math.ceil(x0) + 1, c.height);
       g.globalCompositeOperation = 'source-over';
     }
-    roundBack(g, ox, oy, rh / HEAD);
+    if (!M.shape) roundBack(g, ox, oy, rh / HEAD);   // the reshaped head has its own back edge
     atlasGrade(c, 0);
     return { c: c, ox: ox, oy: oy };
   }
@@ -676,7 +676,9 @@
   function bankJob(R, src) {
     var A = src && src.atlas ? src : null, furDev = A ? null : src;
     var bank = { R: R, RH: R * HEAD, src: src, atlas: A, fur: furDev, big: [[], [], []], small: [[], [], []], floor: [], occl: [], head: new Array(HB), headBase: null,
-                 eyesBaked: !!(A && A.m.head.eyes), tongueX: (A && A.m.head.tongue_base_R && +A.m.head.tongue_base_R[0]) || TONGUE_BASE };
+                 eyesBaked: !!(A && A.m.head.eyes), tongueX: (A && A.m.head.tongue_base_R && +A.m.head.tongue_base_R[0]) || TONGUE_BASE,
+                 // reshaped head (client photo): the tongue leaves from under the snout, on the jaw side (u > 0)
+                 tongueU: (A && A.m.head.shape && A.m.head.tongue_base_R && +A.m.head.tongue_base_R[1]) || 0 };
     var tasks = [], t0 = 0, spent = 0;
     // tasks are kept small (one sprite each) so a slow phone never gets a long main-thread task from the bank
     function set(kind, v, small) { // one colour variant: mask, detail, then the 32 angle sprites one by one
@@ -1937,7 +1939,10 @@
     // a lit cylinder: pale #F0C9D1 top, deeper rose rim on the shadow (screen-down) side. Flicks scale it out.
     function drawTongue(c, ext, up) {
       var R = bank.R, down = -up, len = 1.85 * R * ext, pl = 0.7 * R * ext;
-      var bx = bank.tongueX * R, by = down * 0.08 * R, ang = down * 0.297 + Math.sin(clock * 31) * 0.05 * ext;
+      // jaw side in the drawn head = local -y (the bead eye is always on +y, see headPick); procedural: screen down
+      var jaw = bank.tongueU ? -1 : down;
+      var bx = bank.tongueX * R, by = bank.tongueU ? jaw * bank.tongueU * R : down * 0.08 * R;
+      var ang = jaw * (bank.tongueU ? 0.42 : 0.297) + Math.sin(clock * 31) * 0.05 * ext;
       var ca = Math.cos(ang), sa = Math.sin(ang), fx = bx + ca * len, fy = by + sa * len;
       var wv = Math.sin(clock * 47) * 0.07 * R * ext, mx = bx + ca * len * 0.5 - sa * wv, my = by + sa * len * 0.5 + ca * wv;
       var spread = 0.5 + Math.sin(clock * 53) * 0.07, fk = ang + up * 0.15, a1 = fk - spread, a2 = fk + spread;

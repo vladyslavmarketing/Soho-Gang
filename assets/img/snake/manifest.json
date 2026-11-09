@@ -74,12 +74,12 @@
   "rh_ref": 76.8,
   "head_scale": 1.2,
   "cell": [
-   286,
-   242
+   281,
+   296
   ],
   "origin": [
    113,
-   121
+   148
   ],
   "eyes": true,
   "fade_baked": true,
@@ -213,7 +213,12 @@
     ]
    ],
    "two_eyes_below_abs_cos": 0.3,
-   "notes": "head-local units of R (body radius), x forward, y down (sprite space, before rotation). Eye 0 is drawn when the screen-up side is local -y (cos th > 0), eye 1 when cos th < 0, both when |cos th| < two_eyes_below_abs_cos. Use for a pointer glint overlay; the beads + key-light glint are already baked."
+   "notes": "head-local units of R (body radius), x forward, y down (sprite space, before rotation). Eye 0 is drawn when the screen-up side is local -y (cos th > 0), eye 1 when cos th < 0, both when |cos th| < two_eyes_below_abs_cos. Use for a pointer glint overlay; the beads + key-light glint are already baked.",
+   "moved_to": [
+    0.327,
+    0.2,
+    "u: + = jaw side (opposite the eye side of the source cell)"
+   ]
   },
   "neck_band": {
    "start_w": 0.575,
@@ -242,13 +247,13 @@
   },
   "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R). Eyes baked (see eye). No tongue (engine draws it; base at the snout tip, see tongue_base_R). Straight alpha.",
   "tongue_base_R": [
-   2.15,
-   0.0
+   1.95,
+   1.45
   ],
   "shape": {
-   "reshaped": "dev/head-reshape.py",
-   "front_R": 2.45,
-   "corner_R": 0.55
+   "reshaped": "dev/head-reshape.py (client photo)",
+   "front_R": 2.33,
+   "jaw_R": 2.0
   }
  },
  "cap": {
@@ -266,7 +271,7 @@
  },
  "bytes": {
   "body": 757218,
-  "head": 420974,
+  "head": 351294,
   "cap": 4832,
   "total": 1181610
  }

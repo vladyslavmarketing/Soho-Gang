@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Reshape the plush snake head atlas from the Blender egg to the client's head shape.
+"""Reshape the plush snake head atlas from the Blender egg to the client's reference photo.
 
     python3 dev/head-reshape.py            # dev/snake-src/head-egg.webp -> assets/img/snake/head.webp (+ manifest)
 
-Target silhouette (client sketch over the egg cell + the plush photo), side view, x forward:
-  - top (the eye side): a flat brow that slopes down to the snout; the back of the head is cut at a slant;
-  - snout: blunt, rounded corners, a little below the middle;
-  - bottom (jaw): almost flat, rising only near the snout.
-Each atlas cell is warped column by column: the source column's top/bottom fur edges are mapped onto the target
-edges (the eye side is known from the manifest, so the shape is the same whichever way the head is lit).
-Fur, lighting and the baked eye are kept. Premultiplied bilinear sampling.
+Target silhouette = the client's outline over the plush photo (side view, head facing left, eye up), converted to
+the atlas frame: x forward from the head point, u across the head (negative = the eye side), units of body radius R
+(incl. fur). Scale: the neck behind the head is the body diameter (2.5 R with fur); the eye stays at x 0.33.
+  - the brow slopes gently from the back of the head, then down to a blunt, rounded snout;
+  - the jaw is flat and hangs below the neck;
+  - the eye sits a little below the middle of the head height (moved there; the bead keeps its size).
+Each column of each cell is remapped piecewise-linearly (edges + the eye band). Cells are processed with the eye on
+-u and flipped back. The new cells are symmetric about the head point (the engine uses one origin).
 """
 import json
 import os
@@ -22,135 +23,110 @@ SRC = os.path.join(ROOT, 'dev', 'snake-src', 'head-egg.webp')
 OUT = os.path.join(ROOT, 'assets', 'img', 'snake', 'head.webp')
 MAN = os.path.join(ROOT, 'assets', 'img', 'snake', 'manifest.json')
 
-# silhouette in body radii R (incl. fur); "top" = the eye side, values are distances from the head axis
-FRONT = 2.45       # snout front
-CORNER = 0.55      # snout corner radius
-IDENT = (-0.75, 0.75)   # columns kept exactly as rendered (the eye sits at x ~0.33)
-
-
-def lerp(a, b, t):
-    return a + (b - a) * t
-
-
-def ease(t):
-    # a brow that rolls into the slope (no knee)
-    t = min(1.0, max(0.0, t))
-    return t * t * 0.45 + t * 0.55   # soft start only: the slope runs straight into the rounded snout
-
-
-def top_edge(x, src):
-    """target top half-height at x (src = rendered half-height at the same source column)."""
-    if IDENT[0] <= x <= IDENT[1]:
-        return src
-    if x < IDENT[0]:                                  # slanted back of the head (sketch: top-left corner cut)
-        t = min(1.0, (IDENT[0] - x) / 0.75)
-        return lerp(src, min(src, 1.25), t)
-    # brow: flat, then a straight slope down to the snout top
-    flat_to, slope_to, h0, h1 = 0.95, FRONT - CORNER, 1.70, 0.86
-    if x <= flat_to:
-        return lerp(src, h0, (x - IDENT[1]) / (flat_to - IDENT[1]))
-    return lerp(h0, h1, ease((x - flat_to) / (slope_to - flat_to)))
-
-
-def bottom_edge(x, src):
-    if IDENT[0] <= x <= IDENT[1]:
-        return src
-    if x < IDENT[0]:
-        t = min(1.0, (IDENT[0] - x) / 0.75)
-        return lerp(src, min(src, 1.45), t)
-    flat_to, slope_to, h0, h1 = 1.15, FRONT - CORNER, 1.62, 1.02   # jaw: nearly flat, rises near the snout
-    if x <= flat_to:
-        return lerp(src, h0, (x - IDENT[1]) / (flat_to - IDENT[1]))
-    return lerp(h0, h1, ease((x - flat_to) / (slope_to - flat_to)))
-
-
-def corner_cut(x):
-    """how much the rounded snout corners pull both edges in near the front."""
-    x0 = FRONT - CORNER
-    if x <= x0:
-        return 0.0
-    d = min(CORNER, x - x0)
-    return CORNER - np.sqrt(CORNER * CORNER - d * d)
+# outline from the photo; T = eye-side edge (negative u), B = jaw edge (positive u)
+T_X = [-1.9, -0.29, 0.40, 0.96, 1.55, 2.05, 2.24, 2.33]
+T_U = [-1.14, -1.14, -1.02, -0.80, -0.30, 0.35, 0.83, 1.25]
+B_X = [-1.9, -1.18, -0.64, 0.60, 1.38, 1.86, 2.19, 2.33]
+B_U = [1.20, 1.24, 1.62, 1.86, 2.00, 1.81, 1.33, 1.25]
+FRONT = 2.33
+EYE_SRC = -0.938          # Blender eye centre (eye side)
+EYE_DST = 0.2             # the photo has it a little below the middle; less shift = less stretched fur above it
+EYE_X = 0.327
+BAND = 0.34               # eye band kept at 1:1 so the bead is not stretched
+TONGUE = [1.95, 1.45]     # tongue root under the front of the snout (u, + = jaw side)
+FRINGE = 0.24             # fur kept beyond the target edges (fades out)
 
 
 def main():
     man = json.load(open(MAN))
     H = man['head']
-    if not os.path.exists(SRC):   # first run: keep the Blender original next to the script
+    if not os.path.exists(SRC):
         os.makedirs(os.path.dirname(SRC), exist_ok=True)
         Image.open(OUT).save(SRC, lossless=True)
     src = np.asarray(Image.open(SRC).convert('RGBA')).astype(np.float32) / 255.0
-    w, h = 271, 242                                   # the Blender cell (head v2)
-    ox, oy = H['origin']
+    w, h, oy = 271, 242, 121                          # Blender cell (head v2)
+    ox = H['origin'][0]
     cols, n = H['cols'], H['buckets']
     R = float(H['ref_R'])
     rows = (n + cols - 1) // cols
-    w2 = int(np.ceil(ox + (FRONT + 0.25) * R))
+    half = int(np.ceil((max(-min(T_U), max(B_U)) + FRINGE + 0.05) * R))
+    h2, oy2 = 2 * half + 2, half + 1
+    w2 = int(np.ceil(ox + (FRONT + FRINGE + 0.05) * R))
     per = (H.get('eye') or {}).get('per_bucket') or [[0]] * n
+    U = (np.arange(h2) - oy2) / R                     # target rows, + = jaw side
+    xs_src = (np.arange(w) - ox) / R
+    sm = np.ones(7) / 7
 
-    out = np.zeros((rows * h, cols * w2, 4), np.float32)
+    out = np.zeros((rows * h2, cols * w2, 4), np.float32)
     for b in range(n):
-        cx, cy = (b % cols) * w, (b // cols) * h
-        cell = src[cy:cy + h, cx:cx + w].copy()
-        cell[..., :3] *= cell[..., 3:4]                   # premultiply
+        cell = src[(b // cols) * h:(b // cols + 1) * h, (b % cols) * w:(b % cols + 1) * w].copy()
+        flip = per[b][0] != 0                         # eye on +y: process upside down
+        if flip:
+            cell = cell[::-1].copy()
+        cell[..., :3] *= cell[..., 3:4]
         al = cell[..., 3]
-        up = -1.0 if per[b][0] == 0 else 1.0             # sign of the eye side (local y); two-eye cells: -y
-        top_s = np.zeros(w); bot_s = np.zeros(w); ok = np.zeros(w, bool)
+        ts = np.zeros(w); bs = np.zeros(w)
         for x in range(w):
             c = np.where(al[:, x] > 0.5)[0]
             if len(c):
-                ok[x] = True
-                lo, hi = (c.min() - oy) / R, (c.max() - oy) / R          # y down
-                top_s[x], bot_s[x] = (-lo, hi) if up < 0 else (hi, -lo)  # distances on the eye / jaw side
-        k = np.ones(7) / 7
-        top_s = np.convolve(top_s, k, 'same'); bot_s = np.convolve(bot_s, k, 'same')
-        src_front = (np.max(np.where(ok)[0]) - ox) / R - 0.05
-        xs_src = (np.arange(w) - ox) / R
+                ts[x], bs[x] = -(c.min() - oy) / R, (c.max() - oy) / R
+        ts = np.convolve(ts, sm, 'same'); bs = np.convolve(bs, sm, 'same')
+        src_front = (np.max(np.where(ts + bs > 0.1)[0]) - ox) / R
 
-        res = np.zeros((h, w2, 4), np.float32)
+        res = np.zeros((h2, w2, 4), np.float32)
         for X in range(w2):
             x = (X - ox) / R
-            if x > FRONT + 0.2:
+            if x > FRONT + FRINGE:
                 continue
-            # x: identity up to the eye region, then the snout section maps onto the source front
-            sx = x if x <= IDENT[1] else IDENT[1] + (x - IDENT[1]) * (src_front - IDENT[1]) / (FRONT - IDENT[1])
-            ts = float(np.interp(sx, xs_src, top_s)); bs = float(np.interp(sx, xs_src, bot_s))
-            if ts + bs < 0.1:
+            sx = x if x <= 0.9 else 0.9 + (x - 0.9) * (src_front - 0.9) / (FRONT - 0.9)
+            t_s = float(np.interp(sx, xs_src, ts)); b_s = float(np.interp(sx, xs_src, bs))
+            T = float(np.interp(x, T_X, T_U)); B = float(np.interp(x, B_X, B_U))
+            if t_s + b_s < 0.1 or B - T < 0.05:
                 continue
-            cc = corner_cut(x)
-            tt = max(0.05, top_edge(x, ts) - cc); bt = max(0.05, bottom_edge(x, bs) - cc)
-            # map target [-tt, bt] (eye side negative) onto source [-ts, bs], linearly
-            Y = (np.arange(h) - oy) / R * (-up)          # +: jaw side, -: eye side
-            SYs = -ts + (Y + tt) * (ts + bs) / (tt + bt)
-            py = SYs * (-up) * R + oy
+            g = (B - T) / (t_s + b_s)
+            prop = T + (EYE_SRC + t_s) * g
+            dx = max(0.0, abs(x - EYE_X) - 0.45)          # flat over the whole bead, then a soft fall-off
+            wgt = float(np.exp(-(dx / 0.6) ** 2))
+            kt = prop + (EYE_DST - prop) * wgt
+            gb = g + (1.0 - g) * wgt
+            sk = [-t_s, EYE_SRC - BAND, EYE_SRC + BAND, b_s]
+            dk = [T, kt - BAND * gb, kt + BAND * gb, B]
+            if not (dk[0] < dk[1] < dk[2] < dk[3] and sk[0] < sk[1] < sk[2] < sk[3]):
+                sk, dk = [-t_s, b_s], [T, B]
+            su = np.interp(U, dk, sk)
+            su = np.where(U < T, sk[0] + (U - T) * (sk[1] - sk[0]) / (dk[1] - dk[0]), su)
+            su = np.where(U > B, sk[-1] + (U - B) * (sk[-1] - sk[-2]) / (dk[-1] - dk[-2]), su)
+            py = su * R + oy
             px = sx * R + ox
             x0 = int(np.floor(px)); fx = px - x0
             y0 = np.floor(py).astype(int); fy = (py - y0)[:, None]
 
             def at(xx, yy):
-                v = np.zeros((h, 4), np.float32)
-                m = (yy >= 0) & (yy < h) & (0 <= xx < w)
+                v = np.zeros((h2, 4), np.float32)
                 if 0 <= xx < w:
+                    m = (yy >= 0) & (yy < h)
                     v[m] = cell[yy[m], xx]
                 return v
             col = ((at(x0, y0) * (1 - fy) + at(x0, y0 + 1) * fy) * (1 - fx) +
                    (at(x0 + 1, y0) * (1 - fy) + at(x0 + 1, y0 + 1) * fy) * fx)
-            # keep fur fringe only a little beyond the target edges
-            d_out = np.maximum(-Y - tt, Y - bt)
-            col *= np.clip(1 - d_out / 0.22, 0, 1)[:, None]
+            col *= np.clip(1 - np.maximum(T - U, U - B) / FRINGE, 0, 1)[:, None]
             res[:, X] = col
         a = res[..., 3:4]
         res[..., :3] = np.where(a > 1e-4, res[..., :3] / np.maximum(a, 1e-4), 0)
-        out[(b // cols) * h:(b // cols + 1) * h, (b % cols) * w2:(b % cols + 1) * w2] = res
+        if flip:
+            res = res[::-1]
+        out[(b // cols) * h2:(b // cols + 1) * h2, (b % cols) * w2:(b % cols + 1) * w2] = res
 
     Image.fromarray(np.clip(out * 255 + 0.5, 0, 255).astype(np.uint8), 'RGBA').save(OUT, quality=88, method=6)
-    H['cell'] = [w2, h]
-    H['shape'] = {'reshaped': 'dev/head-reshape.py', 'front_R': FRONT, 'corner_R': CORNER}
-    H['tongue_base_R'] = [round(FRONT - 0.3, 2), 0.0]
+    H['cell'] = [w2, h2]
+    H['origin'] = [ox, oy2]
+    H['shape'] = {'reshaped': 'dev/head-reshape.py (client photo)', 'front_R': FRONT, 'jaw_R': max(B_U)}
+    H['eye']['moved_to'] = [EYE_X, EYE_DST, 'u: + = jaw side (opposite the eye side of the source cell)']
+    H['tongue_base_R'] = TONGUE
     H.pop('silhouette', None)
     man['bytes']['head'] = os.path.getsize(OUT)
     json.dump(man, open(MAN, 'w'), indent=1)
-    print('cell', w2, 'x', h, 'bytes', man['bytes']['head'])
+    print('cell', w2, 'x', h2, 'origin', ox, oy2, 'bytes', man['bytes']['head'])
 
 
 if __name__ == '__main__':
