@@ -74,7 +74,7 @@
   "rh_ref": 76.8,
   "head_scale": 1.2,
   "cell": [
-   330,
+   286,
    242
   ],
   "origin": [
@@ -242,14 +242,13 @@
   },
   "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R). Eyes baked (see eye). No tongue (engine draws it; base at the snout tip, see tongue_base_R). Straight alpha.",
   "tongue_base_R": [
-   2.82,
+   2.15,
    0.0
   ],
   "shape": {
    "reshaped": "dev/head-reshape.py",
-   "tip_R": 3.17,
-   "tip_halfwidth_R": 0.62,
-   "keep_R": 0.45
+   "front_R": 2.45,
+   "corner_R": 0.55
   }
  },
  "cap": {
@@ -267,7 +266,7 @@
  },
  "bytes": {
   "body": 757218,
-  "head": 412210,
+  "head": 420974,
   "cap": 4832,
   "total": 1181610
  }

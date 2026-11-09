@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Reshape the plush snake head atlas: egg -> snake head (wide temples, long tapered rounded snout).
+"""Reshape the plush snake head atlas from the Blender egg to the client's head shape.
 
     python3 dev/head-reshape.py            # dev/snake-src/head-egg.webp -> assets/img/snake/head.webp (+ manifest)
 
-The Blender atlas (head v2) has an egg-shaped head. Each cell is warped in 2D (sprite space, x forward, origin =
-head point): the back and the eye region stay as rendered; ahead of the eye the head is stretched forward and
-narrowed toward a rounded snout. Fur, lighting and the baked eye are kept. Premultiplied bilinear sampling.
+Target silhouette (client sketch over the egg cell + the plush photo), side view, x forward:
+  - top (the eye side): a flat brow that slopes down to the snout; the back of the head is cut at a slant;
+  - snout: blunt, rounded corners, a little below the middle;
+  - bottom (jaw): almost flat, rising only near the snout.
+Each atlas cell is warped column by column: the source column's top/bottom fur edges are mapped onto the target
+edges (the eye side is known from the manifest, so the shape is the same whichever way the head is lit).
+Fur, lighting and the baked eye are kept. Premultiplied bilinear sampling.
 """
 import json
 import os
@@ -18,13 +22,55 @@ SRC = os.path.join(ROOT, 'dev', 'snake-src', 'head-egg.webp')
 OUT = os.path.join(ROOT, 'assets', 'img', 'snake', 'head.webp')
 MAN = os.path.join(ROOT, 'assets', 'img', 'snake', 'manifest.json')
 
-# shape, in body radii R (incl. fur), x forward from the head point
-KEEP = 0.45       # untouched up to here (temples + eye at x ~0.33)
-NECK_X = -0.9     # from here back: narrow toward the neck
-NECK_HW = 1.42    # half-width at the back edge of the head (body + fur ~ this)
-TAPER_TO = 2.55   # straight taper ends here...
-TIP_HW = 0.62     # ...at this half-width; then a round cap
-TIP = TAPER_TO + TIP_HW
+# silhouette in body radii R (incl. fur); "top" = the eye side, values are distances from the head axis
+FRONT = 2.45       # snout front
+CORNER = 0.55      # snout corner radius
+IDENT = (-0.75, 0.75)   # columns kept exactly as rendered (the eye sits at x ~0.33)
+
+
+def lerp(a, b, t):
+    return a + (b - a) * t
+
+
+def ease(t):
+    # a brow that rolls into the slope (no knee)
+    t = min(1.0, max(0.0, t))
+    return t * t * 0.45 + t * 0.55   # soft start only: the slope runs straight into the rounded snout
+
+
+def top_edge(x, src):
+    """target top half-height at x (src = rendered half-height at the same source column)."""
+    if IDENT[0] <= x <= IDENT[1]:
+        return src
+    if x < IDENT[0]:                                  # slanted back of the head (sketch: top-left corner cut)
+        t = min(1.0, (IDENT[0] - x) / 0.75)
+        return lerp(src, min(src, 1.25), t)
+    # brow: flat, then a straight slope down to the snout top
+    flat_to, slope_to, h0, h1 = 0.95, FRONT - CORNER, 1.70, 0.86
+    if x <= flat_to:
+        return lerp(src, h0, (x - IDENT[1]) / (flat_to - IDENT[1]))
+    return lerp(h0, h1, ease((x - flat_to) / (slope_to - flat_to)))
+
+
+def bottom_edge(x, src):
+    if IDENT[0] <= x <= IDENT[1]:
+        return src
+    if x < IDENT[0]:
+        t = min(1.0, (IDENT[0] - x) / 0.75)
+        return lerp(src, min(src, 1.45), t)
+    flat_to, slope_to, h0, h1 = 1.15, FRONT - CORNER, 1.62, 1.02   # jaw: nearly flat, rises near the snout
+    if x <= flat_to:
+        return lerp(src, h0, (x - IDENT[1]) / (flat_to - IDENT[1]))
+    return lerp(h0, h1, ease((x - flat_to) / (slope_to - flat_to)))
+
+
+def corner_cut(x):
+    """how much the rounded snout corners pull both edges in near the front."""
+    x0 = FRONT - CORNER
+    if x <= x0:
+        return 0.0
+    d = min(CORNER, x - x0)
+    return CORNER - np.sqrt(CORNER * CORNER - d * d)
 
 
 def main():
@@ -34,71 +80,73 @@ def main():
         os.makedirs(os.path.dirname(SRC), exist_ok=True)
         Image.open(OUT).save(SRC, lossless=True)
     src = np.asarray(Image.open(SRC).convert('RGBA')).astype(np.float32) / 255.0
-    w, h = H['cell']
+    w, h = 271, 242                                   # the Blender cell (head v2)
     ox, oy = H['origin']
     cols, n = H['cols'], H['buckets']
     R = float(H['ref_R'])
     rows = (n + cols - 1) // cols
-    w2 = int(np.ceil(ox + (TIP + 0.22) * R))       # new cell width (longer snout)
+    w2 = int(np.ceil(ox + (FRONT + 0.25) * R))
+    per = (H.get('eye') or {}).get('per_bucket') or [[0]] * n
 
     out = np.zeros((rows * h, cols * w2, 4), np.float32)
-    ys, xs = np.mgrid[0:h, 0:w2].astype(np.float32)
-    X = (xs - ox) / R
-    Y = (ys - oy) / R
-
     for b in range(n):
         cx, cy = (b % cols) * w, (b // cols) * h
         cell = src[cy:cy + h, cx:cx + w].copy()
-        cell[..., :3] *= cell[..., 3:4]                      # premultiply
+        cell[..., :3] *= cell[..., 3:4]                   # premultiply
         al = cell[..., 3]
-        # source half-width per column (alpha > .5), smoothed
-        hw = np.zeros(w, np.float32)
+        up = -1.0 if per[b][0] == 0 else 1.0             # sign of the eye side (local y); two-eye cells: -y
+        top_s = np.zeros(w); bot_s = np.zeros(w); ok = np.zeros(w, bool)
         for x in range(w):
             c = np.where(al[:, x] > 0.5)[0]
-            hw[x] = (c.max() - c.min()) / 2 / R if len(c) else 0
-        hw = np.convolve(hw, np.ones(7) / 7, mode='same')
-        srcTip = (np.max(np.where(hw > 0.05)[0]) - ox) / R
-        # forward stretch: [KEEP, TIP] <- [KEEP, srcTip]
-        k = (srcTip - KEEP) / (TIP - KEEP)
-        SX = np.where(X > KEEP, KEEP + (X - KEEP) * k, X)
-        # target half-width along x
-        t = np.clip((X - KEEP) / (TAPER_TO - KEEP), 0, 1)
-        hw_keep = np.interp(SX * R + ox, np.arange(w), hw)
-        tgt = np.where(X <= KEEP, hw_keep, 0)
-        hw_at_keep = float(np.interp(KEEP * R + ox, np.arange(w), hw))
-        lin = hw_at_keep + (TIP_HW - hw_at_keep) * (t * t * (3 - 2 * t) * 0.35 + t * 0.65)
-        tgt = np.where((X > KEEP) & (X <= TAPER_TO), lin, tgt)
-        cap = np.sqrt(np.clip(TIP_HW ** 2 - (X - TAPER_TO) ** 2, 0, None))
-        tgt = np.where(X > TAPER_TO, cap, tgt)
-        # neck: narrow the back toward the body width
-        tn = np.clip((NECK_X - X) / (NECK_X - (-1.6)), 0, 1)
-        tgt = np.where(X < NECK_X, hw_keep * (1 - tn) + np.minimum(hw_keep, NECK_HW) * tn, tgt)
-        src_hw = np.maximum(np.interp(SX * R + ox, np.arange(w), hw), 0.05)
-        s = np.where(X <= KEEP, np.where(X < NECK_X, tgt / src_hw, 1.0), tgt / src_hw)
-        s = np.clip(s, 0.02, 1.2)
-        SY = Y / s
-        px = SX * R + ox
-        py = SY * R + oy
-        # bilinear sample (outside = transparent)
-        x0 = np.floor(px).astype(int); y0 = np.floor(py).astype(int)
-        fx = (px - x0)[..., None]; fy = (py - y0)[..., None]
-        def at(xx, yy):
-            ok = (xx >= 0) & (xx < w) & (yy >= 0) & (yy < h)
-            v = np.zeros(px.shape + (4,), np.float32)
-            v[ok] = cell[yy[ok], xx[ok]]
-            return v
-        v = (at(x0, y0) * (1 - fx) * (1 - fy) + at(x0 + 1, y0) * fx * (1 - fy) +
-             at(x0, y0 + 1) * (1 - fx) * fy + at(x0 + 1, y0 + 1) * fx * fy)
-        # beyond the rounded tip nothing
-        v[(X > TIP + 0.25)] = 0
-        a = v[..., 3:4]
-        v[..., :3] = np.where(a > 1e-4, v[..., :3] / np.maximum(a, 1e-4), 0)
-        out[(b // cols) * h:(b // cols + 1) * h, (b % cols) * w2:(b % cols + 1) * w2] = v
+            if len(c):
+                ok[x] = True
+                lo, hi = (c.min() - oy) / R, (c.max() - oy) / R          # y down
+                top_s[x], bot_s[x] = (-lo, hi) if up < 0 else (hi, -lo)  # distances on the eye / jaw side
+        k = np.ones(7) / 7
+        top_s = np.convolve(top_s, k, 'same'); bot_s = np.convolve(bot_s, k, 'same')
+        src_front = (np.max(np.where(ok)[0]) - ox) / R - 0.05
+        xs_src = (np.arange(w) - ox) / R
+
+        res = np.zeros((h, w2, 4), np.float32)
+        for X in range(w2):
+            x = (X - ox) / R
+            if x > FRONT + 0.2:
+                continue
+            # x: identity up to the eye region, then the snout section maps onto the source front
+            sx = x if x <= IDENT[1] else IDENT[1] + (x - IDENT[1]) * (src_front - IDENT[1]) / (FRONT - IDENT[1])
+            ts = float(np.interp(sx, xs_src, top_s)); bs = float(np.interp(sx, xs_src, bot_s))
+            if ts + bs < 0.1:
+                continue
+            cc = corner_cut(x)
+            tt = max(0.05, top_edge(x, ts) - cc); bt = max(0.05, bottom_edge(x, bs) - cc)
+            # map target [-tt, bt] (eye side negative) onto source [-ts, bs], linearly
+            Y = (np.arange(h) - oy) / R * (-up)          # +: jaw side, -: eye side
+            SYs = -ts + (Y + tt) * (ts + bs) / (tt + bt)
+            py = SYs * (-up) * R + oy
+            px = sx * R + ox
+            x0 = int(np.floor(px)); fx = px - x0
+            y0 = np.floor(py).astype(int); fy = (py - y0)[:, None]
+
+            def at(xx, yy):
+                v = np.zeros((h, 4), np.float32)
+                m = (yy >= 0) & (yy < h) & (0 <= xx < w)
+                if 0 <= xx < w:
+                    v[m] = cell[yy[m], xx]
+                return v
+            col = ((at(x0, y0) * (1 - fy) + at(x0, y0 + 1) * fy) * (1 - fx) +
+                   (at(x0 + 1, y0) * (1 - fy) + at(x0 + 1, y0 + 1) * fy) * fx)
+            # keep fur fringe only a little beyond the target edges
+            d_out = np.maximum(-Y - tt, Y - bt)
+            col *= np.clip(1 - d_out / 0.22, 0, 1)[:, None]
+            res[:, X] = col
+        a = res[..., 3:4]
+        res[..., :3] = np.where(a > 1e-4, res[..., :3] / np.maximum(a, 1e-4), 0)
+        out[(b // cols) * h:(b // cols + 1) * h, (b % cols) * w2:(b % cols + 1) * w2] = res
 
     Image.fromarray(np.clip(out * 255 + 0.5, 0, 255).astype(np.uint8), 'RGBA').save(OUT, quality=88, method=6)
     H['cell'] = [w2, h]
-    H['shape'] = {'reshaped': 'dev/head-reshape.py', 'tip_R': TIP, 'tip_halfwidth_R': TIP_HW, 'keep_R': KEEP}
-    H['tongue_base_R'] = [round(TIP - 0.35, 2), 0.0]
+    H['shape'] = {'reshaped': 'dev/head-reshape.py', 'front_R': FRONT, 'corner_R': CORNER}
+    H['tongue_base_R'] = [round(FRONT - 0.3, 2), 0.0]
     H.pop('silhouette', None)
     man['bytes']['head'] = os.path.getsize(OUT)
     json.dump(man, open(MAN, 'w'), indent=1)
