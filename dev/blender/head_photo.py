@@ -26,9 +26,9 @@ T_X = [-1.9, -0.29, 0.40, 0.96, 1.55, 2.05, 2.24, 2.33]
 T_U = [-1.14, -1.14, -1.02, -0.80, -0.30, 0.35, 0.83, 1.25]
 B_X = [-1.9, -1.18, -0.64, 0.60, 1.38, 1.86, 2.19, 2.33]
 B_U = [1.20, 1.24, 1.62, 1.86, 2.00, 1.81, 1.33, 1.25]
-FUR = 0.30           # fur length beyond the skin
+FUR = 0.46           # fur length beyond the skin (body fur reaches ~0.58 R)
 EYE = (0.36, 0.42)   # eye centre (x, u)
-EYE_R = 0.25
+EYE_R = 0.27
 CELL = (281, 296)    # px; origin (113, 148); 64 px per R
 ORIGIN = (113, 148)
 PX_R = 64
@@ -121,7 +121,8 @@ def materials(head):
     hair = nt.nodes.new('ShaderNodeBsdfHairPrincipled')
     hair.parametrization = 'COLOR'
     hair.inputs['Color'].default_value = (0.78, 0.36, 0.46, 1)
-    hair.inputs['Roughness'].default_value = 0.55
+    hair.inputs['Roughness'].default_value = 0.42
+    if 'Random Color' in hair.inputs: hair.inputs['Random Color'].default_value = 0.25
     hair.inputs['Radial Roughness'].default_value = 0.7
     hair.inputs['Coat'].default_value = 0.0
     nt.links.new(hair.outputs[0], out.inputs['Surface'])
@@ -142,23 +143,25 @@ def fur_system(head):
     ps.vertex_group_density = 'density'
     st = ps.settings
     st.type = 'HAIR'
-    st.count = 26000
-    st.hair_length = FUR * 1.12
+    st.count = 11000
+    st.hair_length = FUR * 1.3
     st.use_advanced_hair = False        # simple mode: hair_length is the strand length, along the normal
     st.emit_from = 'FACE'
     st.use_even_distribution = True
     st.child_type = 'INTERPOLATED'
-    st.rendered_child_count = 10
+    st.rendered_child_count = 7
     st.child_length = 1.0
     st.child_length_threshold = 0.25
-    st.clump_factor = 0.18
-    st.roughness_1 = 0.03
-    st.roughness_endpoint = 0.04
-    st.roughness_2 = 0.02
+    st.clump_factor = 0.55
+    st.clump_shape = -0.45
+    st.roughness_1 = 0.12
+    st.roughness_endpoint = 0.16
+    st.roughness_2 = 0.10
+    st.kink = 'NO'
     st.material = 2
     st.root_radius = 1.0
     st.tip_radius = 0.0
-    st.radius_scale = 0.012
+    st.radius_scale = 0.045
     st.display_step = 3
     st.render_step = 4
 
@@ -171,8 +174,8 @@ def eye_bead():
     m = bpy.data.materials.new('bead')
     m.use_nodes = True
     b = m.node_tree.nodes['Principled BSDF']
-    b.inputs['Base Color'].default_value = (0.01, 0.008, 0.01, 1)
-    b.inputs['Roughness'].default_value = 0.08
+    b.inputs['Base Color'].default_value = (0.002, 0.002, 0.003, 1)
+    b.inputs['Roughness'].default_value = 0.04
     b.inputs['Specular IOR Level'].default_value = 0.8
     ob.data.materials.append(m)
     return ob
