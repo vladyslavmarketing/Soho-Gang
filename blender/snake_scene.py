@@ -54,13 +54,13 @@ rng = np.random.default_rng(11)
 W_PX, H_PX = 1408, 768
 # centre line, snout (skin tip) -> tail, in photo pixels
 PATH_PX = [
-    (385, 257), (410, 247), (440, 233), (480, 216), (530, 196), (585, 183), (635, 186), (670, 208),
-    (686, 252), (678, 300), (655, 343), (610, 368), (550, 378), (500, 386), (455, 407), (428, 450),
+    (385, 257), (412, 252), (443, 239), (483, 222), (532, 203), (587, 205), (628, 209), (653, 221),
+    (678, 253), (678, 300), (655, 343), (610, 368), (550, 378), (500, 386), (455, 407), (428, 450),
     (430, 505), (458, 560), (505, 592), (565, 592), (615, 568), (655, 525), (688, 470), (712, 410),
-    (738, 335), (768, 270), (810, 218), (868, 192), (930, 198), (975, 232), (992, 282), (978, 335),
+    (738, 335), (768, 270), (810, 218), (868, 192), (925, 212), (965, 239), (982, 282), (978, 335),
     (944, 378), (900, 400), (840, 408), (778, 412), (728, 428), (712, 470), (732, 515), (775, 553),
-    (835, 580), (895, 588), (955, 572), (1005, 545), (1055, 512), (1100, 482), (1150, 466), (1200, 467),
-    (1260, 478), (1320, 494), (1385, 515), (1450, 535)]
+    (835, 580), (894, 577), (954, 568), (1005, 545), (1055, 512), (1102, 486), (1151, 475), (1199, 479),
+    (1255, 499), (1314, 513), (1383, 520), (1449, 540)]
 # depth (D, + = away from the camera) of each path point in the letter plane; None = lying on the floor
 DEPTH = [0, 0, 0, 0, 0, 0, 0, 0.15,
          0.3, 0.4, 0.4, 0.35, 0.2, 0, 0, 0,
@@ -82,14 +82,14 @@ LENS, SENSOR, PITCH, CAM_DIST, CAM_H = 85.0, 36.0, 7.0, 32.0, 6.4      # 1 D ~ 1
 
 # shape
 FUR = 0.13                  # fur depth on the body (D); outer body radius 0.5 -> skin radius 0.37
-FUR_STRAND = 1.5            # strands are longer than the depth: leaning, clumped tips read ~0.13 D above the skin
+FUR_STRAND = 1.15           # strands a bit longer than the depth: leaning, clumped tips read ~0.13 D above the skin
 HEAD_LEN = 1.30             # rigid head bone, from the snout tip
 NB = 56                     # spine bones behind the head
 N_AROUND = 32
 # calibrated against the photo (mean linear colour of pink / cream / black pixels, photo vs render)
 # light tones are fed more saturated: the hair model washes pale colours out toward grey
-COL = dict(pink='#CB7486', pink_deep='#AC4D61', muzzle='#DB8C9D', eye_ring='#A0566A',
-           cream='#F3D29A', black='#060202', tongue='#F0B5C3', skin_dark=0.72)
+COL = dict(pink='#CB7582', pink_deep='#AC4D5A', muzzle='#D6808E', eye_ring='#A05663',
+           cream='#EFCB95', black='#060202', tongue='#F0B5C3', skin_dark=0.72)
 
 
 def hex2lin(h):
@@ -211,17 +211,20 @@ log('rings at s =', np.round(RING_S, 2))
 def head_profile(s):
     """outer half height, half width and centre offset (z) at arc length s (snout tip = 0)"""
     s = np.asarray(s, float)
-    rt_h = (1 - (1 - np.clip(s / 0.80, 0, 1)) ** 2.0) ** (1 / 2.0)        # blunt rounded snout
-    rt_w = (1 - (1 - np.clip(s / 0.70, 0, 1)) ** 2.0) ** (1 / 2.0)        # round blunt snout seen from above
-    hump = sstep(0.1, 0.9, s) * (1 - sstep(1.05, 1.8, s))
-    hump_w = sstep(0.1, 0.8, s) * (1 - sstep(1.05, 1.8, s))
+    # Egg-shaped head measured on the photo: ~1.3 D tall from 0.5 to 1.15 D behind the nose, the front is the
+    # rounded end of an ellipse (no flat face), the axis dips toward the nose (nose low, forehead sloping down
+    # to it), then the head narrows into the neck by ~1.75 D.
+    HEAD_H, HEAD_W, EGG_C, EGG_A = 0.59, 0.56, 0.95, 0.95
+    q = np.clip((EGG_C - s) / EGG_A, 0, 1)
+    egg = np.sqrt(1 - q * q)                                                # rounded front of the egg
+    neck = sstep(1.15, 1.75, s)
     base = outer_radius(s, L)
+    hh = HEAD_H * egg * (1 - neck) + base * neck
+    ww = HEAD_W * egg * (1 - neck) + base * neck
+    cz = (-0.03 - 0.20 * np.clip(1 - s / EGG_C, 0, 1) ** 1.5) * (1 - neck)
     te = np.clip((L - s) / 0.35, 0, 1)
     rt2 = np.sqrt(1 - (1 - te) ** 2)                                        # round tail tip
-    hh = (base + 0.19 * hump) * rt_h * rt2
-    ww = (base + 0.17 * hump_w) * rt_w * rt2
-    cz = -0.03 * hump - 0.06 * (1 - sstep(0.0, 0.8, s))                    # nose a little low
-    return hh, ww, cz
+    return hh * rt2, ww * rt2, cz
 
 
 def fur_scale(hh, ww):
@@ -235,7 +238,7 @@ def skin_point(s, th):
     return np.stack([np.asarray(s, float) * np.ones_like(th), w * np.cos(th), cz + h * np.sin(th)], -1)
 
 
-EYE_S, EYE_Z, EYE_R = 0.93, -0.10, 0.10
+EYE_S, EYE_Z, EYE_R = 0.81, -0.05, 0.10          # photo: eye on the head axis, 0.81 D behind the nose
 
 
 def eye_pos(sign):
@@ -253,6 +256,8 @@ def surface_color(s, th, P):
     col = np.tile(hex2lin(COL['pink']), (n, 1))
     deep = (0.35 * sstep(0.2, -0.7, np.sin(th)))[:, None]                 # deeper rose low on the sides
     col = col * (1 - deep) + hex2lin(COL['pink_deep']) * deep
+    head = (0.75 * (1 - sstep(1.2, 1.6, s)))[:, None]                    # the head is a touch lighter
+    col = col * (1 - head) + hex2lin(COL['muzzle']) * head
     muz = (1 - sstep(0.10, 0.42, s))[:, None]                             # pale muzzle
     col = col * (1 - muz) + hex2lin(COL['muzzle']) * muz
     de = np.min([np.linalg.norm(P - e, axis=1) for e in EYES], axis=0)
@@ -507,12 +512,12 @@ def hair_material():
     mx = nt.nodes.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MULTIPLY'
     mx.inputs['Factor'].default_value = 1
     nt.links.new(at.outputs['Color'], mx.inputs['A']); nt.links.new(cmb.outputs[0], mx.inputs['B'])
-    pw = nt.nodes.new('ShaderNodeMath'); pw.operation = 'POWER'; pw.inputs[1].default_value = 2.2
+    pw = nt.nodes.new('ShaderNodeMath'); pw.operation = 'POWER'; pw.inputs[1].default_value = 1.4
     nt.links.new(info.outputs['Intercept'], pw.inputs[0])
     ml = nt.nodes.new('ShaderNodeMath'); ml.operation = 'MULTIPLY'; ml.inputs[1].default_value = 0.9
     nt.links.new(pw.outputs[0], ml.inputs[0])
     lighter = nt.nodes.new('ShaderNodeMix'); lighter.data_type = 'RGBA'; lighter.blend_type = 'SCREEN'
-    lighter.inputs['Factor'].default_value = 0.65                # pale tips: a lighter tint of the strand's own colour
+    lighter.inputs['Factor'].default_value = 0.85                # pale tips: a lighter tint of the strand's own colour
     nt.links.new(at.outputs['Color'], lighter.inputs['A']); nt.links.new(at.outputs['Color'], lighter.inputs['B'])
     tip = nt.nodes.new('ShaderNodeMix'); tip.data_type = 'RGBA'
     nt.links.new(ml.outputs[0], tip.inputs['Factor']); nt.links.new(mx.outputs['Result'], tip.inputs['A'])
@@ -564,22 +569,25 @@ def grow_fur():
         d += nrm(P - e) * (1.4 * (1 - sstep(EYE_R * 1.1, EYE_R * 3.0, de)))[:, None]
     d = nrm(d - (d * N).sum(1, keepdims=True) * N)
     fl = fur_scale(hh, ww) * FUR * FUR_STRAND * (0.82 + 0.18 * sstep(0.05, 0.45, s))   # shorter on the muzzle
+    fl *= 1 + 0.25 * (1 - sstep(1.2, 1.6, s))                    # fluffier pile on the head
     for e in EYES:
         fl *= 0.06 + 0.94 * sstep(EYE_R * 1.2, EYE_R * 3.0, np.linalg.norm(P - e, axis=1))
     col = surface_color(s, th, P) * rng.uniform(0.88, 1.1, (n, 1))
-    shade = sstep(0.15, 0.55, s)                                  # no root darkening on the pale muzzle
-    return P, N, d, fl, col, UV, shade
+    hw = 1 - sstep(1.2, 1.6, s)                                   # the head pile stands up more (fluffier)
+    shade = sstep(0.15, 0.55, s) * (1 - 0.9 * hw)                 # little root darkening on the head, none on the muzzle
+    lean = (0.3 - 0.15 * hw, 1.1 - 0.4 * hw)
+    return P, N, d, fl, col, UV, shade, lean
 
 
-def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, r0=0.0034, r1=0.0008, k=5,
-              lean=(0.3, 1.1), clump=0.55):
+def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, lean, r0=0.0034, r1=0.0008, k=5,
+              clump=0.55):
     n = len(roots)
     t = np.linspace(0, 1, k)
     a0 = np.clip(lean[0] + rng.normal(0, 0.15, n), 0.0, 1.0)
     a1 = np.clip(lean[1] + rng.normal(0, 0.28, n), a0 + 0.05, 1.4)
     d = nrm(dirs + nrm(np.cross(normals, dirs)) * rng.normal(0, 0.45, (n, 1)))
     hfac = (np.sin(a1) - np.sin(a0)) / (a1 - a0)                  # mean cos of the bend -> tip height = length
-    stray = np.where(rng.random(n) < 0.03, rng.uniform(1.4, 1.9, n), 1.0)       # a few long stray fibres
+    stray = np.where(rng.random(n) < 0.012, rng.uniform(1.3, 1.6, n), 1.0)      # a few long stray fibres
     seg = (lengths * rng.uniform(0.85, 1.12, n) * stray / hfac)[:, None] / (k - 1)
     pts = np.zeros((n, k, 3))
     pts[:, 0] = roots - normals * 0.003
@@ -635,7 +643,7 @@ scene.collection.objects.link(cam)
 scene.camera = cam
 scene.render.resolution_x, scene.render.resolution_y = W_PX, H_PX
 
-BG = np.array([0.89, 0.79, 0.81])
+BG = np.array([0.80, 0.70, 0.72])
 sweep_m = mat_principled('Backdrop', np.where(BG <= 0.04045, BG / 12.92, ((BG + 0.055) / 1.055) ** 2.4), 0.95, spec=0.2)
 prof = [(-30.0, floor_z)] + [(7 + 6 * math.sin(a), floor_z + 6 * (1 - math.cos(a)))
                              for a in np.linspace(0, math.pi / 2, 40)] + [(20.0, floor_z + 30)]
@@ -660,7 +668,8 @@ def area_light(name, loc, target, energy, size, color=(1, 1, 1)):
 
 
 mid = Vector((float(np.mean(path[:, 0])), 0.0, floor_z + 2.5))
-area_light('Key', (-12, -13, floor_z + 8), mid, float(arg('--key', 4300)), 10, (1.0, 0.97, 0.95))
+area_light('Key', (-12, -13, floor_z + 8), mid, float(arg('--key', 2600)), 10, (1.0, 0.97, 0.95))
+area_light('Beauty', (-6, -28, floor_z + 10), mid, float(arg('--beauty', 7500)), 14, (1.0, 0.97, 0.96))    # softbox by the camera
 area_light('Fill', (10, -12, floor_z + 5), mid, float(arg('--fill', 700)), 10, (1.0, 0.95, 0.96))
 area_light('Back', (2, 12, floor_z + 9), mid, 1500, 8, (1.0, 0.96, 0.96))
 
@@ -672,7 +681,7 @@ scene.cycles.transparent_max_bounces = 16
 scene.cycles_curves.shape = 'THICK'
 scene.view_settings.view_transform = 'Standard'
 scene.view_settings.look = 'None'
-scene.view_settings.exposure = float(arg('--exposure', -0.35))
+scene.view_settings.exposure = float(arg('--exposure', -0.2))
 os.makedirs(os.path.dirname(BLEND), exist_ok=True)
 bpy.ops.wm.save_as_mainfile(filepath=BLEND, compress=False)
 log('saved', BLEND)
