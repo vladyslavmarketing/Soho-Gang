@@ -92,8 +92,8 @@ N_AROUND = 32
 # head: photo head pixels average (208, 142, 154), ~12 % lighter than the body, with pale frosted tips
 # tongue: fed darker than its on-screen colour (#E9A7B5) because the key + softbox light it brightly
 # (calibrated with 8 glossy bounces: fewer bounces cut the multiple scattering of light fur and it turns grey)
-COL = dict(pink='#BC6C78', pink_deep='#A0474F', head='#E0727F', muzzle='#E68C97', frost='#F9D0D3',
-           eye_ring='#B0606F', cream='#E2BC88', black='#060202', tongue='#CC8E9C', skin_dark=0.72)
+COL = dict(pink='#BC6C78', pink_deep='#A0474F', head='#DC5270', muzzle='#DE5E79', frost='#FFF0F0',
+           eye_ring='#2E2628', cream='#E2BC88', black='#060202', tongue='#CC8E9C', skin_dark=0.72)
 
 
 def hex2lin(h):
@@ -225,14 +225,16 @@ def head_profile(s):
     # NOSE_EXT past the first-fit nose (short blunt muzzle), the axis dips toward the nose (nose low, forehead
     # sloping down to it), the crown is ~1.12 D tall around 0.75-0.9 D and the back of the head eases into the
     # neck by ~1.35 D (the photo head is not taller at the back than over the eye).
-    HEAD_H, HEAD_W, EGG_C = 0.56, 0.58, 0.90
+    # v2 (photo close-up): a rounder, wider cranium and a blunt "bulb" muzzle - the front is a superellipse
+    # (stays tall almost to the tip) instead of an ellipse tapering to the nose; less forehead slope.
+    HEAD_H, HEAD_W, EGG_C, EGG_P = 0.58, 0.635, 0.90, 2.6
     q = np.clip((EGG_C - u) / (EGG_C + NOSE_EXT), 0, 1)
-    egg = np.sqrt(1 - q * q)                                                # rounded front
-    back = sstep(0.75, 1.35, u)                                             # back of the head -> neck
+    egg = (1 - q ** EGG_P) ** (1 / EGG_P)                                   # blunt rounded front
+    back = sstep(0.80, 1.40, u)                                             # back of the head -> neck
     base = outer_radius(s, L)
     hh = HEAD_H * egg * (1 - back) + base * back
     ww = HEAD_W * egg * (1 - back) + base * back
-    cz = (-0.03 - 0.20 * q ** 1.5) * (1 - back)
+    cz = (-0.03 - 0.13 * q ** 2) * (1 - back)
     te = np.clip((L - s) / 0.35, 0, 1)
     rt2 = np.sqrt(1 - (1 - te) ** 2)                                        # round tail tip
     return hh * rt2, ww * rt2, cz
@@ -261,7 +263,7 @@ def eye_pos(sign):
 EYES = [eye_pos(1), eye_pos(-1)]
 
 
-def surface_color(s, th, P):
+def surface_color(s, th, P, ring_w=0.85):
     """linear RGB of the fur at arc length s, angle th (0 = left side, pi/2 = top), rest point P"""
     n = len(s)
     col = np.tile(hex2lin(COL['pink']), (n, 1))
@@ -273,7 +275,7 @@ def surface_color(s, th, P):
     muz = (1 - sstep(0.0, 0.40, u))[:, None]                              # pale muzzle
     col = col * (1 - muz) + hex2lin(COL['muzzle']) * muz
     de = np.min([np.linalg.norm(P - e, axis=1) for e in EYES], axis=0)
-    ring = (0.45 * (1 - sstep(EYE_R * 1.05, EYE_R * 1.9, de)))[:, None]  # rosier ring round the eye
+    ring = (ring_w * (1 - sstep(EYE_R * 1.05, EYE_R * 2.0, de)))[:, None]  # dark socket shadow (skin only)
     col = col * (1 - ring) + hex2lin(COL['eye_ring']) * ring
     d = s[:, None] - RING_S[None, :]
     k = np.argmin(np.abs(d), axis=1)
@@ -534,12 +536,10 @@ def hair_material():
     nt.links.new(info.outputs['Intercept'], pw.inputs[0])
     ml = nt.nodes.new('ShaderNodeMath'); ml.operation = 'MULTIPLY'; ml.inputs[1].default_value = 0.9
     nt.links.new(pw.outputs[0], ml.inputs[0])
-    lighter = nt.nodes.new('ShaderNodeMix'); lighter.data_type = 'RGBA'; lighter.blend_type = 'SCREEN'
-    lighter.inputs['Factor'].default_value = 0.85                # pale tips: a lighter tint of the strand's own colour
-    nt.links.new(at.outputs['Color'], lighter.inputs['A']); nt.links.new(at.outputs['Color'], lighter.inputs['B'])
+    lighter = nt.nodes.new('ShaderNodeAttribute'); lighter.attribute_name = 'tip_col'   # pale / frosted tips
     tip = nt.nodes.new('ShaderNodeMix'); tip.data_type = 'RGBA'
     nt.links.new(ml.outputs[0], tip.inputs['Factor']); nt.links.new(mx.outputs['Result'], tip.inputs['A'])
-    nt.links.new(lighter.outputs['Result'], tip.inputs['B'])
+    nt.links.new(lighter.outputs['Color'], tip.inputs['B'])
     hs = nt.nodes.new('ShaderNodeHueSaturation')
     hs.inputs['Saturation'].default_value = 1.05
     nt.links.new(tip.outputs['Result'], hs.inputs['Color'])
@@ -583,41 +583,53 @@ def grow_fur():
     snout = np.array([-0.05, 0, float(head_profile(0.0)[2])])
     hd = (1 - sstep(1.0, 1.6, u))[:, None]
     d = d * (1 - hd) + (nrm(P - snout) * 0.6 + ex * 1.0) * hd
+    mz = (1 - sstep(0.25, 0.75, u))[:, None]                       # muzzle: a whorl radiating from the nose (bulb)
+    d = d * (1 - mz) + nrm(P - np.array([NOSE_EXT * 0.5 + 0.12, 0, snout[2]])) * mz
     for e in EYES:
         de = np.linalg.norm(P - e, axis=1)
         d += nrm(P - e) * (1.4 * (1 - sstep(EYE_R * 1.1, EYE_R * 3.0, de)))[:, None]
     d = nrm(d - (d * N).sum(1, keepdims=True) * N)
-    fl = fur_scale(hh, ww) * FUR * FUR_STRAND * (0.82 + 0.18 * sstep(-0.1, 0.45, u))  # shorter on the muzzle
-    fl *= 1 + 0.25 * (1 - sstep(1.2, 1.6, u))                    # fluffier pile on the head
+    fl = fur_scale(hh, ww) * FUR * FUR_STRAND * (0.92 + 0.08 * sstep(-0.1, 0.45, u))  # muzzle pile nearly as long
+    fl *= 1 + 0.45 * (1 - sstep(1.2, 1.6, u))                    # long fluffy pile on the head (photo close-up)
     for e in EYES:
         fl *= 0.06 + 0.94 * sstep(EYE_R * 1.2, EYE_R * 3.0, np.linalg.norm(P - e, axis=1))
-    col = surface_color(s, th, P) * rng.uniform(0.88, 1.1, (n, 1))
+    col = surface_color(s, th, P, ring_w=0.0) * rng.uniform(0.88, 1.1, (n, 1))   # (dark hair turns red: no ring)
     hw = 1 - sstep(1.2, 1.6, u)                                   # the head pile stands up more (fluffier)
-    # frosted head: on the photo a share of the head strands is almost white-pink (p80 of the head ~ 235,206,210)
+    # pale tips: a lighter tint of the strand's own colour; on the head the tips are frosted almost white
+    # (photo: saturated pink where the pile parts, white-pink tips on top)
     de = np.min([np.linalg.norm(P - e, axis=1) for e in EYES], axis=0)
-    fr = hw * sstep(EYE_R * 1.3, EYE_R * 2.4, de) * np.where(rng.random(n) < 0.6, rng.uniform(0.2, 0.55, n), 0.0)
-    col = col * (1 - fr[:, None]) + hex2lin(COL['frost']) * fr[:, None]
+    whole = hw * np.where(rng.random(n) < 0.22, rng.uniform(0.2, 0.45, n), 0.0)    # frosted strands
+    sock = (0.75 * (1 - sstep(EYE_R * 1.2, EYE_R * 2.4, de)))[:, None]             # short hairs by the eye: grey-mauve
+    col = col * (1 - sock) + hex2lin('#8A787C') * sock
+    col = col * (1 - whole[:, None]) + hex2lin(COL['frost']) * whole[:, None]
+    tip = col * 0.15 + 0.85 * (1 - (1 - np.clip(col, 0, 1)) ** 2)
+    fr = hw * sstep(EYE_R * 1.3, EYE_R * 2.6, de) * np.where(rng.random(n) < 0.75, rng.uniform(0.5, 0.85, n), 0.0)
+    tip = tip * (1 - fr[:, None]) + hex2lin(COL['frost']) * fr[:, None]
     shade = sstep(1.3, 1.8, u)                                    # no root darkening on the head (reads as dirt)
-    lean = (0.3 - 0.15 * hw, 1.1 - 0.4 * hw)
-    return P, N, d, fl, col, UV, shade, lean
+    mzf = mz[:, 0]
+    lean = (0.3 - 0.12 * hw, 1.1 - 0.5 * hw - 0.15 * mzf)
+    clump = 0.55 * (1 - 0.6 * hw)                                 # head: loose, fluffy (little tufting)
+    return P, N, d, fl, (col, tip), UV, shade, lean, clump
 
 
-def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, lean, r0=0.0034, r1=0.0008, k=5,
-              clump=0.55):
+def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, lean, clump=0.55, r0=0.0034, r1=0.0008,
+              k=5):
     n = len(roots)
+    colors, tips = colors                                          # root and tip colour per strand
+    clump = np.broadcast_to(np.asarray(clump, float), (n,))
     t = np.linspace(0, 1, k)
     a0 = np.clip(lean[0] + rng.normal(0, 0.15, n), 0.0, 1.0)
     a1 = np.clip(lean[1] + rng.normal(0, 0.28, n), a0 + 0.05, 1.4)
     d = nrm(dirs + nrm(np.cross(normals, dirs)) * rng.normal(0, 0.45, (n, 1)))
     hfac = (np.sin(a1) - np.sin(a0)) / (a1 - a0)                  # mean cos of the bend -> tip height = length
-    stray = np.where(rng.random(n) < 0.012, rng.uniform(1.3, 1.6, n), 1.0)      # a few long stray fibres
+    stray = np.where((rng.random(n) < 0.012) & (clump > 0.4), rng.uniform(1.3, 1.6, n), 1.0)   # not on the head      # a few long stray fibres
     seg = (lengths * rng.uniform(0.85, 1.12, n) * stray / hfac)[:, None] / (k - 1)
     pts = np.zeros((n, k, 3))
     pts[:, 0] = roots - normals * 0.003
     for i in range(1, k):
         a = (a0 + (a1 - a0) * (i - 0.5) / (k - 1))[:, None]
         pts[:, i] = pts[:, i - 1] + seg * (normals * np.cos(a) + d * np.sin(a))
-    if clump > 0:                                                  # tufts: tips gather toward a guide strand
+    if clump.max() > 0:                                            # tufts: tips gather toward a guide strand
         from mathutils.kdtree import KDTree
         g = rng.choice(n, max(n // 45, 1), replace=False)
         kd = KDTree(len(g))
@@ -626,7 +638,7 @@ def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, lean, r0=
         kd.balance()
         near = np.fromiter((kd.find(p)[1] for p in roots), int, n)
         guide = pts[g[near]]
-        pts = pts + (guide - pts) * ((t ** 1.6)[None, :, None] * clump * rng.uniform(0.4, 1.0, (n, 1, 1)))
+        pts = pts + (guide - pts) * ((t ** 1.6)[None, :, None] * clump[:, None, None] * rng.uniform(0.4, 1.0, (n, 1, 1)))
     cv = bpy.data.hair_curves.new(name)
     cv.add_curves([k] * n)
     cv.position_data.foreach_set('vector', pts.astype(np.float32).ravel())
@@ -634,6 +646,8 @@ def make_hair(name, roots, normals, dirs, lengths, colors, uvs, shade, lean, r0=
     rad.data.foreach_set('value', np.tile(r0 + (r1 - r0) * t ** 0.8, n).astype(np.float32))
     ca = cv.attributes.new('fur_col', 'FLOAT_COLOR', 'CURVE')
     ca.data.foreach_set('color', np.concatenate([colors, np.ones((n, 1))], 1).astype(np.float32).ravel())
+    ta = cv.attributes.new('tip_col', 'FLOAT_COLOR', 'CURVE')
+    ta.data.foreach_set('color', np.concatenate([tips, np.ones((n, 1))], 1).astype(np.float32).ravel())
     rs = cv.attributes.new('root_shade', 'FLOAT', 'CURVE')
     rs.data.foreach_set('value', shade.astype(np.float32))
     su = cv.attributes.get('surface_uv_coordinate') or cv.attributes.new('surface_uv_coordinate', 'FLOAT2', 'CURVE')
