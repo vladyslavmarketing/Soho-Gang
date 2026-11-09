@@ -71,6 +71,9 @@
   // from the head into the body and the regular bands start at NECK_NEXT.
   var NECK_COLLAR = false;
   var NATURAL_Z = true;
+  // a cell mirrored across the head axis and drawn at heading a is lit right when it is the cell of heading
+  // LIGHT_MIRROR - a: cell light = R(-th) L must equal R(a) M L (M = y mirror), so th = 2 * angle(L) - a
+  var LIGHT_MIRROR = 2 * Math.atan2(-0.5792, -0.4194);
   var SLAB_SCREENS = 3;        // touch slab height, in screens
   var SLAB_PX = 9e6;           // touch slab: max device pixels (iOS canvas memory)        // free motion draws the body in natural order (see buildPlan)
   var NECK_TOP = 1.7;          // head + this many body widths of neck (inside the pink neck) are always drawn on top
@@ -1959,19 +1962,37 @@
         if (pass) c.translate(0, -off);
       }
     }
+    // Two neighbouring head cells blended exactly (premultiplied, via 'lighter' on a scratch canvas): drawing the
+    // second cell over the first with alpha fr made the soft fur edge denser toward fr -> 1 and click every 11.25 deg.
+    var headMix = null;
+    function blendHead(h1, h2, fr) {
+      var w = h1.c.width, h = h1.c.height;
+      if (!headMix || headMix.width !== w || headMix.height !== h) headMix = canvasEl(w, h);
+      var g = headMix.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, w, h);
+      g.globalAlpha = 1 - fr; g.drawImage(h1.c, 0, 0);
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = fr; g.drawImage(h2.c, h1.ox - h2.ox, h1.oy - h2.oy);
+      g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+      return { c: headMix, ox: h1.ox, oy: h1.oy };
+    }
     function drawHead(c, x, y, ang, tongue, breath) {
+      var co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
+      // reshaped side-view head: the brow must stay up. Heading right, the cell is mirrored across the head axis and
+      // lit from the mirrored heading (the screen key light is not symmetric); near vertical the head narrows (a turn)
+      var side = !!(bank.atlas && bank.atlas.m.head.shape && bank.eyesBaked), flip = side && co > 0;
+      var ky = side ? (flip ? -1 : 1) * clamp(Math.abs(co) / 0.3, 0.3, 1) : 1;
+      var la = flip ? LIGHT_MIRROR - ang : ang;
       // the 32 lighting cells are cross-faded by the exact heading, so the fur never snaps as the head turns
-      var p = ((ang / TAU) * HB % HB + HB) % HB, i0 = Math.floor(p), fr = p - i0;
+      var p = ((la / TAU) * HB % HB + HB) % HB, i0 = Math.floor(p), fr = p - i0;
       var pk = headPick(bank, i0), pk1 = pk && headPick(bank, i0 + 1);
       var hs = pk ? getHeadCell(bank, pk.cell, pk.flip) : getHead(bank, ang);
       var hs2 = pk1 && fr > 0.02 && (pk1.cell !== pk.cell || pk1.flip !== pk.flip) ? getHeadCell(bank, pk1.cell, pk1.flip) : null;
-      var co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
-      var up = co < 0 ? 1 : -1;                     // local y sign that points up on screen
-      c.setTransform(co * k, si * k, -si * k, co * k, x + baseX, y + baseY);
+      if (hs2) hs = blendHead(hs, hs2, fr);
+      var up = side ? 1 : co < 0 ? 1 : -1;          // local y sign that points up on screen
+      c.setTransform(co * k, si * k, -si * k * ky, co * k * ky, x + baseX, y + baseY);
       c.lineCap = 'round'; c.lineJoin = 'round';
       if (tongue > 0.01) drawTongue(c, tongue, up);
       c.drawImage(hs.c, -hs.ox, -hs.oy);
-      if (hs2) { c.globalAlpha = fr; c.drawImage(hs2.c, -hs2.ox, -hs2.oy); c.globalAlpha = 1; }
       c.setTransform(1, 0, 0, 1, baseX, baseY);
       headCX = x / dpr; headCY = y / dpr; headAng = ang;
       if (bank.eyesBaked) return;   // atlas v2 cells carry their bead eyes (screen-up one; both facing us)
