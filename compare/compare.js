@@ -17,7 +17,8 @@
       .then(function (bl) { va.src = URL.createObjectURL(bl); })
       .catch(function () { va.src = SRC.clipA; });
     va.addEventListener('loadedmetadata', function () {
-      hasA = true; dur = va.duration || dur; nFrames = Math.round(dur * FPS); scrub.max = nFrames - 1;
+      hasA = true; dur = va.duration || dur;
+      if (va.videoWidth) stage.style.setProperty('--ar', va.videoWidth + ' / ' + va.videoHeight);   // panes follow the clip (CamHero is 1408×768) nFrames = Math.round(dur * FPS); scrub.max = nFrames - 1;
       if (playing) { va.currentTime = clockT; va.play().catch(function () {}); } else gotoFrame(frameOf(clockT));   // keep the frame chosen before the clip arrived
     });
     va.addEventListener('error', function () { hasA = false; });

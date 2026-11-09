@@ -35,7 +35,7 @@
   .readout b { color: var(--ink); font-weight: 500; }
   #scrub { flex: 1 1 220px; accent-color: var(--accent); min-width: 0; }
   .stage { position: relative; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .pane { position: relative; aspect-ratio: 16 / 9; max-width: 100%; background: var(--paper); border-radius: 12px; overflow: hidden; }
+  .pane { position: relative; aspect-ratio: var(--ar, 16 / 9); max-width: 100%; background: var(--paper); border-radius: 12px; overflow: hidden; }
   .pane video, .pane iframe, .pane img { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; object-fit: contain; }
   .tag { position: absolute; z-index: 3; left: 10px; top: 10px; font: 500 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
     color: #1E1618; background: rgba(255, 248, 249, .85); border-radius: 999px; padding: 6px 9px; }
