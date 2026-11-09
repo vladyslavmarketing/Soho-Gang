@@ -347,6 +347,12 @@ for i in range(NB):
     prev = b
     bone_names.append(b.name)
 jb = eb.new('Jaw'); jb.head = (0.95, 0, -0.18); jb.tail = (0.12, 0, -0.30); jb.parent = hb_
+# tongue: short bone at the mouth; scaling it pulls the tongue in / pushes it out
+TONGUE_ANG = math.radians(14)
+TONGUE_BASE = (0.10, 0.0, float(head_profile(0.08)[2]) - 0.16)
+tb = eb.new('Tongue'); tb.head = TONGUE_BASE
+tb.tail = (TONGUE_BASE[0] - 0.05 * math.cos(TONGUE_ANG), 0.0, TONGUE_BASE[2] - 0.05 * math.sin(TONGUE_ANG))
+tb.parent = hb_
 bpy.ops.object.mode_set(mode='OBJECT')
 log('rig: Head + %d spine bones (%.3f D each) + Jaw' % (NB, BL))
 
@@ -444,9 +450,8 @@ for name, e in (('EyeL', EYES[0]), ('EyeR', EYES[1])):
 
 def tongue_mesh():
     """flat forked ribbon in the rest frame of the head: leaves the mouth forward (-X) and down"""
-    cz = float(head_profile(0.08)[2])
-    bx, bz = 0.10, cz - 0.16
-    length, width, ang, n, fork = 0.95, 0.11, math.radians(14), 14, 0.72
+    bx, bz = TONGUE_BASE[0], TONGUE_BASE[2]
+    length, width, ang, n, fork = 0.95, 0.11, TONGUE_ANG, 14, 0.72
     verts, faces, rows = [], [], []
     for i in range(n + 1):
         t = i / n
@@ -485,7 +490,7 @@ sm_ = tongue.modifiers.new('Thick', 'SOLIDIFY'); sm_.thickness = 0.018; sm_.offs
 tongue.modifiers.new('Smooth', 'SUBSURF').levels = 1
 for p in tme.polygons:
     p.use_smooth = True
-bone_parent(tongue, 'Head')
+bone_parent(tongue, 'Tongue')
 
 
 # ---------------------------------------------------------------------------------------- fur (Cycles only)

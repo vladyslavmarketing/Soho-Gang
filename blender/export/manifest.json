@@ -1,0 +1,167 @@
+{
+  "name": "ae studio plush snake",
+  "version": 1,
+  "generator": "blender/snake_scene.py + blender/snake_anim.py (Blender 5.1.2)",
+  "units": "1 unit = D, the outer diameter of the body with its fur",
+  "axes": {
+    "up": "+Y",
+    "gltfFromBlender": "(x, y, z)_gltf = (x, z, -y)_blender",
+    "floorY": -0.0772,
+    "pose": "the \"ae\" pose of the client photo (assets/img/snake-ae.jpg)"
+  },
+  "mesh": {
+    "node": "Body",
+    "triangles": 19072,
+    "skinned": true,
+    "uv0": "u = arc length from the nose / L, v = angle around the body from the belly line (0..1)",
+    "lengthD": 34.3256,
+    "others": [
+      "EyeL, EyeR: glossy black beads (follow Head)",
+      "Tongue: follows the Tongue bone"
+    ]
+  },
+  "skeleton": {
+    "root": "Head (the chain runs nose -> tail tip)",
+    "bones": [
+      "Head",
+      "Spine_01",
+      "Spine_02",
+      "Spine_03",
+      "Spine_04",
+      "Spine_05",
+      "Spine_06",
+      "Spine_07",
+      "Spine_08",
+      "Spine_09",
+      "Spine_10",
+      "Spine_11",
+      "Spine_12",
+      "Spine_13",
+      "Spine_14",
+      "Spine_15",
+      "Spine_16",
+      "Spine_17",
+      "Spine_18",
+      "Spine_19",
+      "Spine_20",
+      "Spine_21",
+      "Spine_22",
+      "Spine_23",
+      "Spine_24",
+      "Spine_25",
+      "Spine_26",
+      "Spine_27",
+      "Spine_28",
+      "Spine_29",
+      "Spine_30",
+      "Spine_31",
+      "Spine_32",
+      "Spine_33",
+      "Spine_34",
+      "Spine_35",
+      "Spine_36",
+      "Spine_37",
+      "Spine_38",
+      "Spine_39",
+      "Spine_40",
+      "Spine_41",
+      "Spine_42",
+      "Spine_43",
+      "Spine_44",
+      "Spine_45",
+      "Spine_46",
+      "Spine_47",
+      "Spine_48",
+      "Spine_49",
+      "Spine_50",
+      "Spine_51",
+      "Spine_52",
+      "Spine_53",
+      "Spine_54",
+      "Spine_55",
+      "Spine_56",
+      "Jaw",
+      "Tongue"
+    ],
+    "spineBones": 56,
+    "jaw": "Jaw: child of Head, no skin weights yet",
+    "tongue": "Tongue: uniform scale 0.03 = hidden, 1 = out"
+  },
+  "fur": {
+    "depthD": 0.13,
+    "strandLengthD": 0.1495,
+    "direction": "combed toward the tail with a parting along the side mid-lines; on the head it radiates from the snout",
+    "shading": "tips are a lighter tint of the strand colour; roots ~50 % darker on the body, not on the muzzle"
+  },
+  "animation": {
+    "name": "idle_lookaround",
+    "fps": 30,
+    "frames": 180,
+    "seconds": 6.0,
+    "loop": true,
+    "content": "breathing (2 breaths, ~2 % swell), head looks to one side, the other, a little up, back; two tongue flicks"
+  },
+  "camera": {
+    "node": "CamHero",
+    "yfovRad": 0.23712,
+    "aspect": 1.77778,
+    "lensMm": 85.0,
+    "sensorMm": 36.0,
+    "sensorFit": "horizontal",
+    "position": [
+      0.0,
+      6.4,
+      32.0
+    ],
+    "pitchDownDeg": 7.0,
+    "note": "same camera as clip A (1280x720); the photo is 1408x768 with the same lens and pose"
+  },
+  "textures": {
+    "snake_albedo.webp": {
+      "size": [
+        4096,
+        512
+      ],
+      "colorSpace": "sRGB",
+      "uv": 0,
+      "content": "fur colour as seen: pink, cream bands with black edges, lighter head and muzzle, darker ring round the eyes"
+    },
+    "snake_normal.webp": {
+      "size": [
+        4096,
+        512
+      ],
+      "colorSpace": "linear",
+      "uv": 0,
+      "content": "tangent-space normal of soft pile bumps (glTF convention, +G = image up); use at low strength"
+    },
+    "fur_strands.webp": {
+      "size": [
+        1024,
+        1024
+      ],
+      "colorSpace": "linear",
+      "tileable": true,
+      "tileD": 0.35,
+      "R": "strand height / mask for shell alpha: the shell at height h (0..1) keeps texels with R >= h",
+      "G": "random value per strand",
+      "B": "random value per clump",
+      "source": "Cycles render of real hair curves seen from above"
+    }
+  },
+  "clipA": {
+    "dir": "clipA/",
+    "webm": "snake_idle.webm: VP9 + alpha, the snake with its shadow, 1280x720",
+    "preview": "snake_idle_preview.mp4: H.264 on the powder-pink backdrop",
+    "passes": "PNG passes (rgba_####.png snake on transparent, shadow_####.png black shadow sprite) are kept locally"
+  },
+  "files": [
+    "snake.glb",
+    "snake_albedo.webp",
+    "snake_normal.webp",
+    "fur_strands.webp",
+    "manifest.json",
+    "clipA/snake_idle.webm",
+    "clipA/snake_idle_preview.mp4"
+  ]
+}
