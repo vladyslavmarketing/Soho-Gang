@@ -11,8 +11,15 @@
   var bq = 'embed&paused' + (SRC.bQuery ? '&' + SRC.bQuery : '');
   fb.src = 'b.html?' + bq;
   if (SRC.clipA) {
-    va.src = SRC.clipA; if (SRC.clipAPoster) va.poster = SRC.clipAPoster;
-    va.addEventListener('loadedmetadata', function () { hasA = true; dur = va.duration || dur; nFrames = Math.round(dur * FPS); scrub.max = nFrames - 1; if (playing) va.play().catch(function () {}); });
+    // whole clip as a blob: exact frame seeking even where the host does not serve byte ranges
+    if (SRC.clipAPoster) va.poster = SRC.clipAPoster;
+    fetch(SRC.clipA).then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      .then(function (bl) { va.src = URL.createObjectURL(bl); })
+      .catch(function () { va.src = SRC.clipA; });
+    va.addEventListener('loadedmetadata', function () {
+      hasA = true; dur = va.duration || dur; nFrames = Math.round(dur * FPS); scrub.max = nFrames - 1;
+      if (playing) { va.currentTime = clockT; va.play().catch(function () {}); } else gotoFrame(frameOf(clockT));   // keep the frame chosen before the clip arrived
+    });
     va.addEventListener('error', function () { hasA = false; });
   }
   if (SRC.placeholder) $('note').textContent = 'Заглушка: пока нет экспорта из Blender, A — клип, записанный с той же сцены в более высоком качестве, B — простая трубка со скелетом. После экспорта сюда встанут snake.glb и клип Cycles.';
