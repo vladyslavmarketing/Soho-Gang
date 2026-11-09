@@ -532,7 +532,8 @@
       if (R.flick) { busy = true; if (t - R.flick.t0 > R.flick.seq.length / FPS * 1000) { R.flick = null; R.lastFlick = t; } }
     }
     var on = R.breathOn && R.t.flow && R.br.amp > 0 && t - R.lastIn < 45000 ? 1 : 0;
-    if (R.breathE !== on) { R.breathE = on ? Math.min(1, R.breathE + dt / 1.5) : Math.max(0, R.breathE - dt / 1.5); busy = true; }
+    var ease = !on && R.s.st === 'align' ? 0.15 : 1.5;                // align: breath out fast, the departure must follow the scroll
+    if (R.breathE !== on) { R.breathE = on ? Math.min(1, R.breathE + dt / ease) : Math.max(0, R.breathE - dt / ease); busy = true; }
     if (R.breathE > 0) { var f = Math.floor(t / 1000 * FPS); if (f !== R.bf) { R.bf = f; busy = true; } R.breathTick = true; } else R.breathTick = false;
     return busy;
   };
@@ -578,7 +579,7 @@
   };
   Scene.prototype.showImg = function (on) {
     this.layer.classList.toggle('is-img', !!on); this.imgMode = !!on;
-    if (this.name === 'hero') this.sec.classList.toggle('is-snake-static', !!on);
+    if (this.name === 'hero') this.sec.classList.toggle('is-snake-static', !!on || !!(this.sm && !this.sm.look));   // no look set: no «she follows» hint
   };
   Scene.prototype.stillUrl = function () {
     var fi = this.m.files[this.name + '/' + this.tier + '/rest.webp'];
@@ -1250,6 +1251,7 @@
     if (DEBUG) checkInvariants(m);
     onLayoutAll();
     scenes.forEach(function (S) { S.R.set(m, S.tier); });
+    if (hero && hero.sm && !hero.sm.look) hero.sec.classList.add('is-snake-static');
     if (hero) {
       hero.p = hero.prog(); visSync(hero);
       if (hero.st === 'still' || mode === 'still') {

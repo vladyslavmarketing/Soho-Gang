@@ -4,36 +4,30 @@ This folder is the Blender session's `web3d\` delivery (spec: `docs/snake3d-spec
 `claude/webcam-studio-animation-design-jl8r68`, sections MANIFEST and WEB BRIEF). The player is
 `assets/js/snake3d.js`; the test page is `dev/snake3d.html`.
 
-## Current delivery: placeholder (W0 "first delivery", spec B10)
+## Current delivery: animatic set (interim, user decision 2026-11-10)
 
-Built by the web session from `blender/export/clipA/snake_idle.webm` (branch `claude/snake-blender`):
+The user asked to see the full behaviour on the live site before the Cycles finals exist, so this delivery is built
+from the Blender session's animatics (`blender/renders/motion/*_animatic.mp4`, branch `claude/snake-blender`, commit
+`3a2d4c7`): smooth fur-less drafts, 704×448 = the full CamHero / CamGauge frame at 1/3 of master.
+`python3 -I dev/snake3d-animatic-pack.py <dir with the 3 mp4s> <out>` writes everything here:
 
 | File | What |
 |---|---|
-| `hero/M/placeholder.h264.mp4` | Stacked-alpha H.264 (1280×1536: colour, 96 px black gutter, alpha). 180 frames, idle loop, used as `intro` (`from: rest`, `to: rest`). |
-| `hero/M/rest.webp` | Frame 0 as the rest still (also the no-JS / manifest-failure fallback). |
-| `manifest.json` | Written by hand: `strip: null`, `patches: null`, `look: null`, `flow: null`, no `depart`, no gauge. |
+| `hero/S/intro`, `depart`, `depart-rev` `.h264.mp4` | Stacked-alpha clips (704×928) with a real grey strip and colour patches, so calibration runs. |
+| `gauge/S/arrive.h264.mp4` | The coil around the income ring (96 frames). |
+| `*/S/rest.webp` | Last frames as the rest stills; `hero/M/rest.webp` is the unhashed no-JS / manifest-failure copy. |
+| `*/flow.png` | Breath map: outward normal of the blurred silhouette (±6 master px, `fileScale` 0.25), so she breathes at rest. |
 
-**User feedback (2026-11-09):** the rest must move and the floor shadow must go ("тени портят эстетику").
-- The floor shadow is stripped: alpha is kept only on the fur core (alpha ≥ 250, dilated 3 px) or on coloured pixels
-  (straight max RGB ≥ 40); the shadow is near-black. Script: `dev/snake3d-noshadow.py`.
-- `clips.intro.loopRest: true` (placeholder-only field): after the intro the idle clip keeps looping as the rest state
-  instead of a still. It pauses off-screen, in still mode and in hidden tabs.
-- **For the final renders:** the spec's shadow-catcher floor (B2, B8-3) must be dropped too, otherwise the same grey
-  shadow returns. The Blender side should skip the shadow step (`a_s = 0`) or turn off the catcher.
+- Tier: only `S` = 1/3 (the animatic resolution); the player snaps every device to it.
+- Background **and floor shadow are keyed out** against an empty frame (user: «тени портят эстетику»).
+- No `look` / `tongue` yet: the head does not follow the cursor, so the hero hint is hidden (`is-snake-static`).
+- Files are not content-hashed (interim); the finals from `web3d_pack.py` will be.
+- `aeBox [534, 312, 1056, 756]`; gauge anchors use the spec's ring (720, 672, r 390).
 
-Anchors measured on frame 0: `aeBox [337, 135, 608, 465]`, eye `[424, 229]`, snout `[353, 235]`,
-`pxPerD` ≈ 90. With no `depart` clip the hero leaves by an opacity fade; with no gauge scene the flat
-SVG ring stays.
+**For the final renders:** drop the shadow-catcher floor (B2, B8-3) too, otherwise the grey shadow returns.
 
-Commands (from the scratch folder holding `a.webm`):
-
-```
-# superseded by dev/snake3d-noshadow.py (no shadow):
-ffmpeg -c:v libvpx-vp9 -i a.webm -filter_complex "[0]format=rgba,premultiply=inplace=1,format=rgba,split[c][a];[a]alphaextract,format=rgb24[al];[c]format=rgb24,pad=iw:ih+96:0:0:black[cp];[cp][al]vstack,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" -c:v libx264 -crf 20 -an -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range tv -movflags +faststart placeholder.h264.mp4
-ffmpeg -c:v libvpx-vp9 -i a.webm -frames:v 1 -c:v libwebp -pix_fmt bgra -quality 82 rest.webp
-ffmpeg -f lavfi -i color=c=black:s=16x16:r=30 -frames:v 1 -c:v libx264 -profile:v baseline -pix_fmt yuv420p -movflags +faststart -an probe.mp4   # -> manifest.probe
-```
+The earlier plush placeholder (idle loop from `snake_idle.webm`, `loopRest`) is in git history; `dev/snake3d-noshadow.py`
+rebuilds it.
 
 ## Integrating a real delivery
 
