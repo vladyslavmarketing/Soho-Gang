@@ -1,0 +1,8 @@
+/* page-3d.html only: this site's hero aligned to the 3D snake's logo box (snake3d-page.js logoBox):
+   desktop bw = min(.44W, 1.85*.5H), centre .46H. The perks row stays below the snake. */
+@media (min-width: 960px) {
+  .hero {
+    --logo-w: min(44vw, 92.5svh);
+    --logo-y: calc(46svh - var(--logo-h) / 2);
+  }
+}

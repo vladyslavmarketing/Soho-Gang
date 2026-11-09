@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ae studio — 3D-змея</title>
+<meta name="description" content="ae studio — вебкам-студия для девушек 18+. В студии или из дома: обучение с нуля, выплаты каждую неделю и защита анонимности.">
+<meta name="theme-color" content="#F1D6DA">
+<meta property="og:title" content="ae studio — Мягкий старт. Большой доход.">
+<meta property="og:description" content="Вебкам-студия для девушек 18+. В студии или из дома. Обучение с нуля, выплаты каждую неделю, защита анонимности.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/img/snake-ae.jpg">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700;800;900&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/blocks.css">
+<link rel="stylesheet" href="assets/css/3d/v2.css">
+<link rel="stylesheet" href="assets/css/3d-page.css">
+<script>
+  /* Mark JS as available before first paint; force the intro to finish even if main.js never loads. */
+  document.documentElement.classList.add('js');
+  setTimeout(function () { document.documentElement.classList.add('is-loaded'); }, 2500);
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Перейти к содержанию</a>
+
+<!-- "Plush" filter: gives white type the fuzzy fur edge of the ae studio logo (used via CSS filter:url(#plush)) -->
+<svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="plush" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<!-- Soft "ring light" halo that trails the pointer (desktop only, decorative) -->
+<div class="cursor" aria-hidden="true"><span class="cursor__ring"></span><span class="cursor__dot"></span></div>
+
+<!-- Icon sprite: line icons for the plush badges, cards and contact links -->
+<svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-tg" viewBox="0 0 24 24"><path d="M21.2 4.2 2.9 11.3c-.9.4-.9 1.1 0 1.4l4.6 1.4 1.8 5.5c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.2-2.2 4.6 3.4c.8.5 1.4.2 1.6-.8l3-14.3c.3-1.2-.4-1.7-1.3-1.3Z" fill="currentColor"/><path d="m8 14 9.6-6.2" fill="none" stroke="var(--tg-cut, #F4EADB)" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="6.5" ry="2.6"/><path d="M5.5 6.5v4c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6v-4"/><path d="M5.5 10.5v4c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6v-4"/><path d="M5.5 14.5v3c0 1.4 2.9 2.6 6.5 2.6s6.5-1.2 6.5-2.6v-3"/></symbol>
+  <symbol id="i-cap" viewBox="0 0 24 24"><path d="m2.5 9 9.5-4.5L21.5 9 12 13.5Z"/><path d="M6.5 11v4.6c1.4 1.5 3.3 2.3 5.5 2.3s4.1-.8 5.5-2.3V11"/><path d="M21.5 9v5.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8 19.5 5.6v5.6c0 4.9-3.2 8.6-7.5 10-4.3-1.4-7.5-5.1-7.5-10V5.6Z"/><path d="m8.6 12.1 2.4 2.4 4.6-4.8"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s6.5-6 6.5-11.2a6.5 6.5 0 0 0-13 0C5.5 15.5 12 21.5 12 21.5Z"/><circle cx="12" cy="10.3" r="2.4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.8 9.3V20h12.4V9.3"/><path d="M10 20v-5.2h4V20"/></symbol>
+  <symbol id="i-ring" viewBox="0 0 24 24"><circle cx="12" cy="9.5" r="6.5"/><circle cx="12" cy="9.5" r="3.2"/><path d="M12 16v5.5M8.5 21.5h7"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.8" width="11" height="18.4" rx="2.6"/><path d="M10.5 5.6h3"/><circle cx="12" cy="17.6" r=".9" fill="currentColor"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8"/><path d="M3.2 12h17.6M12 3.2c2.4 2.4 3.6 5.3 3.6 8.8s-1.2 6.4-3.6 8.8c-2.4-2.4-3.6-5.3-3.6-8.8s1.2-6.4 3.6-8.8Z"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M12 21v-9"/><path d="M12 12c0-4 2.6-6.8 7-7 .1 4.4-2.8 7-7 7Z"/><path d="M12 14.5c0-3.3-2.2-5.6-5.8-5.8-.1 3.6 2.3 5.8 5.8 5.8Z"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v8h14v-8M12 8.5v12"/><path d="M12 8.5C10.6 5.2 7.2 4.6 7.2 6.8c0 1.3 1.8 1.7 4.8 1.7ZM12 8.5c1.4-3.3 4.8-3.9 4.8-1.7 0 1.3-1.8 1.7-4.8 1.7Z"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3.5 8.5c0-1.1.9-2 2-2h2.3L9.3 4.5h5.4l1.5 2h2.3c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2h-13c-1.1 0-2-.9-2-2Z"/><circle cx="12" cy="12.8" r="3.6"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6.5 3h11M6.5 21h11"/><path d="M7.5 3c0 4.3 4.5 5.6 4.5 9s-4.5 4.7-4.5 9M16.5 3c0 4.3-4.5 5.6-4.5 9s4.5 4.7 4.5 9"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.1A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20Z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5h16v10.5H10l-4.5 3.5V16H4Z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.2 2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6l-5.3 2.9 1.1-5.9-4.4-4.1 6-.8Z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+</svg>
+
+<header class="nav" data-nav>
+  <div class="nav__inner container">
+    <a class="logo" href="#top" aria-label="ae studio — на главную">
+      <span class="logo__ae" aria-hidden="true">ae</span>
+      <span class="logo__studio" aria-hidden="true">studio</span>
+    </a>
+    <nav class="nav__links" aria-label="Основная навигация">
+      <a href="#fit" data-nav-link>Кому подойдёт</a>
+      <a href="#conditions" data-nav-link>Условия</a>
+      <a href="#income" data-nav-link>Доход</a>
+      <a href="#path" data-nav-link>Путь</a>
+      <a href="#faq" data-nav-link>Вопросы</a>
+    </nav>
+    <a class="nav__tg" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" aria-label="Написать в Telegram">
+      <svg class="nav__tg-icon" aria-hidden="true" focusable="false"><use href="#i-tg"/></svg><span class="nav__tg-text" aria-hidden="true">Написать в&nbsp;Telegram</span>
+    </a>
+    <a class="btn btn--light btn--small nav__cta" href="#apply" data-magnetic>Подать анкету</a>
+    <button class="nav__burger" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
+      <span class="nav__burger-line"></span><span class="nav__burger-line"></span>
+      <span class="sr-only">Открыть меню</span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobile-menu" data-menu hidden>
+  <nav class="mobile-menu__nav container" aria-label="Мобильная навигация">
+    <a href="#fit" data-menu-link>Кому подойдёт</a>
+    <a href="#conditions" data-menu-link>Условия</a>
+    <a href="#income" data-menu-link>Доход</a>
+    <a href="#path" data-menu-link>Путь</a>
+    <a href="#faq" data-menu-link>Вопросы</a>
+    <a class="btn btn--light" href="#apply" data-menu-link>Подать анкету</a>
+    <a class="btn btn--ghost" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-menu-link>Написать в&nbsp;Telegram</a>
+  </nav>
+</div>
+
+<!-- Floating plush Telegram button (hidden over the form and the footer; main.js initFloatTg) -->
+<a class="float-tg" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" aria-label="Написать нам в Telegram" data-float-tg>
+  <svg aria-hidden="true" focusable="false"><use href="#i-tg"/></svg>
+</a>
+
+<main id="main" tabindex="-1">
+
+  <!-- Page-level snake layer: fixed canvas between section backgrounds and content.
+       The snake writes the logo in the hero, then travels down the page with scroll to the income gauge.
+       Sections between the hero and #income must not create a stacking context (see style.css, SNAKE LAYER). -->
+  <canvas class="snake-layer" data-snake-canvas aria-hidden="true"></canvas>
+
+  <!-- ============ 1. HERO: snake logo + offer + four perks ============ -->
+  <section class="hero" id="top" data-hero aria-labelledby="hero-title">
+    <div class="hero__vignette" aria-hidden="true"></div>
+    <img class="hero__still" src="assets/img/snake-ae-3d.webp" alt="" width="1200" height="800" aria-hidden="true" decoding="async">
+    <p class="hero__studio" aria-hidden="true">studio</p>
+
+    <div class="viewfinder" aria-hidden="true">
+      <span class="vf-corner vf-corner--tl"></span>
+      <span class="vf-corner vf-corner--tr"></span>
+      <span class="vf-corner vf-corner--bl"></span>
+      <span class="vf-corner vf-corner--br"></span>
+      <div class="vf-top">
+        <span class="vf-rec"><span class="rec-dot"></span>REC</span>
+        <span class="vf-timecode" data-timecode>00:00:00:00</span>
+      </div>
+    </div>
+
+    <div class="hero__content container">
+      <p class="eyebrow hero__eyebrow"><span class="rec-dot"></span>Твой график. Твой доход. Твои правила.</p>
+      <h1 class="hero__title" id="hero-title">
+        <span class="line"><span>Мягкий старт.</span></span>
+        <span class="line line--accent"><span>Большой доход.</span></span>
+      </h1>
+      <p class="hero__where"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-pin"/></svg>Вебкам-студия для&nbsp;девушек 18+&nbsp;· в&nbsp;студии или из&nbsp;дома</p>
+      <p class="hero__lead">Начни в&nbsp;уютной студии или работай из&nbsp;дома. Обучим с&nbsp;нуля, будем рядом на&nbsp;первых эфирах и&nbsp;поможем выйти на&nbsp;стабильный доход.</p>
+      <div class="hero__actions">
+        <a class="btn btn--light" href="#conditions" data-magnetic>Узнать условия</a>
+        <a class="btn btn--ghost" href="#income" data-magnetic>Посчитать доход</a>
+      </div>
+
+      <div class="hero__perks">
+        <ul class="perks">
+          <li class="perk">
+            <span class="perk__icon" aria-hidden="true"><svg class="ico"><use href="#i-coins"/></svg></span>
+            <p class="perk__title">Честный доход</p>
+            <p class="perk__text">Одной цифры для&nbsp;всех нет: доход зависит от&nbsp;графика, активности и&nbsp;того, как ты растёшь.</p>
+          </li>
+          <li class="perk">
+            <span class="perk__icon" aria-hidden="true"><svg class="ico"><use href="#i-cap"/></svg></span>
+            <p class="perk__title">Обучение с&nbsp;нуля</p>
+            <p class="perk__text">Пошаговые уроки и&nbsp;наставница на&nbsp;первых эфирах.</p>
+          </li>
+          <li class="perk">
+            <span class="perk__icon" aria-hidden="true"><svg class="ico"><use href="#i-shield"/></svg></span>
+            <p class="perk__title">Безопасность</p>
+            <p class="perk__text">Анонимность и&nbsp;защита данных на&nbsp;первом месте.</p>
+          </li>
+          <li class="perk">
+            <span class="perk__icon" aria-hidden="true"><svg class="ico"><use href="#i-cal"/></svg></span>
+            <!-- ⚑ payout schedule: confirm with the studio (same wording everywhere) -->
+            <p class="perk__title">Выплаты каждую неделю</p>
+            <p class="perk__text">На&nbsp;карту или в&nbsp;USDT, как тебе удобно.</p>
+          </li>
+        </ul>
+        <p class="hero__trust"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>Конфиденциальность&nbsp;— с&nbsp;первого дня и&nbsp;по&nbsp;договору</p>
+      </div>
+    </div>
+
+    <p class="hero__hint" data-hero-hint aria-hidden="true">Наведи курсор&nbsp;— она следит. Кликни&nbsp;— и&nbsp;поползёт за&nbsp;тобой.</p>
+  </section>
+
+  <!-- ============ 2. FIT: «Кому подойдёт» — ten numbered cards + a polaroid ============ -->
+  <section class="section fit" id="fit" aria-labelledby="fit-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Кому подойдёт</p>
+        <h2 class="section-title" id="fit-title">Кому подойдёт эта работа</h2>
+        <p class="section-lead">Найди себя в&nbsp;этих пунктах. Не&nbsp;обязательно совпадать во&nbsp;всём&nbsp;— главное, чтобы тебе было интересно.</p>
+      </header>
+
+      <div class="fit__grid">
+        <div class="fit__list" data-reveal>
+          <ol class="checks">
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">01</span><span class="fit-card__text">Ты любишь общаться и&nbsp;легко находишь общий язык с&nbsp;новыми людьми</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">02</span><span class="fit-card__text">Тебе нравится красиво одеваться и&nbsp;делать макияж</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">03</span><span class="fit-card__text">Ты любишь менять образы&nbsp;— и&nbsp;при этом остаёшься собой</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">04</span><span class="fit-card__text">Ты спокойно говоришь на&nbsp;откровенные темы и&nbsp;умеешь держать свои границы</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">05</span><span class="fit-card__text">Тебе интересно учиться выстраивать долгое общение с&nbsp;постоянными зрителями</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">06</span><span class="fit-card__text">Ты ценишь дисциплину и&nbsp;взаимное уважение</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">07</span><span class="fit-card__text">Тебе приятны подарки и&nbsp;внимание&nbsp;— и&nbsp;ты понимаешь, что их&nbsp;приносит живое, тёплое общение</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">08</span><span class="fit-card__text">Чужое мнение и&nbsp;стереотипы тебя не&nbsp;останавливают</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">09</span><span class="fit-card__text">Для тебя важен хороший уровень жизни</span></li>
+            <li class="fit-card"><span class="fit-card__no" aria-hidden="true">10</span><span class="fit-card__text">Ты мечтаешь путешествовать и&nbsp;работать из&nbsp;любой точки мира</span></li>
+          </ol>
+        </div>
+
+        <aside class="fit__side" data-reveal style="--i:1">
+          <figure class="snap snap--trip fit__snap" aria-hidden="true">
+            <span class="snap__tape"></span>
+            <span class="snap__shot">
+              <span class="art-sun"></span>
+              <span class="art-sea"></span>
+              <span class="art-case"><span class="art-case__band"></span></span>
+              <span class="art-tripod-phone"></span>
+            </span>
+            <figcaption class="snap__cap">2026 · где&nbsp;угодно</figcaption>
+          </figure>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. CONDITIONS: two cream care-labels with a snake-band seam ============ -->
+  <section class="section conditions" id="conditions" aria-labelledby="conditions-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Условия</p>
+        <h2 class="section-title" id="conditions-title">Условия на&nbsp;берегу</h2>
+        <p class="section-lead">Что нужно от&nbsp;тебя и&nbsp;что даём мы&nbsp;— всё это проговариваем на&nbsp;первой встрече и&nbsp;прописываем в&nbsp;договоре.</p>
+      </header>
+
+      <div class="terms">
+        <article class="term" data-reveal>
+          <span class="term__seam" aria-hidden="true"></span>
+          <p class="term__kicker" aria-hidden="true"><span class="term__brand">ae</span>от тебя</p>
+          <h3 class="term__title">Что нужно от&nbsp;тебя</h3>
+          <ul class="term__list">
+            <li>Вести прямые эфиры на&nbsp;международных площадках</li>
+            <li>Общаться с&nbsp;иностранной аудиторией&nbsp;— переводчик и&nbsp;готовые фразы помогут</li>
+            <li>Придумывать образы и&nbsp;темы для&nbsp;стримов</li>
+            <li>Выстраивать долгое общение с&nbsp;постоянными зрителями</li>
+          </ul>
+        </article>
+        <article class="term term--pink" data-reveal style="--i:1">
+          <span class="term__seam" aria-hidden="true"></span>
+          <p class="term__kicker" aria-hidden="true"><span class="term__brand">ae</span>от нас</p>
+          <h3 class="term__title">Что даём мы</h3>
+          <!-- ⚑ shifts, days off and payout day: confirm with the studio (also in FAQ and the calculator) -->
+          <p class="term__sub">Три графика на&nbsp;выбор:</p>
+          <ul class="shifts">
+            <li><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg><span class="shifts__name">Утро</span><span class="shifts__time">08:00–15:00</span><span class="shifts__note">час перерыва</span></li>
+            <li><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg><span class="shifts__name">День</span><span class="shifts__time">15:00–22:00</span><span class="shifts__note">час перерыва</span></li>
+            <li><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg><span class="shifts__name">Ночь</span><span class="shifts__time">22:00–08:00</span><span class="shifts__note">два часа перерыва</span></li>
+          </ul>
+          <ul class="term__list">
+            <li>Два выходных в&nbsp;неделю</li>
+            <li>Выплаты каждую неделю</li>
+            <li>Обучение, техника и&nbsp;менеджер&nbsp;— бесплатно</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. PLATFORMS: the ink marquee (names as text, no third-party logos) ============ -->
+  <!-- ⚑ platform list: confirm with the studio (OnlyFans removed on request) -->
+  <section class="platforms" aria-labelledby="platforms-title">
+    <div class="container">
+      <h2 class="platforms__title" id="platforms-title">Работаем с&nbsp;площадками</h2>
+      <ul class="sr-only">
+        <li>Stripchat</li><li>Chaturbate</li><li>LiveJasmin</li><li>BongaCams</li><li>Streamate</li><li>Flirt4Free</li><li>Dreamcam</li>
+      </ul>
+    </div>
+    <!-- Logos: put the file in assets/img/platforms/ and set data-logo="assets/img/platforms/<name>.svg" on BOTH copies
+         of the platform below (main.js initPlatformLogos swaps the name for the logo). See README «Логотипы площадок». -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee__track">
+        <span class="plat" data-logo=""><span class="plat__name">Stripchat</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Chaturbate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">LiveJasmin</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">BongaCams</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Streamate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Flirt4Free</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Dreamcam</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Stripchat</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Chaturbate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">LiveJasmin</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">BongaCams</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Streamate</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Flirt4Free</span></span><i class="scale"></i>
+        <span class="plat" data-logo=""><span class="plat__name">Dreamcam</span></span><i class="scale"></i>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. FORMAT: studio 50% / home individual (same as the calculator and FAQ) ============ -->
+  <!-- ⚑ studio share 50% (home: individual): confirm with the studio -->
+  <section class="section format" id="format" aria-labelledby="format-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Студия или дом</p>
+        <h2 class="section-title" id="format-title">Стримь у&nbsp;нас в&nbsp;студии или из&nbsp;любой точки мира</h2>
+        <p class="section-lead">Для работы из&nbsp;дома нужны компьютер, камера и&nbsp;стабильный интернет. Твоя доля с&nbsp;аккаунтов:</p>
+      </header>
+
+      <div class="share">
+        <article class="share-card" data-reveal>
+          <span class="share-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-ring"/></svg></span>
+          <p class="share-card__pct"><b>50</b>%</p>
+          <h3 class="share-card__title">Если стримишь из&nbsp;нашей студии</h3>
+          <p class="share-card__text">Комната, свет, техника, админ и&nbsp;охрана&nbsp;— на&nbsp;нас.</p>
+          <span class="share-card__bar" aria-hidden="true"><span style="--p:.5"></span></span>
+        </article>
+        <article class="share-card share-card--home" data-reveal style="--i:1">
+          <span class="share-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span>
+          <p class="share-card__pct share-card__pct--word">Индивидуально</p>
+          <h3 class="share-card__title">Если стримишь из&nbsp;дома</h3>
+          <p class="share-card__text">Доля обсуждается лично. Своя техника и&nbsp;интернет, обучение и&nbsp;поддержка&nbsp;— от&nbsp;нас.</p>
+        </article>
+      </div>
+      <div class="cta-row" data-reveal>
+        <a class="btn btn--light" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-magnetic>Написать нам</a>
+        <a class="btn btn--ghost" href="#income" data-magnetic>Посчитать свою часть</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. INCOME CALCULATOR: on-stream «goal» overlay; the travelling snake coils around the ring ============ -->
+  <section class="section income" id="income" aria-labelledby="income-title">
+    <div class="container income__grid">
+      <div class="income__copy" data-reveal>
+        <p class="eyebrow">Калькулятор</p>
+        <h2 class="section-title" id="income-title">Сколько ты можешь зарабатывать</h2>
+        <p class="section-lead">Расчёт примерный, для работы в&nbsp;студии: сумма уже после доли студии (твоя часть&nbsp;— 50%). Итог зависит от&nbsp;площадки, графика и&nbsp;твоей активности. Из&nbsp;дома доля обсуждается индивидуально.</p>
+
+        <form class="calc" data-calc>
+          <fieldset class="calc__group">
+            <legend class="calc__legend">Опыт · средний заработок аккаунта в&nbsp;час</legend>
+            <div class="segmented segmented--rates">
+              <label class="segmented__opt"><input type="radio" id="level-1" name="level" value="12" checked><span>Новичок<small class="segmented__rate" data-rate>$12/ч</small></span></label>
+              <label class="segmented__opt"><input type="radio" id="level-2" name="level" value="22"><span>Есть опыт<small class="segmented__rate" data-rate>$22/ч</small></span></label>
+              <label class="segmented__opt"><input type="radio" id="level-3" name="level" value="38"><span>Топ-модель<small class="segmented__rate" data-rate>$38/ч</small></span></label>
+            </div>
+          </fieldset>
+          <div class="calc__row">
+            <label for="calc-hours">Часов в&nbsp;эфире за&nbsp;смену</label>
+            <output for="calc-hours" data-out="hours">6</output>
+            <input type="range" id="calc-hours" name="hours" min="4" max="8" step="1" value="6">
+          </div>
+          <div class="calc__row">
+            <label for="calc-days">Смен в&nbsp;неделю</label>
+            <output for="calc-days" data-out="days">5</output>
+            <input type="range" id="calc-days" name="days" min="2" max="5" step="1" value="5">
+          </div>
+        </form>
+      </div>
+
+      <div class="gauge" data-gauge data-reveal style="--i:1">
+        <div class="gauge__hud" aria-hidden="true">
+          <span class="gauge__live"><span class="rec-dot"></span>Live</span>
+          <span class="gauge__cam">Cam 01</span>
+        </div>
+        <svg class="gauge__svg" viewBox="0 0 400 400" aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="gauge-tube" gradientUnits="userSpaceOnUse" cx="200" cy="200" r="178">
+              <stop offset=".8" stop-color="#B9667B"/>
+              <stop offset=".86" stop-color="#E7A2B2"/>
+              <stop offset=".93" stop-color="#E29AAB"/>
+              <stop offset="1" stop-color="#B05E73"/>
+            </radialGradient>
+          </defs>
+          <circle class="gauge__ticks" cx="200" cy="200" r="128"/>
+          <circle class="gauge__track" cx="200" cy="200" r="160"/>
+          <circle class="gauge__fill" cx="200" cy="200" r="160" data-gauge-fill/>
+          <circle class="gauge__scales" cx="200" cy="200" r="160" data-gauge-scales/>
+          <g class="gauge__head" data-gauge-head>
+            <path class="gauge__tongue" d="M22 0h11m0 0 4.5-3.2M33 0l4.5 3.2"/>
+            <path class="gauge__head-shape" d="M-17-13C-3-19 15-16 23-6c3 4 3 8 0 12-8 10-26 13-40 7-5-3-5-23 0-26Z"/>
+            <circle class="gauge__eye" cx="9" cy="-6" r="2.8"/>
+            <circle class="gauge__eye-glint" cx="9.9" cy="-6.9" r="0.9"/>
+          </g>
+        </svg>
+        <div class="gauge__readout" aria-live="polite">
+          <span class="gauge__label">Твоя часть · месяц</span>
+          <strong class="gauge__value" data-income>$780</strong>
+          <span class="gauge__bar" aria-hidden="true"><span data-goal-fill></span></span>
+          <span class="gauge__sub" data-income-sub>≈ $180 в неделю</span>
+        </div>
+        <div class="gauge__tips" data-gauge-tips aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. FORMATS + STUDIO EQUIPMENT ============ -->
+  <section class="section rooms" id="rooms" aria-labelledby="rooms-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Форматы работы</p>
+        <h2 class="section-title" id="rooms-title">Три формата работы</h2>
+        <p class="section-lead">Выбери, как тебе удобнее, и&nbsp;меняй формат, когда захочешь.</p>
+      </header>
+
+      <ul class="formats">
+        <li class="format-card" data-reveal>
+          <span class="format-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-ring"/></svg></span>
+          <h3 class="format-card__title">В&nbsp;студии</h3>
+          <p class="format-card__text">Уютные комнаты, где чувствуешь себя как дома: свет, техника и&nbsp;команда рядом.</p>
+        </li>
+        <!-- ⚑ content / personal brand format: confirm the studio offers it -->
+        <li class="format-card format-card--pink" data-reveal style="--i:1">
+          <span class="format-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-phone"/></svg></span>
+          <h3 class="format-card__title">Контент и&nbsp;личный бренд</h3>
+          <p class="format-card__text">Снимаешь с&nbsp;телефона из&nbsp;любой точки мира и&nbsp;развиваешь свой бренд. Научим выигрышным ракурсам, поможем с&nbsp;образом и&nbsp;перепиской&nbsp;— или возьмём её на&nbsp;себя.</p>
+        </li>
+        <li class="format-card format-card--ink" data-reveal style="--i:2">
+          <span class="format-card__icon" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span>
+          <h3 class="format-card__title">Из&nbsp;дома</h3>
+          <p class="format-card__text">Работаешь где угодно, а&nbsp;мы даём обучение, поддержку и&nbsp;вовремя выплачиваем деньги.</p>
+        </li>
+      </ul>
+
+      <!-- ⚑ equipment list: confirm with the studio -->
+      <div class="gear" data-reveal>
+        <div class="gear__copy">
+          <p class="eyebrow">Студия</p>
+          <h3 class="section-title section-title--sub">Профессиональное оборудование</h3>
+          <p class="section-lead">Все комнаты сделаны для работы: свет выставлен, камера и&nbsp;компьютер настроены. Тебе остаётся прийти и&nbsp;включить эфир.</p>
+        </div>
+        <ul class="gear__list">
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-camera"/></svg></span><b>Камеры 4K</b><span>Чёткая картинка в&nbsp;любом свете</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-ring"/></svg></span><b>Профессиональный свет</b><span>Кольцевые лампы и&nbsp;мягкие софтбоксы</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span><b>Звукоизоляция</b><span>Отдельные уютные комнаты</span></li>
+          <li><span class="gear__icon" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span><b>Компьютер и&nbsp;интернет</b><span>Стабильное соединение для&nbsp;эфира</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. BENEFITS: «Что ты получаешь в итоге» — stream alerts that pop in on scroll (main.js initAlerts) ============ -->
+  <section class="section benefits" id="benefits" aria-labelledby="benefits-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Новые уведомления</p>
+        <h2 class="section-title" id="benefits-title">Что ты получаешь в&nbsp;итоге</h2>
+      </header>
+
+      <div class="feed" data-alerts>
+        <p class="feed__bar" aria-hidden="true"><span class="feed__live"><span class="rec-dot"></span>Live</span><span>уведомления · 8</span></p>
+        <ul class="feed__list feed__list--benefits">
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-sprout"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Работа и&nbsp;рост</h3>
+            <p class="alert__text">В&nbsp;индустрии, где хорошо платят и&nbsp;есть куда расти.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h3>
+            <p class="alert__text">Стримь из&nbsp;любой точки мира или из&nbsp;уютной студии с&nbsp;современной техникой.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cal"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Выплаты каждую неделю</h3>
+            <p class="alert__text">Без задержек&nbsp;— на&nbsp;карту или в&nbsp;USDT.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-heart"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Поддержка</h3>
+            <p class="alert__text">Психолог и&nbsp;команда рядом, когда тяжело.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-cap"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Обучение</h3>
+            <p class="alert__text">Профессиональное обучение и&nbsp;развитие&nbsp;— бесплатно.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-star"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Личный бренд</h3>
+            <p class="alert__text">Свой образ, стиль и&nbsp;узнаваемое имя.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-chat"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Тёплое общение</h3>
+            <p class="alert__text">Навык долгого тёплого общения с&nbsp;постоянными зрителями.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--pink" data-alert>
+          <span class="alert__badge" aria-hidden="true"><svg class="ico"><use href="#i-coins"/></svg></span>
+          <div class="alert__body">
+            <h3 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Больше возможностей</h3>
+            <p class="alert__text">Чем больше опыта и&nbsp;аудитории&nbsp;— тем больше возможностей расти.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. PATH: instant photos of the way in; the snake-line crawls past them on scroll ============ -->
+  <section class="section path" id="path" aria-labelledby="path-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Путь модели</p>
+        <h2 class="section-title" id="path-title">Путь модели в&nbsp;студии</h2>
+        <p class="section-lead">Сначала оставь контакт&nbsp;— мы напишем в&nbsp;Telegram или позвоним, как тебе удобнее.</p>
+      </header>
+
+      <div class="path__track" data-path>
+        <svg class="path__svg" aria-hidden="true" focusable="false" data-path-svg>
+          <path class="path__line-bg" data-path-bg/>
+          <path class="path__shade" data-path-shade/>
+          <path class="path__line" data-path-line/>
+          <path class="path__scales" data-path-scales/>
+          <path class="path__sheen" data-path-sheen/>
+          <g class="path__head" data-path-head>
+            <path class="path__tongue" d="M26 0h11m0 0 4.5-3.2M37 0l4.5 3.2"/>
+            <path class="path__head-shape" d="M-13-13C1-19 19-16 27-6c3 4 3 8 0 12-8 10-26 13-40 7-5-3-5-23 0-26Z"/>
+            <circle class="path__eye" cx="13" cy="-6" r="2.8"/>
+            <circle class="path__eye-glint" cx="13.9" cy="-6.9" r="0.9"/>
+          </g>
+        </svg>
+
+        <!-- ⚑ «можно начать на следующий день», lesson schedule and payout day: confirm with the studio -->
+        <ol class="steps">
+          <li class="step" data-step data-reveal style="--i:0">
+            <span class="step__num">01</span>
+            <div class="step__body">
+              <figure class="snap snap--coffee" aria-hidden="true">
+                <span class="snap__tape"></span>
+                <span class="snap__shot">
+                  <span class="art-cup art-cup--cream"><span class="art-cup__steam"></span></span>
+                  <span class="art-cup art-cup--pink"><span class="art-cup__steam"></span></span>
+                </span>
+                <figcaption class="snap__cap">шаг 1 · собеседование</figcaption>
+              </figure>
+              <div class="step__note">
+                <h3 class="step__title"><span class="sr-only">Шаг 1. </span>Собеседование</h3>
+                <p class="step__text">Онлайн или в&nbsp;студии&nbsp;— смотря какой формат выберешь. Возьми паспорт: он нужен площадкам для&nbsp;подтверждения возраста. Можно начать уже на&nbsp;следующий день.</p>
+              </div>
+            </div>
+          </li>
+          <li class="step" data-step data-reveal style="--i:1">
+            <span class="step__num">02</span>
+            <div class="step__body">
+              <figure class="snap snap--form" aria-hidden="true">
+                <span class="snap__tape"></span>
+                <span class="snap__shot">
+                  <span class="art-phone"><span class="art-phone__screen"><span class="art-phone__title"></span><span class="art-phone__field"></span><span class="art-phone__field"></span><span class="art-phone__field"></span><span class="art-phone__btn"></span></span></span>
+                  <span class="art-spark"></span>
+                </span>
+                <figcaption class="snap__cap">шаг 2 · профиль</figcaption>
+              </figure>
+              <div class="step__note">
+                <h3 class="step__title"><span class="sr-only">Шаг 2. </span>Аккаунты и&nbsp;профиль</h3>
+                <p class="step__text">Регистрируем рабочие аккаунты, подтверждаем возраст, заполняем профиль. Понадобятся 5+&nbsp;фото, которых нет в&nbsp;соцсетях.</p>
+              </div>
+            </div>
+          </li>
+          <li class="step" data-step data-reveal style="--i:2">
+            <span class="step__num">03</span>
+            <div class="step__body">
+              <figure class="snap snap--onair" aria-hidden="true">
+                <span class="snap__tape"></span>
+                <span class="snap__shot">
+                  <span class="art-sign"><span class="art-sign__text">On air</span></span>
+                </span>
+                <figcaption class="snap__cap">шаг 3 · первая смена</figcaption>
+              </figure>
+              <div class="step__note">
+                <h3 class="step__title"><span class="sr-only">Шаг 3. </span>Первая смена с&nbsp;куратором</h3>
+                <p class="step__text">Куратор научит работать с&nbsp;площадками и&nbsp;будет на&nbsp;связи всю смену. Твоя задача&nbsp;— не&nbsp;бояться пробовать и&nbsp;быть собой: зрители ценят честность.</p>
+              </div>
+            </div>
+          </li>
+          <li class="step" data-step data-reveal style="--i:3">
+            <span class="step__num">04</span>
+            <div class="step__body">
+              <figure class="snap snap--light" aria-hidden="true">
+                <span class="snap__tape"></span>
+                <span class="snap__shot">
+                  <span class="art-ring"><span class="art-ring__phone"></span></span>
+                  <span class="art-tripod"></span>
+                </span>
+                <figcaption class="snap__cap">шаг 4 · обучение</figcaption>
+              </figure>
+              <div class="step__note">
+                <h3 class="step__title"><span class="sr-only">Шаг 4. </span>Обучение</h3>
+                <p class="step__text">Первую неделю приходишь на&nbsp;час раньше на&nbsp;уроки, потом обучение дважды в&nbsp;неделю: разборы, рекомендации и&nbsp;поддержка.</p>
+              </div>
+            </div>
+          </li>
+          <li class="step" data-step data-reveal style="--i:4">
+            <span class="step__num">05</span>
+            <div class="step__body">
+              <figure class="snap snap--payout" aria-hidden="true">
+                <span class="snap__tape"></span>
+                <span class="snap__shot">
+                  <span class="art-envelope"><span class="art-envelope__note"></span><span class="art-envelope__flap"></span><span class="art-envelope__heart"></span></span>
+                </span>
+                <figcaption class="snap__cap">пн · первая выплата</figcaption>
+              </figure>
+              <div class="step__note">
+                <h3 class="step__title"><span class="sr-only">Шаг 5. </span>Первая выплата</h3>
+                <p class="step__text">В&nbsp;ближайший понедельник&nbsp;— на&nbsp;карту или в&nbsp;USDT. Дальше&nbsp;— каждую неделю.</p>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 10. IMPORTANT: four honest notes before the start ============ -->
+  <section class="section notes" id="important" aria-labelledby="notes-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Важно знать</p>
+        <h2 class="section-title" id="notes-title">Важно знать до&nbsp;старта</h2>
+      </header>
+      <ul class="notes__grid">
+        <li class="note" data-reveal>
+          <span class="note__pin" aria-hidden="true"><svg class="ico"><use href="#i-hourglass"/></svg></span>
+          <h3 class="note__title">Не&nbsp;жди всего и&nbsp;сразу</h3>
+          <p class="note__text">Первые месяцы&nbsp;— время учиться, пробовать форматы, искать свой образ и&nbsp;аудиторию. У&nbsp;каждой свой темп: не&nbsp;сравнивай себя с&nbsp;другими и&nbsp;никогда не&nbsp;делай того, что тебе не&nbsp;нравится.</p>
+        </li>
+        <!-- ⚑ bonuses and giveaways: confirm with the studio -->
+        <li class="note note--pink" data-reveal style="--i:1">
+          <span class="note__pin" aria-hidden="true"><svg class="ico"><use href="#i-gift"/></svg></span>
+          <h3 class="note__title">Бонусы и&nbsp;розыгрыши</h3>
+          <p class="note__text">Есть системы мотивации и&nbsp;розыгрыши&nbsp;— подробности расскажет менеджер. Всё просто и&nbsp;прозрачно.</p>
+        </li>
+        <li class="note note--pink" data-reveal style="--i:2">
+          <span class="note__pin" aria-hidden="true"><svg class="ico"><use href="#i-home"/></svg></span>
+          <h3 class="note__title">Работаешь из&nbsp;дома</h3>
+          <p class="note__text">Фото и&nbsp;видео для&nbsp;профиля снимаешь сама, а&nbsp;мы присылаем референсы: позы, образ, аксессуары, локация, макияж.</p>
+        </li>
+        <li class="note" data-reveal style="--i:3">
+          <span class="note__pin" aria-hidden="true"><svg class="ico"><use href="#i-camera"/></svg></span>
+          <h3 class="note__title">Работаешь в&nbsp;студии</h3>
+          <p class="note__text">Профессиональные фотосессии и&nbsp;видео&nbsp;— бесплатно.</p>
+        </li>
+      </ul>
+      <div class="cta-row" data-reveal>
+        <a class="btn btn--light" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-magnetic>Написать нам</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. SAFETY & BOUNDARIES: three promises + the anonymity console ============ -->
+  <section class="section privacy" id="privacy" aria-labelledby="privacy-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Безопасность</p>
+        <h2 class="section-title" id="privacy-title">Безопасность и&nbsp;границы</h2>
+      </header>
+      <ul class="pledges">
+        <li class="pledge" data-reveal>
+          <span class="pledge__no" aria-hidden="true">01</span>
+          <h3 class="pledge__title">Только 18+</h3>
+          <p>Работаем только с&nbsp;девушками 18+. До&nbsp;начала честно расскажем, как всё устроено: площадки, форматы и&nbsp;правила.</p>
+        </li>
+        <li class="pledge" data-reveal style="--i:1">
+          <span class="pledge__no" aria-hidden="true">02</span>
+          <h3 class="pledge__title">Границы задаёшь ты</h3>
+          <p>Никто не&nbsp;заставит делать то, чего ты не&nbsp;хочешь. Основа работы&nbsp;— живое общение, и&nbsp;можно работать в&nbsp;формате без&nbsp;обнажения&nbsp;— научим с&nbsp;нуля.</p>
+        </li>
+        <li class="pledge" data-reveal style="--i:2">
+          <span class="pledge__no" aria-hidden="true">03</span>
+          <h3 class="pledge__title">Конфиденциальность</h3>
+          <p>Чёткие правила и&nbsp;инструктаж, как защитить себя от&nbsp;утечек; куратор подскажет каждый шаг.</p>
+        </li>
+      </ul>
+
+      <div class="privacy__grid">
+        <div class="privacy__copy" data-reveal>
+          <h3 class="privacy__sub">Где тебя знают&nbsp;— там эфир закрыт</h3>
+          <p class="section-lead">Включай защиту и&nbsp;смотри, как&nbsp;меняется эфир.</p>
+
+          <div class="toggles" role="group" aria-label="Настройки приватности">
+            <label class="toggle" for="privacy-geo">
+              <input type="checkbox" id="privacy-geo" data-privacy="geo" checked>
+              <span class="toggle__ui" aria-hidden="true"></span>
+              <span class="toggle__text"><strong>Блокировка страны</strong><small>Зрители из&nbsp;твоей страны и&nbsp;города не&nbsp;увидят эфир</small></span>
+            </label>
+            <label class="toggle" for="privacy-alias">
+              <input type="checkbox" id="privacy-alias" data-privacy="alias" checked>
+              <span class="toggle__ui" aria-hidden="true"></span>
+              <span class="toggle__text"><strong>Псевдоним</strong><small>Вместо имени&nbsp;— сценический ник</small></span>
+            </label>
+            <label class="toggle" for="privacy-mask">
+              <input type="checkbox" id="privacy-mask" data-privacy="mask">
+              <span class="toggle__ui" aria-hidden="true"></span>
+              <span class="toggle__text"><strong>Без лица</strong><small>Маска или ракурс, где лица не&nbsp;видно</small></span>
+            </label>
+          </div>
+
+          <div class="privacy__label">
+            <p class="privacy__label-head" aria-hidden="true"><span class="privacy__label-brand">ae</span>Прописано в&nbsp;договоре</p>
+            <ul class="privacy__list">
+              <li>Письменный договор до&nbsp;первого эфира</li>
+              <li>Отдельный вход и&nbsp;охрана в&nbsp;студии</li>
+              <li>Документы видят только менеджер и&nbsp;площадка&nbsp;— для&nbsp;проверки возраста</li>
+              <li>Добиваемся удаления утёкших записей (DMCA)</li>
+            </ul>
+          </div>
+        </div>
+
+      <div class="stream" data-stream data-reveal style="--i:1">
+        <div class="stream__screen">
+          <div class="stream__bar">
+            <span class="stream__live"><span class="rec-dot"></span>LIVE</span>
+            <span class="stream__viewers" data-viewers>1&nbsp;284 зрителя</span>
+          </div>
+          <svg class="stream__model" viewBox="0 0 300 300" aria-hidden="true" focusable="false">
+            <defs>
+              <radialGradient id="rim" cx="50%" cy="35%" r="65%">
+                <stop offset="0" stop-color="#c97a8b"/>
+                <stop offset="1" stop-color="#7a3c4b"/>
+              </radialGradient>
+            </defs>
+            <circle class="stream__ring" cx="150" cy="120" r="112"/>
+            <path class="stream__body" d="M58 300c8-62 46-96 92-96s84 34 92 96Z" fill="url(#rim)"/>
+            <rect class="stream__body" x="134" y="160" width="32" height="50" rx="12" fill="url(#rim)"/>
+            <path class="stream__hair" d="M92 126c-6-58 24-90 58-90s66 30 58 90c-3 26-10 44-18 52 4-22 2-40-6-50H116c-8 10-10 28-6 50-8-8-15-26-18-52Z"/>
+            <ellipse class="stream__body" cx="150" cy="116" rx="44" ry="54" fill="url(#rim)"/>
+            <g class="stream__mask" data-mask>
+              <path d="M98 104c14-12 34-12 50-2 16-10 36-10 50 2-2 18-18 28-34 22-8-3-12-8-16-8s-8 5-16 8c-16 6-32-4-34-22Z"/>
+              <ellipse class="stream__mask-eye" cx="124" cy="108" rx="10" ry="6"/>
+              <ellipse class="stream__mask-eye" cx="176" cy="108" rx="10" ry="6"/>
+            </g>
+          </svg>
+          <div class="stream__tag" data-alias-name data-real="Анна, 23 · Киев" data-alias="Pink_Python">Pink_Python</div>
+        </div>
+        <div class="stream__geo">
+          <canvas class="stream__globe" data-globe aria-hidden="true"></canvas>
+          <div class="stream__geo-text">
+            <span class="stream__geo-label">Твой регион</span>
+            <strong data-geo-status aria-live="polite">Скрыт от&nbsp;зрителей</strong>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 12. REVIEWS: chat screenshots carousel. Hidden until real screenshots exist —
+       add them to the JSON below (see README «Отзывы»); main.js initReviews renders and un-hides the block. ============ -->
+  <section class="section reviews" id="reviews" aria-labelledby="reviews-title" data-reviews hidden>
+    <div class="container">
+      <header class="section-head section-head--split" data-reveal>
+        <div>
+          <p class="eyebrow">Отзывы</p>
+          <h2 class="section-title" id="reviews-title">Как это выглядит изнутри</h2>
+        </div>
+        <p class="section-lead">Переписки моделей с&nbsp;кураторами&nbsp;— публикуем с&nbsp;их согласия, имена скрыты.</p>
+      </header>
+      <div class="reel" data-reveal>
+        <div class="reel__track" data-reviews-track tabindex="0" role="region" aria-label="Скриншоты переписок"></div>
+        <div class="reel__nav">
+          <button class="icon-btn" type="button" data-reviews-prev aria-label="Предыдущий скриншот"><span aria-hidden="true">←</span></button>
+          <button class="icon-btn" type="button" data-reviews-next aria-label="Следующий скриншот"><span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+      <script type="application/json" data-reviews-data>[]</script>
+    </div>
+  </section>
+
+  <!-- ============ 13. ABOUT: manifesto, founders (template, hidden), values ============ -->
+  <section class="section about" id="about" aria-labelledby="about-title">
+    <div class="container">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">О студии</p>
+        <h2 class="section-title" id="about-title">О&nbsp;студии</h2>
+      </header>
+      <blockquote class="manifesto" data-reveal>
+        <p>Мы здесь ради денег&nbsp;— но не&nbsp;только. В&nbsp;основе ae&nbsp;studio&nbsp;— <mark>свобода</mark>: от&nbsp;чужого мнения, в&nbsp;выборе и&nbsp;в&nbsp;том, где и&nbsp;как жить. Жизнь слишком короткая, чтобы не&nbsp;увидеть мир и&nbsp;не&nbsp;заявить о&nbsp;себе&nbsp;— красиво, смело и&nbsp;без&nbsp;страха. Начать можно уже сегодня.</p>
+      </blockquote>
+
+      <!-- Founders: TEMPLATE. Remove `hidden` once the studio provides real names, photos and words (README «Основатели»). -->
+      <div class="founders" data-founders hidden>
+        <article class="founder">
+          <span class="founder__photo" aria-hidden="true"><b>ae</b></span>
+          <h3 class="founder__name">[Имя]</h3>
+          <p class="founder__role">основательница ae&nbsp;studio</p>
+          <p class="founder__text">[Пара слов от&nbsp;основательницы]</p>
+        </article>
+      </div>
+
+      <h3 class="about__values-title" data-reveal>Наши ценности</h3>
+      <div class="feed" data-alerts>
+        <p class="feed__bar" aria-hidden="true"><span class="feed__live"><span class="rec-dot"></span>Live</span><span>ценности · 5</span></p>
+        <ul class="feed__list feed__list--values">
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Свобода</h4>
+            <p class="alert__text">Здесь тебя не&nbsp;осуждают.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Честность и&nbsp;прозрачность</h4>
+            <p class="alert__text">С&nbsp;первой встречи говорим прямо о&nbsp;деньгах, мотивах и&nbsp;правилах.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Чёткие правила</h4>
+            <p class="alert__text">На&nbsp;них держится взаимное уважение.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Забота о&nbsp;тебе</h4>
+            <p class="alert__text">Твоё состояние важнее любых денег.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        <li class="alert alert--cream" data-alert>
+          <span class="alert__badge alert__badge--ae" aria-hidden="true">ae</span>
+          <div class="alert__body">
+            <h4 class="alert__title"><span class="alert__plus" aria-hidden="true">+</span>Дисциплина</h4>
+            <p class="alert__text">Самый короткий путь к&nbsp;цифрам, о&nbsp;которых ты мечтаешь.</p>
+          </div>
+          <span class="alert__timer" aria-hidden="true"></span>
+        </li>
+        </ul>
+      </div>
+      <div class="cta-row" data-reveal>
+        <a class="btn btn--light" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener" data-magnetic>Написать нам</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 14. FAQ: «Чат с менеджером». The <details> list is the no-JS fallback and the data source:
+       blocks.js renders the chat from it (skipping [hidden] items), then hides it. Styles: assets/css/blocks.css ============ -->
+  <section class="section faq" id="faq" aria-labelledby="faq-title">
+    <div class="container faq__grid">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">Вопросы</p>
+        <h2 class="section-title" id="faq-title">Спрашивают чаще всего</h2>
+        <p class="section-lead">Не&nbsp;нашла ответ? <a href="https://t.me/ae_studio_cam" target="_blank" rel="noopener">Напиши нам в&nbsp;Telegram</a>&nbsp;— ответим лично.</p>
+        <figure class="faq__mascot" aria-hidden="true">
+          <span class="faq__mascot-photo"><img src="assets/img/snake-ae.jpg" alt="" width="1408" height="768" loading="lazy" decoding="async"></span>
+          <figcaption class="faq__mascot-bubble">Спрашивай смело&nbsp;— я&nbsp;не&nbsp;кусаюсь</figcaption>
+        </figure>
+      </header>
+
+      <div class="faq__stage" data-reveal style="--i:1">
+        <div class="chat" data-chat hidden>
+          <div class="chat__head">
+            <span class="chat__avatar" aria-hidden="true"><span class="chat__avatar-ae">ae</span></span>
+            <div class="chat__who">
+              <p class="chat__name">ae&nbsp;studio</p>
+              <p class="chat__status"><span data-chat-status>частые вопросы</span></p>
+            </div>
+            <span class="chat__badge" aria-hidden="true"><span class="rec-dot"></span>24/7</span>
+          </div>
+          <div class="chat__log" role="log" aria-live="polite" aria-label="Частые вопросы ae&nbsp;studio" tabindex="0" data-chat-log></div>
+          <div class="chat__tray">
+            <p class="chat__tray-label" id="chat-tray-label">Быстрые вопросы <span class="chat__count" aria-hidden="true" data-chat-count></span></p>
+            <div class="chat__chips" role="group" aria-labelledby="chat-tray-label" data-chat-chips></div>
+          </div>
+        </div>
+
+        <div class="accordion" data-accordion>
+          <!-- ⚑ notice period and settlement terms: confirm with the studio -->
+          <details class="acc">
+            <summary class="acc__q">Могу ли я&nbsp;уйти в&nbsp;любое время?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Да. Предупреди за&nbsp;2&nbsp;недели&nbsp;— и&nbsp;получишь полный расчёт. Если нужно уйти сразу&nbsp;— отпустим в&nbsp;тот же день, условия расчёта прописаны в&nbsp;договоре.</p></div>
+          </details>
+          <!-- ⚑ TEMPLATE: hidden until the studio gives its founding year and a few words about the team -->
+          <details class="acc" hidden>
+            <summary class="acc__q">Сколько существует студия?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>[Год основания и&nbsp;пара слов о&nbsp;команде]</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Сколько можно зарабатывать и&nbsp;от&nbsp;чего это зависит?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Одной цифры нет: доход зависит от&nbsp;графика, площадки, активности и&nbsp;умения общаться. Примерно посчитать можно <a href="#income">в&nbsp;калькуляторе</a>.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Будет ли поддержка и&nbsp;обучение на&nbsp;старте?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Да: куратор на&nbsp;первых сменах, уроки в&nbsp;первую неделю, потом&nbsp;— дважды в&nbsp;неделю.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Нужен ли опыт?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Нет, научим с&nbsp;нуля: площадки, общение со&nbsp;зрителями, свет и&nbsp;ракурсы.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Есть ли фиксированная сумма на&nbsp;старте?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Фиксированной суммы нет: доход зависит от&nbsp;тебя и&nbsp;площадки. Зато есть обучение, куратор и&nbsp;прозрачные выплаты каждую неделю.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Как и&nbsp;когда приходят деньги?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Каждый понедельник за&nbsp;прошлую неделю&nbsp;— на&nbsp;карту или в&nbsp;USDT. Статистика по&nbsp;каждому эфиру видна в&nbsp;личном кабинете.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Обязательно раздеваться?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Нет. Формат выбираешь ты: общение, флирт, танцы, игры. Можно работать в&nbsp;формате без&nbsp;обнажения. Границы обсуждаем заранее, и&nbsp;никто не&nbsp;вправе их&nbsp;нарушать.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Меня увидят знакомые?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Риск сводим к&nbsp;минимуму: закрываем доступ из&nbsp;твоей страны и&nbsp;города на&nbsp;всех площадках, а&nbsp;псевдоним и&nbsp;сценический образ добавляют ещё один слой защиты. Всё это включаем с&nbsp;первого эфира.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Нужен ли английский?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Нет. Есть переводчик и&nbsp;готовые фразы, а&nbsp;английский подтянешь по&nbsp;ходу работы.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Можно совмещать с&nbsp;учёбой?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Да. Выбери один из&nbsp;трёх графиков&nbsp;— утро 08:00–15:00, день 15:00–22:00 или ночь 22:00–08:00,&nbsp;— плюс два выходных в&nbsp;неделю.</p></div>
+          </details>
+          <details class="acc">
+            <summary class="acc__q">Можно работать из&nbsp;дома?<span class="acc__icon" aria-hidden="true"></span></summary>
+            <div class="acc__a"><p>Да. Нужны компьютер, камера и&nbsp;стабильный интернет. Из&nbsp;дома доля с&nbsp;аккаунтов обсуждается индивидуально, обучение и&nbsp;поддержка от&nbsp;нас. В&nbsp;студии твоя доля&nbsp;— 50%: комната, свет, техника, админ и&nbsp;охрана на&nbsp;нас.</p></div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 15. APPLY: one short form on the BACKSTAGE pass (main.js initForm; blocks.js: pass number, name, «ПРИНЯТО») ============ -->
+  <section class="section apply" id="apply" aria-labelledby="apply-title">
+    <div class="container apply__grid">
+      <div class="apply__copy" data-reveal>
+        <p class="eyebrow">Анкета</p>
+        <h2 class="section-title" id="apply-title">Настало время познакомиться</h2>
+        <p class="section-lead">Давай просто познакомимся. Оставь контакт&nbsp;— мы спокойно расскажем, как всё устроено, ответим на&nbsp;вопросы, а&nbsp;дальше ты решишь сама.</p>
+        <ul class="apply__notes">
+          <li>Фото не&nbsp;нужны</li>
+          <li>Анкету видит только менеджер</li>
+          <li>Можно указать псевдоним</li>
+        </ul>
+      </div>
+
+      <div class="pass-rig" data-pass data-reveal style="--i:1">
+        <div class="lanyard" aria-hidden="true"><span class="lanyard__strap lanyard__strap--l"></span><span class="lanyard__strap lanyard__strap--r"></span></div>
+        <div class="pass" data-pass-card>
+          <span class="pass__shadow" aria-hidden="true"></span>
+          <div class="pass__card">
+            <div class="pass__top" aria-hidden="true">
+              <span class="pass__slot"></span>
+              <p class="pass__kicker"><span>ae studio</span><span>Кастинг 2026</span></p>
+              <p class="pass__title">Backstage</p>
+              <span class="pass__seal"><b>ae</b></span>
+            </div>
+            <div class="pass__id" aria-hidden="true">
+              <span class="pass__photo"><b>ae</b><small>фото не&nbsp;нужно</small></span>
+              <dl class="pass__meta">
+                <div class="pass__meta-name"><dt>Имя</dt><dd data-pass-name data-empty="Твоё имя">Твоё имя</dd></div>
+                <div><dt>Доступ</dt><dd>Кастинг · 18+</dd></div>
+                <div><dt>Пропуск</dt><dd>№&nbsp;<span data-pass-no>0418</span></dd></div>
+              </dl>
+            </div>
+            <form class="form" data-form data-endpoint="" novalidate>
+              <div class="form__fields" data-form-fields>
+                <div class="field">
+                  <label for="f-name">Имя или псевдоним</label>
+                  <input id="f-name" name="name" type="text" autocomplete="given-name" required aria-describedby="f-name-err">
+                  <p class="field__error" id="f-name-err"></p>
+                </div>
+                <div class="field">
+                  <label for="f-contact">Телефон (+380) или @telegram</label>
+                  <input id="f-contact" name="contact" type="text" autocomplete="tel" required placeholder="+380 67 000 00 00 или @username" aria-describedby="f-contact-err">
+                  <p class="field__error" id="f-contact-err"></p>
+                </div>
+                <fieldset class="field field--chips">
+                  <legend>Где хочешь работать</legend>
+                  <div class="segmented">
+                    <label class="segmented__opt"><input type="radio" id="f-place-studio" name="place" value="studio" checked><span>В&nbsp;студии</span></label>
+                    <label class="segmented__opt"><input type="radio" id="f-place-home" name="place" value="home"><span>Из&nbsp;дома</span></label>
+                  </div>
+                </fieldset>
+                <div class="field">
+                  <label class="check" for="f-adult">
+                    <input type="checkbox" id="f-adult" name="adult" required aria-describedby="f-adult-err">
+                    <span class="check__box" aria-hidden="true"></span>
+                    <span>Мне есть 18&nbsp;лет</span>
+                  </label>
+                  <p class="field__error" id="f-adult-err"></p>
+                </div>
+                <div class="field">
+                  <label class="check" for="f-consent">
+                    <input type="checkbox" id="f-consent" name="consent" required aria-describedby="f-consent-err">
+                    <span class="check__box" aria-hidden="true"></span>
+                    <span>Согласна на&nbsp;обработку персональных данных</span>
+                  </label>
+                  <p class="field__error" id="f-consent-err"></p>
+                </div>
+              </div>
+
+              <p class="form__error" data-form-error role="alert"></p>
+
+              <div class="form__nav">
+                <button type="submit" class="btn btn--light" data-form-submit>Написать нам</button>
+              </div>
+
+              <div class="form__success" data-form-success hidden tabindex="-1">
+                <svg class="form__success-snake" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+                  <circle class="form__success-ring" cx="60" cy="60" r="44"/>
+                  <path class="form__success-body" d="M60 16a44 44 0 1 1-38.1 22"/>
+                  <circle class="form__success-head" cx="21.9" cy="38" r="7"/>
+                </svg>
+                <h3 class="form__success-title">Мы получили твой контакт</h3>
+                <p class="form__success-text">Менеджер напишет тебе в&nbsp;течение суток. Не&nbsp;пришло сообщение? Напиши нам сама: <a href="https://t.me/ae_studio_cam" target="_blank" rel="noopener">@ae_studio_cam</a>. А&nbsp;пока можно <a href="#income">посчитать доход</a> или&nbsp;<a href="#faq">заглянуть в&nbsp;вопросы</a>.</p>
+              </div>
+            </form>
+            <div class="pass__stub" aria-hidden="true">
+              <span class="pass__barcode"><svg class="pass__bars" viewBox="0 0 300 40" preserveAspectRatio="none" focusable="false"><rect x="4.0" width="10.0" height="40" class="b-i"/><rect x="6.2" width="5.6" height="40" class="b-c"/><rect x="16.2" width="8.4" height="40" class="b-i"/><rect x="18.4" width="4.0" height="40" class="b-c"/><rect x="29.6" width="9.6" height="40" class="b-i"/><rect x="32.4" width="4.0" height="40" class="b-c"/><rect x="44.2" width="7.2" height="40" class="b-i"/><rect x="45.8" width="4.0" height="40" class="b-c"/><rect x="58.9" width="10.0" height="40" class="b-i"/><rect x="61.1" width="5.6" height="40" class="b-c"/><rect x="72.3" width="10.0" height="40" class="b-i"/><rect x="74.5" width="5.6" height="40" class="b-c"/><rect x="89.8" width="8.2" height="40" class="b-i"/><rect x="92.6" width="2.6" height="40" class="b-c"/><rect x="100.2" width="7.0" height="40" class="b-i"/><rect x="102.4" width="2.6" height="40" class="b-c"/><rect x="114.7" width="7.0" height="40" class="b-i"/><rect x="116.9" width="2.6" height="40" class="b-c"/><rect x="129.2" width="8.2" height="40" class="b-i"/><rect x="132.0" width="2.6" height="40" class="b-c"/><rect x="139.6" width="8.4" height="40" class="b-i"/><rect x="141.8" width="4.0" height="40" class="b-c"/><rect x="150.2" width="8.8" height="40" class="b-i"/><rect x="151.8" width="5.6" height="40" class="b-c"/><rect x="162.4" width="7.2" height="40" class="b-i"/><rect x="164.0" width="4.0" height="40" class="b-c"/><rect x="177.1" width="13.0" height="40" class="b-i"/><rect x="179.9" width="7.4" height="40" class="b-c"/><rect x="195.1" width="8.4" height="40" class="b-i"/><rect x="197.3" width="4.0" height="40" class="b-c"/><rect x="205.7" width="7.2" height="40" class="b-i"/><rect x="207.3" width="4.0" height="40" class="b-c"/><rect x="220.4" width="7.2" height="40" class="b-i"/><rect x="222.0" width="4.0" height="40" class="b-c"/><rect x="229.8" width="8.8" height="40" class="b-i"/><rect x="231.4" width="5.6" height="40" class="b-c"/><rect x="246.1" width="5.8" height="40" class="b-i"/><rect x="247.7" width="2.6" height="40" class="b-c"/><rect x="255.3" width="8.8" height="40" class="b-i"/><rect x="256.9" width="5.6" height="40" class="b-c"/><rect x="267.5" width="7.0" height="40" class="b-i"/><rect x="269.7" width="2.6" height="40" class="b-c"/><rect x="279.5" width="11.8" height="40" class="b-i"/><rect x="281.7" width="7.4" height="40" class="b-c"/></svg></span>
+              <span class="pass__code"><b>ae·26·<span data-pass-no>0418</span></b><small>backstage</small></span>
+            </div>
+            <span class="pass__holo" aria-hidden="true"></span>
+            <span class="pass__stamp" aria-hidden="true"><b>Принято</b><small>ae studio · кастинг</small></span>
+          </div>
+          <span class="pass__hook" aria-hidden="true"><span class="pass__ring"></span><span class="pass__swivel"></span><span class="pass__tab"></span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ 16. FOOTER ============ -->
+<footer class="footer" data-footer>
+  <canvas class="footer__canvas" data-footer-snake aria-hidden="true"></canvas>
+  <div class="container footer__inner">
+    <p class="footer__logo" aria-hidden="true"><span class="footer__ae">ae</span><span class="footer__studio">studio</span></p>
+    <div class="footer__cols">
+      <div class="footer__col">
+        <h2 class="footer__h">Связаться</h2>
+        <p class="footer__contact">Telegram: <span class="mono" data-copy-text>@ae_studio_cam</span></p>
+        <div class="footer__actions">
+          <a class="btn btn--light btn--small" href="https://t.me/ae_studio_cam" target="_blank" rel="noopener">Написать в&nbsp;Telegram</a>
+          <button class="btn btn--ghost btn--small" type="button" data-copy="@ae_studio_cam">Скопировать ник</button>
+        </div>
+        <p class="footer__copied" data-copy-status aria-live="polite"></p>
+      </div>
+      <nav class="footer__col" aria-label="Разделы сайта">
+        <h2 class="footer__h">Разделы</h2>
+        <a href="#fit">Кому подойдёт</a>
+        <a href="#conditions">Условия</a>
+        <a href="#income">Доход</a>
+        <a href="#path">Путь модели</a>
+        <a href="#privacy">Безопасность</a>
+        <a href="#faq">Вопросы</a>
+      </nav>
+      <div class="footer__col">
+        <h2 class="footer__h">Важно</h2>
+        <p>Студия работает только с&nbsp;совершеннолетними. Все модели проходят проверку документов.</p>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>© 2026 ae studio</span>
+      <span class="badge-18" role="img" aria-label="Только для лиц от 18 лет">18+</span>
+      <a href="#top">Наверх</a>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js" defer></script>
+<script src="assets/js/3d/snake3d.js" defer></script>
+<script src="assets/js/3d/snake3d-page.js" defer></script>
+<script src="assets/js/main.js" defer></script>
+<script src="assets/js/blocks.js" defer></script>
+</body>
+</html>
