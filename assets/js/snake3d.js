@@ -465,6 +465,7 @@
   }
   Rest.prototype.set = function (m, tier) {
     var sm = this.s.sm, R = this;
+    if (!sm || !sm.rest) return;
     R.m = m; R.sm = sm; R.k = m.tiers[tier]; R.look = sm.look || null; R.tg = R.look && R.look.tongue || null;
     R.flowM = sm.rest.flow || null; R.br = sm.rest.breath || { periodS: 3.6, amp: 0 };
     if (R.look) { R.ka = R.tka = R.look.angles[R.look.neutral]; R.cell = R.look.neutral; }
@@ -1059,6 +1060,53 @@
     }
   };
 
+  /* ------------------------------------------------------------------ Journey (docs/snake3d-journey.md)
+     A fixed strip at the right edge between the hero and the gauge (desktop): one all-intra clip [in | loop | out],
+     scrubbed by seeking; the loop repeats n times so one frame is ~14 px of scroll. Runs backwards on scroll up. */
+  function Journey(layer) { Scene.call(this, 'journey', layer, layer); this.on = false; this.st = 'off'; }
+  Journey.prototype = Object.create(Scene.prototype);
+  Journey.prototype.layout = function () {
+    var S = this, sm = S.sm; if (!sm || !hero || !hero.sb) return;
+    var H = vh(), fr = sm.frame, s = H / fr[1], c = sm.clips.journey, sg = c.segments;
+    S.s = s; S.vh = H; S.D = s * S.m.pxPerD;
+    var ls = S.layer.style;
+    ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', H + 'px');
+    S.y0 = hero.sb * hero.vh;
+    S.y1 = gauge && gauge.docTop ? gauge.docTop - H : d.documentElement.scrollHeight - H;
+    var a = sg.in[1], L = sg.loop[1] - sg.loop[0], o = c.frames - sg.out[0], R = S.y1 - S.y0;
+    S.n = Math.max(1, Math.round((R / 14 - a - o) / L));
+    S.tot = a + S.n * L + o; S.ppf = R / S.tot;
+    S.fits = mm('(min-width: 960px)') && R > S.tot * 4;
+    if (!S.tier) S.tier = tierFor(S.D * Math.min(w.devicePixelRatio || 1, 2), S.m);
+    S.need = S.D * Math.min(w.devicePixelRatio || 1, 2);
+    S.size(S.tier); S.dirty = true;
+  };
+  Journey.prototype.fmap = function (U) {                           // unrolled frame -> clip frame
+    var sg = this.sm.clips.journey.segments, a = sg.in[1], b = sg.loop[0], L = sg.loop[1] - b, N = this.sm.clips.journey.frames;
+    U = Math.max(0, Math.floor(U));
+    if (U < a) return U;
+    var u = U - a, loops = this.n * L;
+    return u < loops ? b + (u % L) : Math.min(N - 1, sg.out[0] + (u - loops));
+  };
+  Journey.prototype.onClipFrame = function () { this.dirty = true; };
+  Journey.prototype.onStill = function (on) { if (on) { this.pauseAll(); this.hide(0); } };
+  Journey.prototype.hide = function (ms) { if (!this.on) return; this.on = false; this.vis = 0; this.opacity(0, ms || 0); var S = this; setTimeout(function () { if (!S.on) S.clear(); }, (ms || 0) + 20); };
+  Journey.prototype.tick = function (t) {
+    var S = this, c = S.clips.journey;
+    if (hero && hero.st !== 'gone' && hero.st !== 'still' && hero.vis === 0 && scrollY > S.y0 && S.fits && mode === 'motion') hero.toGone(false);   // hero out of view: she has left
+    var want = mode === 'motion' && S.fits && video === 'ok' && !jumping && hero && hero.st === 'gone' &&
+      (!gauge || gauge.st === 'empty' || gauge.st === 'off') && scrollY > S.y0 && scrollY < S.y1;
+    if (!want) { S.hide(jumping ? 200 : 0); return; }
+    if (!S.ready('journey')) {
+      if (!S.loading && !hero.p4 && !(S.clipFail && S.clipFail.journey) && S.gl()) {   /* never while the hero still loads its pair into hero B */ S.loading = true; S.loadClip('journey', pool[1], 'low').then(function () { S.loading = false; kick(); }, function () { S.loading = false; }); }
+      return;
+    }
+    var f = S.fmap((scrollY - S.y0) / S.ppf);
+    if (c.seekTo == null || t - c.seekT > 150) { if (c.F !== f) c.seek(f); }
+    c.poll();
+    if (!S.on && c.F >= 0) { S.on = true; S.vis = 1; S.view = { a: c }; S.opacity(1, 0); S.dirty = true; }
+  };
+
   /* ------------------------------------------------------------------ quality / watchdog helpers */
   var stalls = 0, slowSegs = 0;
   function stallHit(c) {
@@ -1074,7 +1122,7 @@
   }
 
   /* ------------------------------------------------------------------ Director */
-  var hero = null, gauge = null, M = null, opts = null, hubbed = false;
+  var hero = null, gauge = null, journey = null, M = null, opts = null, hubbed = false;
   function kick() { if (!rafId && !d.hidden && director) rafId = requestAnimationFrame(loop); }
   var lastT = 0;
   function loop(t) {
@@ -1248,6 +1296,10 @@
     var heroDone = false;
     scenes.forEach(function (S) { S.m = m; S.sm = m.scenes[S.name] || null; });
     if (gauge && !gauge.sm) { scenes.splice(scenes.indexOf(gauge), 1); gauge.layer.hidden = true; gauge = null; }
+    if (m.scenes.journey && hero && mode === 'motion') {                  // the right-edge journey layer (desktop)
+      var jl = el('div', 'snake3d snake3d--journey', d.body); jl.setAttribute('aria-hidden', 'true');
+      journey = new Journey(jl); journey.m = m; journey.sm = m.scenes.journey; scenes.push(journey);
+    }
     if (DEBUG) checkInvariants(m);
     onLayoutAll();
     scenes.forEach(function (S) { S.R.set(m, S.tier); });
@@ -1304,10 +1356,10 @@
     var bad = [];
     Object.keys(m.scenes).forEach(function (n) {
       var s = m.scenes[n], st = s.stage, inS = function (r) { return r[0] >= st[0] && r[1] >= st[1] && r[0] + r[2] <= st[0] + st[2] && r[1] + r[3] <= st[1] + st[3]; };
-      var rects = [['still', s.rest.still.rect]]; if (s.rest.flow) rects.push(['flow', s.rest.flow.rect]);
+      var rects = s.rest ? [['still', s.rest.still.rect]] : []; if (s.rest && s.rest.flow) rects.push(['flow', s.rest.flow.rect]);
       if (s.look) rects.push(['look', s.look.rect], ['mask', s.look.mask.rect]);
       rects.forEach(function (r) { if (r[1].some(function (v) { return v % 24; })) bad.push(n + '.' + r[0] + ' not x24'); if (!inS(r[1])) bad.push(n + '.' + r[0] + ' outside stage'); });
-      if (String(s.rest.still.rect) !== String(st)) bad.push(n + ': still.rect != stage');
+      if (s.rest && String(s.rest.still.rect) !== String(st)) bad.push(n + ': still.rect != stage');
       Object.keys(s.clips || {}).forEach(function (k) { if (s.clips[k].rect.some(function (v) { return v % 96; })) bad.push(n + '.' + k + ' rect not x96'); });
     });
     Object.keys(m.files).forEach(function (k) { var f = m.files[k]; if (f.frames) { var mb = Math.ceil(f.size[0] / 16) * Math.ceil(f.size[1] / 16); if (mb > 8192 && k.indexOf('/L/') < 0) bad.push(k + ' ' + mb + ' MBs'); } });
@@ -1363,7 +1415,7 @@
     state: function () {
       return {
         hero: hero ? (hero.st === 'boot' && mode === 'still' ? 'still' : hero.st) : 'boot',
-        gauge: gauge ? gauge.st : 'off', mode: mode, video: video,
+        gauge: gauge ? gauge.st : 'off', journey: journey ? (journey.on ? 'on' : 'off') : 'none', mode: mode, video: video,
         tier: { hero: hero && hero.tier || null, gauge: gauge && gauge.tier || null },
         clipTier: hero && hero.clips.intro ? hero.clips.intro.tier : (M && hero && hero.tier ? clipTierOf(hero.tier, M) : null),
         codec: hero && hero.clips.intro ? hero.clips.intro.codec : null
@@ -1372,10 +1424,12 @@
     destroy: function () {
       scenes.forEach(function (S) { S.pauseAll(); S.cv.remove(); S.img.remove(); S.layer.classList.remove('is-img', 'is-fallback'); S.layer.style.cssText = ''; });
       if (pool) { pool.forEach(release); pool.host.remove(); pool = null; }
-      scenes = []; hero = gauge = null; director = null; root.classList.remove('has-plush-ring');
+      if (journey) journey.layer.remove();
+      scenes = []; hero = gauge = journey = null; director = null; root.classList.remove('has-plush-ring');
       if (dbg) { dbg.remove(); dbg = null; }
     },
-    _frameOf: frameOf, _fitLut: fitLut
+    _frameOf: frameOf, _fitLut: fitLut,
+    _journey: function () { var J = journey; return J && { fits: J.fits, y0: J.y0, y1: J.y1, n: J.n, ppf: J.ppf, tier: J.tier, ready: J.ready('journey'), fail: J.clipFail, loading: J.loading, G: !!J.G }; }
   };
   w.AeSnake3D = api;
 })(window, document);

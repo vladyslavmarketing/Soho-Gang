@@ -2830,6 +2830,9 @@ html.reduced-motion .hero__hint { display: none; }
    --s3d-x/-y/-w/-h (px, relative to .hero / .gauge). The rest still covers the whole layer. */
 .snake3d { position: absolute; left: var(--s3d-x, 0); top: var(--s3d-y, 0); width: var(--s3d-w, 0); height: var(--s3d-h, 0); pointer-events: none; user-select: none; }
 .snake3d--hero { z-index: 1; }   /* under .hero__studio (z 1, later in the DOM), the vignette (3), the viewfinder (4), the copy (5) */
+/* right-edge journey between the hero and #income (desktop): fixed, above section backgrounds, under content (z ≥ 4) */
+.snake3d--journey { position: fixed; left: auto; right: 0; top: 0; z-index: 3; }
+@media (max-width: 959px) { .snake3d--journey { display: none; } }
 html:not(.js) .snake3d--hero, .snake3d--hero.is-fallback {   /* stage from the CSS logo box; constants = W5, from the shipped manifest (animatic set) */
   left: calc(var(--logo-x) + var(--logo-w) * -0.4253);
   top: calc(var(--logo-y) + var(--logo-w) * -0.2659);

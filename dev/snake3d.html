@@ -70,7 +70,7 @@
   setTimeout(function () { document.documentElement.classList.add('is-loaded'); }, 300);
   ['snake:written', 'snake:unwritten'].forEach(function (n) { hero.addEventListener(n, function () { hero.classList.toggle('is-written', n === 'snake:written'); hero.classList.add('was-written'); console.log(n); }); });
   ['snake:arrived', 'snake:departed'].forEach(function (n) { gauge.addEventListener(n, function () { gauge.classList.toggle('has-snake', n === 'snake:arrived'); console.log(n); }); });
-  var snake = AeSnake3D.mount({ hero: hero, gauge: gauge, still: matchMedia('(prefers-reduced-motion: reduce)').matches, base: '../assets/snake3d/' });
+  var snake = AeSnake3D.mount({ hero: hero, gauge: gauge, still: matchMedia('(prefers-reduced-motion: reduce)').matches, base: (/[?&]base=([^&]+)/.exec(location.search) || [0, '../assets/snake3d/'])[1] });
   window.snake = snake;
 
   /* switches */

@@ -4,8 +4,9 @@
      A · #rooms  formats + studio equipment
      B · #faq    «Чат с менеджером» — a stream-chat panel with quick-reply chips
      C · #apply  BACKSTAGE PASS     — the form as a casting pass on a snake-band lanyard
-   The plush snake now lives in one layer per scene inside its own section (snake3d.js),
-   so these sections no longer need to avoid stacking contexts.
+   These sections sit BELOW the snake's right-edge journey (hero → #income), but they still
+   never create a stacking context on the <section> itself: the journey layer (fixed, z 3)
+   must stay under every content wrapper (z 4).
    ========================================================================== */
 
 /* ==========================================================================
@@ -853,8 +854,9 @@ html.reduced-motion .pass { transform: none !important; }
    hero perks · nav Telegram · floating Telegram · #fit checklist · #conditions ·
    platforms marquee · #format 50/70 · formats · values/benefits racks · #important ·
    safety pledges · reviews reel · #about.
-   The old journey-zone constraint is gone (snake3d.js draws inside the hero and the gauge
-   only); the z-index ≥ 4 rules on content wrappers stay and are harmless.
+   #fit, #conditions, .platforms and #format lie INSIDE the snake's right-edge journey
+   (snake3d.js, docs/snake3d-journey.md): never isolation / transform / filter / opacity /
+   z-index on those sections; every content wrapper sits at z-index ≥ 4.
    ========================================================================== */
 
 /* shared line icon (sprite <symbol>s in index.html) */
