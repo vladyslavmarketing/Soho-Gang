@@ -1,5 +1,12 @@
 # Decisions
 
+> **Paths in this document.** It was written in the main session's sandbox. Map its paths like this:
+> - `…/scratchpad/diva-wt/…` → branch `claude/ae-diva-structure` at commit `8093dd6`;
+> - `diva-hero-d.png`, `diva-income-d.png`, `diva-hero-m.png` → `docs/snake3d-ref/` on branch `claude/webcam-studio-animation-design-jl8r68`;
+> - `a.webm` → `blender/export/clipA/snake_idle.webm` on branch `claude/snake-blender`;
+> - `…/scratchpad/ab/snake_scene.py`, `snake_anim.py` → `blender/` on branch `claude/snake-blender`.
+
+
 **Status:** v3, 2026-11-09. This version merges spec v2 with the review round. DIVA line numbers were checked against commit `8093dd6` (branch `claude/ae-diva-structure`, worktree `diva-wt`).
 
 **How to send this document.** The BLENDER BRIEF and the WEB BRIEF each go to their own session. Each brief must be sent **together with the `# MANIFEST` section**: that section is part of both briefs and holds the glossary, schema, invariants and byte caps.
