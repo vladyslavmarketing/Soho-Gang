@@ -53,8 +53,9 @@ rng = np.random.default_rng(11)
 # ======================================================================================== photo measurements
 W_PX, H_PX = 1408, 768
 # centre line, snout (skin tip) -> tail, in photo pixels
+NOSE_OLD_PX = (385, 257)   # the snout tip of the first fit; the photo nose reaches ~17 px further (blunt muzzle)
 PATH_PX = [
-    (385, 257), (412, 252), (443, 239), (483, 222), (532, 203), (587, 205), (628, 209), (653, 221),
+    (368, 260), (412, 252), (443, 239), (483, 222), (532, 203), (587, 205), (628, 209), (653, 221),
     (678, 253), (678, 300), (655, 343), (610, 368), (550, 378), (500, 386), (455, 407), (428, 450),
     (430, 505), (458, 560), (505, 592), (565, 592), (615, 568), (655, 525), (688, 470), (712, 410),
     (738, 335), (768, 270), (810, 218), (868, 192), (925, 212), (965, 239), (982, 282), (978, 335),
@@ -88,8 +89,11 @@ NB = 56                     # spine bones behind the head
 N_AROUND = 32
 # calibrated against the photo (mean linear colour of pink / cream / black pixels, photo vs render)
 # light tones are fed more saturated: the hair model washes pale colours out toward grey
-COL = dict(pink='#CB7582', pink_deep='#AC4D5A', muzzle='#D6808E', eye_ring='#A05663',
-           cream='#EFCB95', black='#060202', tongue='#F0B5C3', skin_dark=0.72)
+# head: photo head pixels average (208, 142, 154), ~12 % lighter than the body, with pale frosted tips
+# tongue: fed darker than its on-screen colour (#E9A7B5) because the key + softbox light it brightly
+# (calibrated with 8 glossy bounces: fewer bounces cut the multiple scattering of light fur and it turns grey)
+COL = dict(pink='#BC6C78', pink_deep='#A0474F', head='#E0727F', muzzle='#E68C97', frost='#F9D0D3',
+           eye_ring='#B0606F', cream='#E2BC88', black='#060202', tongue='#CC8E9C', skin_dark=0.72)
 
 
 def hex2lin(h):
@@ -191,6 +195,11 @@ P2 = np.array([project(p) for p in path[::5]])
 S2 = S_PATH[::5]
 # arc length of every control point (to restrict ring lookups to the right stretch of body)
 S_CTRL = np.array([S_PATH[np.argmin(np.linalg.norm(path - c, axis=1))] for c in ctrl])
+# head measurements below are taken from the first-fit nose; NOSE_EXT is how far the blunt snout reaches past it
+_o, _d = ray(*NOSE_OLD_PX)
+NOSE_EXT = float(S_PATH[np.argmin(np.linalg.norm(path - (_o + _d * (-_o[1] / _d[1])), axis=1))])
+HEAD_LEN = 1.30 + NOSE_EXT
+log('nose extension %.3f D, head bone %.3f D' % (NOSE_EXT, HEAD_LEN))
 
 
 def ring_s():
@@ -211,17 +220,19 @@ log('rings at s =', np.round(RING_S, 2))
 def head_profile(s):
     """outer half height, half width and centre offset (z) at arc length s (snout tip = 0)"""
     s = np.asarray(s, float)
-    # Egg-shaped head measured on the photo: ~1.3 D tall from 0.5 to 1.15 D behind the nose, the front is the
-    # rounded end of an ellipse (no flat face), the axis dips toward the nose (nose low, forehead sloping down
-    # to it), then the head narrows into the neck by ~1.75 D.
-    HEAD_H, HEAD_W, EGG_C, EGG_A = 0.59, 0.56, 0.95, 0.95
-    q = np.clip((EGG_C - s) / EGG_A, 0, 1)
-    egg = np.sqrt(1 - q * q)                                                # rounded front of the egg
-    neck = sstep(1.15, 1.75, s)
+    u = s - NOSE_EXT                    # measured from the first-fit nose (photo columns were compared there)
+    # Round, chubby head measured on the photo silhouette: the front is the rounded end of an ellipse reaching
+    # NOSE_EXT past the first-fit nose (short blunt muzzle), the axis dips toward the nose (nose low, forehead
+    # sloping down to it), the crown is ~1.12 D tall around 0.75-0.9 D and the back of the head eases into the
+    # neck by ~1.35 D (the photo head is not taller at the back than over the eye).
+    HEAD_H, HEAD_W, EGG_C = 0.56, 0.58, 0.90
+    q = np.clip((EGG_C - u) / (EGG_C + NOSE_EXT), 0, 1)
+    egg = np.sqrt(1 - q * q)                                                # rounded front
+    back = sstep(0.75, 1.35, u)                                             # back of the head -> neck
     base = outer_radius(s, L)
-    hh = HEAD_H * egg * (1 - neck) + base * neck
-    ww = HEAD_W * egg * (1 - neck) + base * neck
-    cz = (-0.03 - 0.20 * np.clip(1 - s / EGG_C, 0, 1) ** 1.5) * (1 - neck)
+    hh = HEAD_H * egg * (1 - back) + base * back
+    ww = HEAD_W * egg * (1 - back) + base * back
+    cz = (-0.03 - 0.20 * q ** 1.5) * (1 - back)
     te = np.clip((L - s) / 0.35, 0, 1)
     rt2 = np.sqrt(1 - (1 - te) ** 2)                                        # round tail tip
     return hh * rt2, ww * rt2, cz
@@ -238,7 +249,7 @@ def skin_point(s, th):
     return np.stack([np.asarray(s, float) * np.ones_like(th), w * np.cos(th), cz + h * np.sin(th)], -1)
 
 
-EYE_S, EYE_Z, EYE_R = 0.81, -0.05, 0.10          # photo: eye on the head axis, 0.81 D behind the nose
+EYE_S, EYE_Z, EYE_R = NOSE_EXT + 0.86, -0.05, 0.10   # photo: eye on the head axis, ~1.0 D behind the nose tip
 
 
 def eye_pos(sign):
@@ -256,12 +267,13 @@ def surface_color(s, th, P):
     col = np.tile(hex2lin(COL['pink']), (n, 1))
     deep = (0.35 * sstep(0.2, -0.7, np.sin(th)))[:, None]                 # deeper rose low on the sides
     col = col * (1 - deep) + hex2lin(COL['pink_deep']) * deep
-    head = (0.75 * (1 - sstep(1.2, 1.6, s)))[:, None]                    # the head is a touch lighter
-    col = col * (1 - head) + hex2lin(COL['muzzle']) * head
-    muz = (1 - sstep(0.10, 0.42, s))[:, None]                             # pale muzzle
+    u = s - NOSE_EXT
+    head = (1 - sstep(1.2, 1.6, u))[:, None]                              # the head is lighter than the body
+    col = col * (1 - head) + hex2lin(COL['head']) * head
+    muz = (1 - sstep(0.0, 0.40, u))[:, None]                              # pale muzzle
     col = col * (1 - muz) + hex2lin(COL['muzzle']) * muz
     de = np.min([np.linalg.norm(P - e, axis=1) for e in EYES], axis=0)
-    ring = (0.6 * (1 - sstep(EYE_R * 1.05, EYE_R * 1.9, de)))[:, None]   # darker ring round the eye
+    ring = (0.45 * (1 - sstep(EYE_R * 1.05, EYE_R * 1.9, de)))[:, None]  # rosier ring round the eye
     col = col * (1 - ring) + hex2lin(COL['eye_ring']) * ring
     d = s[:, None] - RING_S[None, :]
     k = np.argmin(np.abs(d), axis=1)
@@ -281,7 +293,7 @@ scene.render.engine = 'CYCLES'
 S_RINGS = [0.0]
 while S_RINGS[-1] < L - 1e-6:
     s = S_RINGS[-1]
-    S_RINGS.append(min(s + (0.045 if s < 1.8 else (0.13 if s < L - 1.0 else 0.06)), L))
+    S_RINGS.append(min(s + (0.045 if s < 1.8 + NOSE_EXT else (0.13 if s < L - 1.0 else 0.06)), L))
 S_RINGS = np.array(S_RINGS)
 TH = -math.pi / 2 + np.arange(N_AROUND) * 2 * math.pi / N_AROUND        # starts at the belly line
 bm = bmesh.new()
@@ -346,10 +358,11 @@ for i in range(NB):
     b.parent = prev; b.use_connect = True
     prev = b
     bone_names.append(b.name)
-jb = eb.new('Jaw'); jb.head = (0.95, 0, -0.18); jb.tail = (0.12, 0, -0.30); jb.parent = hb_
+jb = eb.new('Jaw'); jb.head = (0.95 + NOSE_EXT, 0, -0.18); jb.tail = (0.12 + NOSE_EXT, 0, -0.30); jb.parent = hb_
 # tongue: short bone at the mouth; scaling it pulls the tongue in / pushes it out
-TONGUE_ANG = math.radians(14)
-TONGUE_BASE = (0.10, 0.0, float(head_profile(0.08)[2]) - 0.16)
+TONGUE_ANG = math.radians(30)                     # photo: the tongue drops ~50 deg below the horizon
+_hh, _ww, _cz = head_profile(NOSE_EXT + 0.05)     # mouth: under the blunt snout
+TONGUE_BASE = (NOSE_EXT + 0.05, 0.0, float(_cz - _hh) + 0.12)
 tb = eb.new('Tongue'); tb.head = TONGUE_BASE
 tb.tail = (TONGUE_BASE[0] - 0.05 * math.cos(TONGUE_ANG), 0.0, TONGUE_BASE[2] - 0.05 * math.sin(TONGUE_ANG))
 tb.parent = hb_
@@ -451,7 +464,7 @@ for name, e in (('EyeL', EYES[0]), ('EyeR', EYES[1])):
 def tongue_mesh():
     """flat forked ribbon in the rest frame of the head: leaves the mouth forward (-X) and down"""
     bx, bz = TONGUE_BASE[0], TONGUE_BASE[2]
-    length, width, ang, n, fork = 0.95, 0.11, TONGUE_ANG, 14, 0.72
+    length, width, ang, n, fork = 0.95, 0.14, TONGUE_ANG, 14, 0.64
     verts, faces, rows = [], [], []
     for i in range(n + 1):
         t = i / n
@@ -464,7 +477,7 @@ def tongue_mesh():
             offs = (-w / 2, w / 2)
         else:
             f = (t - fork) / (1 - fork)
-            sp, w = 0.09 * f, width * 0.45 * (1 - 0.8 * f)
+            sp, w = 0.13 * f, width * 0.5 * (1 - 0.7 * f)
             offs = (-sp - w / 2, -sp + w / 2, sp - w / 2, sp + w / 2)
         verts += [(x + nx * o, 0.0, z + nz * o) for o in offs]
     for i in range(n):
@@ -483,7 +496,7 @@ def tongue_mesh():
 
 
 tme = tongue_mesh()
-tme.materials.append(mat_principled('Tongue', hex2lin(COL['tongue']), 0.35, spec=0.6))
+tme.materials.append(mat_principled('Tongue', hex2lin(COL['tongue']), 0.8, spec=0.25))   # matte
 tongue = bpy.data.objects.new('Tongue', tme)
 scene.collection.objects.link(tongue)
 sm_ = tongue.modifiers.new('Thick', 'SOLIDIFY'); sm_.thickness = 0.018; sm_.offset = 0
@@ -566,20 +579,25 @@ def grow_fur():
     eth = nrm(np.stack([np.zeros(n), -np.sin(th), np.cos(th)], 1))
     part = (0.75 * np.clip(np.cos(2 * th), 0, 1) * np.sign(np.sin(2 * th)) * sstep(1.4, 2.2, s))[:, None]
     d = ex + eth * part
+    u = s - NOSE_EXT
     snout = np.array([-0.05, 0, float(head_profile(0.0)[2])])
-    hd = (1 - sstep(1.0, 1.6, s))[:, None]
+    hd = (1 - sstep(1.0, 1.6, u))[:, None]
     d = d * (1 - hd) + (nrm(P - snout) * 0.6 + ex * 1.0) * hd
     for e in EYES:
         de = np.linalg.norm(P - e, axis=1)
         d += nrm(P - e) * (1.4 * (1 - sstep(EYE_R * 1.1, EYE_R * 3.0, de)))[:, None]
     d = nrm(d - (d * N).sum(1, keepdims=True) * N)
-    fl = fur_scale(hh, ww) * FUR * FUR_STRAND * (0.82 + 0.18 * sstep(0.05, 0.45, s))   # shorter on the muzzle
-    fl *= 1 + 0.25 * (1 - sstep(1.2, 1.6, s))                    # fluffier pile on the head
+    fl = fur_scale(hh, ww) * FUR * FUR_STRAND * (0.82 + 0.18 * sstep(-0.1, 0.45, u))  # shorter on the muzzle
+    fl *= 1 + 0.25 * (1 - sstep(1.2, 1.6, u))                    # fluffier pile on the head
     for e in EYES:
         fl *= 0.06 + 0.94 * sstep(EYE_R * 1.2, EYE_R * 3.0, np.linalg.norm(P - e, axis=1))
     col = surface_color(s, th, P) * rng.uniform(0.88, 1.1, (n, 1))
-    hw = 1 - sstep(1.2, 1.6, s)                                   # the head pile stands up more (fluffier)
-    shade = sstep(0.15, 0.55, s) * (1 - 0.9 * hw)                 # little root darkening on the head, none on the muzzle
+    hw = 1 - sstep(1.2, 1.6, u)                                   # the head pile stands up more (fluffier)
+    # frosted head: on the photo a share of the head strands is almost white-pink (p80 of the head ~ 235,206,210)
+    de = np.min([np.linalg.norm(P - e, axis=1) for e in EYES], axis=0)
+    fr = hw * sstep(EYE_R * 1.3, EYE_R * 2.4, de) * np.where(rng.random(n) < 0.6, rng.uniform(0.2, 0.55, n), 0.0)
+    col = col * (1 - fr[:, None]) + hex2lin(COL['frost']) * fr[:, None]
+    shade = sstep(1.3, 1.8, u)                                    # no root darkening on the head (reads as dirt)
     lean = (0.3 - 0.15 * hw, 1.1 - 0.4 * hw)
     return P, N, d, fl, col, UV, shade, lean
 
@@ -681,7 +699,9 @@ area_light('Back', (2, 12, floor_z + 9), mid, 1500, 8, (1.0, 0.96, 0.96))
 scene.cycles.samples = SAMPLES
 scene.cycles.use_denoising = True
 scene.cycles.denoiser = 'OPENIMAGEDENOISE'
-scene.cycles.max_bounces = 6
+BOUNCES = int(arg('--bounces', 8))      # hair counts as glossy: light fur needs several bounces to stay light
+scene.cycles.max_bounces = BOUNCES
+scene.cycles.glossy_bounces = BOUNCES
 scene.cycles.transparent_max_bounces = 16
 scene.cycles_curves.shape = 'THICK'
 scene.view_settings.view_transform = 'Standard'
