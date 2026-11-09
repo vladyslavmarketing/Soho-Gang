@@ -14,6 +14,14 @@ Built by the web session from `blender/export/clipA/snake_idle.webm` (branch `cl
 | `hero/M/rest.webp` | Frame 0 as the rest still (also the no-JS / manifest-failure fallback). |
 | `manifest.json` | Written by hand: `strip: null`, `patches: null`, `look: null`, `flow: null`, no `depart`, no gauge. |
 
+**User feedback (2026-11-09):** the rest must move and the floor shadow must go ("тени портят эстетику").
+- The floor shadow is stripped: alpha is kept only on the fur core (alpha ≥ 250, dilated 3 px) or on coloured pixels
+  (straight max RGB ≥ 40); the shadow is near-black. Script: `dev/snake3d-noshadow.py`.
+- `clips.intro.loopRest: true` (placeholder-only field): after the intro the idle clip keeps looping as the rest state
+  instead of a still. It pauses off-screen, in still mode and in hidden tabs.
+- **For the final renders:** the spec's shadow-catcher floor (B2, B8-3) must be dropped too, otherwise the same grey
+  shadow returns. The Blender side should skip the shadow step (`a_s = 0`) or turn off the catcher.
+
 Anchors measured on frame 0: `aeBox [337, 135, 608, 465]`, eye `[424, 229]`, snout `[353, 235]`,
 `pxPerD` ≈ 90. With no `depart` clip the hero leaves by an opacity fade; with no gauge scene the flat
 SVG ring stays.
@@ -21,6 +29,7 @@ SVG ring stays.
 Commands (from the scratch folder holding `a.webm`):
 
 ```
+# superseded by dev/snake3d-noshadow.py (no shadow):
 ffmpeg -c:v libvpx-vp9 -i a.webm -filter_complex "[0]format=rgba,premultiply=inplace=1,format=rgba,split[c][a];[a]alphaextract,format=rgb24[al];[c]format=rgb24,pad=iw:ih+96:0:0:black[cp];[cp][al]vstack,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p" -c:v libx264 -crf 20 -an -color_primaries bt709 -color_trc bt709 -colorspace bt709 -color_range tv -movflags +faststart placeholder.h264.mp4
 ffmpeg -c:v libvpx-vp9 -i a.webm -frames:v 1 -c:v libwebp -pix_fmt bgra -quality 82 rest.webp
 ffmpeg -f lavfi -i color=c=black:s=16x16:r=30 -frames:v 1 -c:v libx264 -profile:v baseline -pix_fmt yuv420p -movflags +faststart -an probe.mp4   # -> manifest.probe

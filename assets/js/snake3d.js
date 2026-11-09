@@ -373,6 +373,7 @@
       function bad() { done(v.error ? v.error.code : 'error'); }
       function done(e) { clearTimeout(to); v.removeEventListener('loadedmetadata', ok); v.removeEventListener('error', bad); if (e) rej(e); else res(); }
       v.addEventListener('loadedmetadata', ok); v.addEventListener('error', bad);
+      v.loop = !!c.cm.loopRest;                                      // placeholder: the idle clip loops at rest
       v.src = useNet ? c.netUrl : c.src;
     }).then(function () {
       if (v.videoWidth !== c.vw || v.videoHeight !== c.vh) { director.stale(); throw 'size'; }
@@ -791,8 +792,11 @@
     S.lastClipEnd = now(); S.written();
     S.pHold = S.pIntro != null ? S.pIntro : S.p; S.go('rest');
     S.R.breathOn = 1; S.R.lastIn = now();
-    if (S.R.ok) S.fadeTo('rest', 5); else S.toRest(0);
-    if (c) setTimeout(function () { if (S.st !== 'intro') c.pause(); }, 200);
+    if (c && c.cm.loopRest) { /* keep looping the clip as the rest state */ }
+    else {
+      if (S.R.ok) S.fadeTo('rest', 5); else S.toRest(0);
+      if (c) setTimeout(function () { if (S.st !== 'intro') c.pause(); }, 200);
+    }
     S.loadExtras(); S.schedP4(); downgradeCheck(c);
   };
   Hero.prototype.playIntro = function () {
@@ -828,6 +832,13 @@
       else if (c) { c.poll(); if (c.F >= 0 && c.last()) S.introEnd(); }
     } else if (S.st === 'rest') {
       if (gauge && t - S.restT > 4000) gauge.p5();
+      var lc = S.clips.intro;                                         // placeholder (clips.intro.loopRest): rest = the looping idle clip
+      if (lc && lc.cm.loopRest && S.ready('intro') && S.vis > 0 && !d.hidden) {
+        if (lc.v.paused) lc.play(1);
+        lc.poll();
+        var V = S.view;
+        if (!V || (V.a !== lc && V.b !== lc)) { S.showImg(false); S.fadeTo(lc, 5); }
+      }
       if (p < S.pHold) S.pHold = p;
       if (jumping && p > S.pHold) { S.toGone(true); return; }
       if (S.fadeDep) {

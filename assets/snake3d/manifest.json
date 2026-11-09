@@ -1,7 +1,7 @@
 {
   "schema": "ae-snake3d/1",
-  "build": "2026-11-09T19:30:00Z",
-  "generator": "placeholder from blender/export/clipA/snake_idle.webm (web session, spec B10)",
+  "build": "2026-11-09T20:00:00Z",
+  "generator": "placeholder from blender/export/clipA/snake_idle.webm (web session, spec B10); floor shadow removed",
   "fps": 30,
   "pxPerD": 90,
   "tiers": {
@@ -85,7 +85,8 @@
             720
           ],
           "from": "rest",
-          "to": "rest"
+          "to": "rest",
+          "loopRest": true
         }
       }
     }
@@ -93,7 +94,7 @@
   "files": {
     "hero/M/rest.webp": {
       "file": "hero/M/rest.webp",
-      "bytes": 91266,
+      "bytes": 71112,
       "size": [
         1280,
         720
@@ -101,7 +102,7 @@
     },
     "hero/M/intro.h264.mp4": {
       "file": "hero/M/placeholder.h264.mp4",
-      "bytes": 1406426,
+      "bytes": 1402302,
       "codec": "avc1.640028",
       "size": [
         1280,
