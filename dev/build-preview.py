@@ -4,9 +4,11 @@
     python3 dev/build-preview.py OUT_DIR [page.html]   # index.html -> ae-studio.html, page-3d.html -> page-3d.html
 
 Writes OUT_DIR/ae-studio.html: the <head> extras and the <body> content of index.html (no <html>/<head>/<body>
-tags), with style.css + blocks.css and snake.js + main.js + blocks.js inlined. Images stay separate files and are
-referenced as assets/img/... relative to the page: CSS '../img/' -> 'assets/img/', snake.js assetUrl() ->
-new URL('assets/img/' + rel, document.baseURI). Publish the images from assets/img/ (snake/ included) beside it.
+tags), with style.css + blocks.css and snake3d.js + main.js + blocks.js inlined. Every inline <script> of <head>
+(the snake3d boot first) is kept in order. Images and snake media stay separate files referenced relative to the
+page (CSS '../img/' -> 'assets/img/'); snake3d.js resolves 'assets/snake3d/...' against document.baseURI, so no URL
+rewrite is needed. Publish assets/img/ and assets/snake3d/ beside the page. The <link rel="preload"> lines are
+dropped: the scripts they warm are inlined here.
 """
 import os
 import re
@@ -36,22 +38,14 @@ def main(out_dir, page='index.html'):
         if src.startswith('http'):
             js.append(('ext', src))
             continue
-        code = read(src)
-        if src.endswith('/snake.js'):
-            code, n = re.subn(
-                r"function assetUrl\(rel\) \{.*?\n  \}",
-                "function assetUrl(rel) {\n    return new URL('assets/img/' + rel, document.baseURI).href;\n  }",
-                code, count=1, flags=re.S)
-            if n != 1:
-                sys.exit('assetUrl() not found in snake.js')
-        js.append(('inline', code))
+        js.append(('inline', read(src)))
 
     keep = []
     for line in head.splitlines():
         s_ = line.strip()
         if s_.startswith('<title') or 'fonts.googleapis' in s_ or 'fonts.gstatic' in s_ or s_.startswith('<meta name="description"'):
             keep.append(s_)
-    early = re.search(r'<script>.*?</script>', head, re.S).group(0)
+    early = '\n'.join(re.findall(r'<script>.*?</script>', head, re.S))
     body = re.sub(r'\s*<script src="[^"]+" defer></script>', '', body)
 
     page_html = '\n'.join(keep) + '\n<style>\n' + css + '\n</style>\n' + early + '\n' + body.strip() + '\n'

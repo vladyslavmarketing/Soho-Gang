@@ -1,8 +1,8 @@
 /*!
  * ae studio — main.js
- * All page interactions except the snake engine (snake.js). Vanilla, zero dependencies, plain IIFE.
+ * All page interactions except the snake player (snake3d.js). Vanilla, zero dependencies, plain IIFE.
  * Every feature is a small init function wrapped in try/catch: a missing element or a missing
- * window.SohoSnake can never break the rest of the page.
+ * window.AeSnake3D can never break the rest of the page.
  *
  * Shared plumbing
  *   - one passive scroll listener, rAF-throttled, fanned out to subscribers (onScroll)
@@ -538,38 +538,25 @@
   function initHero() {
     var hero = $('[data-hero]');
     if (!hero) return;
-    var canvas = $('[data-snake-canvas]');
     var gauge = $('[data-gauge]');
-    var everWritten = false;
+    var everWritten = false, snake = null;
     function markWritten() { everWritten = true; hero.classList.add('is-written', 'was-written'); }
-    function markUnwritten() { hero.classList.remove('is-written'); }
-
-    var engine = win.SohoSnake;
-    if (canvas && engine && typeof engine.mount === 'function') {
-      /* 'journey': writes "ae" in the hero, then travels down the page with scroll
-         and coils around the income gauge (see snake.js). */
-      canvas.addEventListener('snake:written', markWritten);
-      canvas.addEventListener('snake:unwritten', markUnwritten);   // left the logo pose
-      canvas.addEventListener('snake:arrived', function () { if (gauge) gauge.classList.add('has-snake'); });
-      canvas.addEventListener('snake:departed', function () { if (gauge) gauge.classList.remove('has-snake'); });
+    /* left the logo pose; was-written also disarms the CSS «studio» safety net (style.css) */
+    function markUnwritten() { hero.classList.remove('is-written'); hero.classList.add('was-written'); }
+    hero.addEventListener('snake:written', markWritten);
+    hero.addEventListener('snake:unwritten', markUnwritten);
+    if (gauge) {
+      gauge.addEventListener('snake:arrived', function () { gauge.classList.add('has-snake'); });
+      gauge.addEventListener('snake:departed', function () { gauge.classList.remove('has-snake'); });
+    }
+    var engine = win.AeSnake3D;
+    if (engine && typeof engine.mount === 'function') {
       try {
-        var snake = engine.mount(canvas, {
-          mode: 'journey',
-          hero: hero,
-          end: gauge,
-          zoneEnd: $('#income'),
-          pointerTarget: hero,
-          reducedMotion: still()
-        });
-        /* the plush snake replaces the flat SVG head on the income ring (only while it travels) */
-        var setJourney = function () { root.classList.toggle('has-journey', !still()); };
-        setJourney();
-        onStillChange(function (on) {
-          if (snake && typeof snake.setReducedMotion === 'function') snake.setReducedMotion(on);
-          setJourney();
-        });
-        /* safety net: the first writing takes ~3 s, longer on a slow phone (writing ends on 'snake:written') */
-        setTimeout(function () { if (!everWritten) markWritten(); }, 7000);
+        /* pre-rendered Cycles snake: writes "ae" in the hero, coils around the income gauge (see snake3d.js) */
+        snake = engine.mount({ hero: hero, gauge: gauge, still: still(), onScroll: onScroll, onLayout: onLayout });
+        onStillChange(function (on) { snake.setStill(on); });
+        /* safety net: the intro takes ~2.8 s, longer on a slow phone */
+        setTimeout(function () { if (!everWritten && snake.state().hero !== 'gone') markWritten(); }, 7000);
       } catch (e) {
         warn('hero snake', e);
         markWritten();
@@ -580,7 +567,7 @@
 
     /* hint copy for touch devices */
     var hint = $('[data-hero-hint]', hero);
-    if (hint && !state.hover) hint.hidden = true;        /* touch: no chase, so no «tap and she follows» hint */
+    if (hint && !state.hover) hint.hidden = true;        /* touch: no pointer tracking, so no hint */
 
     /* timecode HH:MM:SS:FF @ 25 fps, only ticking while the hero is on screen */
     var tc = $('[data-timecode]', hero);
@@ -761,8 +748,9 @@
       tip.className = 'tip';
       tip.textContent = '+$' + groupNum(Math.round(amount / 10) * 10);
       var y = goalLabel ? goalLabel.offsetTop - 22 : (gauge ? gauge.offsetHeight * 0.26 : 0);
-      /* the coiled plush snake rests its head at 12 o'clock: chips pop beside it, not on its face */
-      var x = gauge && gauge.classList.contains('has-snake') ? 72 + Math.random() * 6 : 50 + (Math.random() - 0.5) * 14;
+      /* the plush snake rests its head near 12 o'clock: chips pop beside it, not on its face (x from snake3d.js) */
+      var tipX = parseFloat(gauge && gauge.dataset.snakeTipX);
+      var x = gauge && gauge.classList.contains('has-snake') ? (isFinite(tipX) ? tipX * 100 : 75) + (Math.random() - 0.5) * 6 : 50 + (Math.random() - 0.5) * 14;
       tip.style.setProperty('--x', x.toFixed(1) + '%');
       tip.style.setProperty('--y', Math.max(0, y).toFixed(0) + 'px');
       tip.style.setProperty('--dx', ((Math.random() - 0.5) * 34).toFixed(0) + 'px');
@@ -793,7 +781,10 @@
       valueText();
       introDone = true;
       var next = compute();
-      if (next.m > lastTarget.m) queueTip(next.m - lastTarget.m);
+      if (next.m > lastTarget.m) {
+        queueTip(next.m - lastTarget.m);
+        doc.dispatchEvent(new CustomEvent('ae:income', { detail: { delta: next.m - lastTarget.m } }));
+      }
       lastTarget = next;
       animateTo(next, 600);
     }
@@ -1638,33 +1629,6 @@
     zones.forEach(function (z) { io.observe(z); });
   }
 
-  /* ================================================================== FOOTER (wander snake) */
-  function initFooter() {
-    var footer = $('[data-footer]');
-    var canvas = $('[data-footer-snake]');
-    var engine = win.SohoSnake;
-    if (!footer || !canvas || !engine || typeof engine.mount !== 'function') return;
-    var mounted = false, snake = null;
-    function mount() {
-      if (mounted) return;
-      mounted = true;
-      try { snake = engine.mount(canvas, { mode: 'wander', pointerTarget: footer, reducedMotion: still() }); }
-      catch (e) { warn('footer snake', e); }
-    }
-    onStillChange(function (on) {
-      if (snake && typeof snake.setReducedMotion === 'function') snake.setReducedMotion(on);
-    });
-    /* mount lazily, shortly before the footer scrolls into view */
-    if (win.IntersectionObserver) {
-      var io = new IntersectionObserver(function (entries) {
-        if (entries[entries.length - 1].isIntersecting) { io.disconnect(); mount(); }
-      }, { rootMargin: '400px 0px' });
-      io.observe(footer);
-    } else {
-      mount();
-    }
-  }
-
   /* ================================================================== COPY TO CLIPBOARD */
   function initCopy() {
     $$('[data-copy]').forEach(function (btn) {
@@ -1794,7 +1758,7 @@
     ['flags', initFlags], ['nav', initNav], ['menu', initMenu], ['cursor', initCursor],
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['alerts', initAlerts],
     ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
-    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['reviews', initReviews], ['platformLogos', initPlatformLogos], ['floatTg', initFloatTg], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
+    ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['reviews', initReviews], ['platformLogos', initPlatformLogos], ['floatTg', initFloatTg], ['copy', initCopy], ['rangeFill', initRangeFill],
     ['motionToggle', initMotionToggle], ['offscreen', initOffscreen]
   ];
   function boot() {

@@ -53,17 +53,18 @@
 index.html            — разметка и все тексты
 assets/css/style.css  — стили, цвета, шрифты, первый экран, адаптив
 assets/css/blocks.css — чат FAQ, пропуск-анкета и блоки по структуре DIVA
-assets/js/snake.js    — движок плюшевой змеи (canvas)
+assets/js/snake3d.js  — плеер плюшевой змеи из Blender Cycles (WebGL + видео со стек-альфой)
 assets/js/main.js     — интерактивы страницы (калькулятор, чек-лист, алерты, форма, отзывы…)
 assets/js/blocks.js   — чат FAQ, пропуск-анкета
-assets/img/            — мех, рендер змеи, атласы меха из Blender (snake/)
-dev/snake.html        — отдельная страница для настройки змеи
+assets/snake3d/       — рендеры змеи и manifest.json (поставка Blender-сессии, см. assets/snake3d/README.md)
+assets/img/           — мех, фото змеи для og:image и FAQ
+dev/snake3d.html      — тестовая страница змеи: кнопки состояний, ?snake3d= / ?tier= / ?codec=
+dev/blender/          — скрипты сборки рендеров (появятся с поставкой Blender-сессии)
 ```
 
-Важно для змеи: секции между первым экраном и калькулятором (`#fit`, `#conditions`, площадки, `#format`)
-не должны создавать stacking context (`isolation`, `transform`, `filter`, `opacity`, `z-index` на самой секции),
-контент внутри — на `z-index` ≥ 4. Подробнее — в `style.css` (раздел SNAKE LAYER) и в комментариях `snake.js`.
-Положение логотипа на десктопе задано одной формулой в двух местах: `logoBox()` в `snake.js` и `.hero` в `style.css` (`min-width: 960px`).
+Змея рисуется в двух слоях внутри своих секций (первый экран и кольцо калькулятора), поэтому остальные
+секции ничего не должны соблюдать. Формула положения логотипа живёт в `style.css` (`.hero`) и в `snake3d.js` (`HERO_FIT`).
+Спецификация: `docs/snake3d-spec.md` в ветке `claude/webcam-studio-animation-design-jl8r68`.
 
 ## Запуск локально
 

@@ -1,0 +1,113 @@
+{
+  "schema": "ae-snake3d/1",
+  "build": "2026-11-09T19:30:00Z",
+  "generator": "placeholder from blender/export/clipA/snake_idle.webm (web session, spec B10)",
+  "fps": 30,
+  "pxPerD": 90,
+  "tiers": {
+    "M": 1
+  },
+  "clipRenderScale": 1,
+  "clipTiers": [
+    "M"
+  ],
+  "videoLayout": {
+    "gutter": 96,
+    "strip": null,
+    "patches": null,
+    "premultiplied": true,
+    "matrix": "bt709",
+    "range": "tv"
+  },
+  "probe": "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMPbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAACIAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAjl0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAACIAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAAiAAAAAAABAAAAAAGxbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAA8AAAAAgBVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABXG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAARxzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMA8DxImSABAAVoy4PLIAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAlrQAAJa0AAAABhzdHRzAAAAAAAAAAEAAAABAAACAAAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAKDAAAAAQAAABRzdGNvAAAAAAAAAAEAAAM/AAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY2MC4xNi4xMDAAAAAIZnJlZQAAAottZGF0AAACcQYF//9t3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzEwOCAzMWUxOWY5IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMyAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTAgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MToweDExMSBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MCBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0wIHdlaWdodHA9MCBrZXlpbnQ9MjUwIGtleWludF9taW49MjUgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAKZYiECfJigAChbg==",
+  "fallback": "hero/M/rest.webp",
+  "scenes": {
+    "hero": {
+      "frame": [
+        1280,
+        720
+      ],
+      "camera": {
+        "name": "placeholder",
+        "type": "persp"
+      },
+      "stage": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "exit": "right",
+      "anchors": {
+        "aeBox": [
+          337,
+          135,
+          608,
+          465
+        ],
+        "eye": [
+          424,
+          229
+        ],
+        "snout": [
+          353,
+          235
+        ],
+        "headDir": [
+          -0.99,
+          -0.12
+        ]
+      },
+      "rest": {
+        "still": {
+          "file": "rest.webp",
+          "rect": [
+            0,
+            0,
+            1280,
+            720
+          ]
+        },
+        "flow": null,
+        "breath": {
+          "periodS": 3.6,
+          "amp": 0
+        }
+      },
+      "look": null,
+      "clips": {
+        "intro": {
+          "frames": 180,
+          "rect": [
+            0,
+            0,
+            1280,
+            720
+          ],
+          "from": "rest",
+          "to": "rest"
+        }
+      }
+    }
+  },
+  "files": {
+    "hero/M/rest.webp": {
+      "file": "hero/M/rest.webp",
+      "bytes": 91266,
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "hero/M/intro.h264.mp4": {
+      "file": "hero/M/placeholder.h264.mp4",
+      "bytes": 1406426,
+      "codec": "avc1.640028",
+      "size": [
+        1280,
+        1536
+      ],
+      "frames": 180
+    }
+  }
+}
