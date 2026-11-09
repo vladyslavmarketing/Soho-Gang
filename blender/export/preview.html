@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake B preview</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #E6C3C9; overflow: hidden; font: 13px/1.4 system-ui, sans-serif; }
+  canvas { display: block; }
+  #ui { position: fixed; left: 12px; bottom: 12px; color: #5a2b37; background: rgba(255,255,255,.55);
+        padding: 6px 10px; border-radius: 8px; }
+  #ui label { margin-right: 10px; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="ui">
+  <label><input type="checkbox" id="fur" checked> мех (слои)</label>
+  <label><input type="checkbox" id="play" checked> анимация</label>
+  <label><input type="checkbox" id="orbit"> вращать камеру</label>
+  <span id="info"></span>
+</div>
+<script type="module">
+// Quick preview of variant B: snake.glb (skinned skin, idle_lookaround, CamHero) + baked textures,
+// with simple shell fur from fur_strands.webp (R = strand height: shell h keeps texels with R >= h).
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const SHELLS = 28, FUR_D = 0.16, TILE_D = 0.35;
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#E6C3C9');
+scene.add(new THREE.HemisphereLight(0xfff4f2, 0xc98e9c, 1.4));
+const key = new THREE.DirectionalLight(0xfff6f0, 2.2);
+key.position.set(-12, 9, 14); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 8;
+Object.assign(key.shadow.camera, { left: -14, right: 14, top: 10, bottom: -10, near: 1, far: 60 });
+scene.add(key);
+const front = new THREE.DirectionalLight(0xffffff, 1.0); front.position.set(-4, 8, 30); scene.add(front);
+
+const tl = new THREE.TextureLoader();
+const tex = (f, srgb) => { const t = tl.load(f); t.flipY = false; if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8; return t; };
+const albedo = tex('snake_albedo.webp', true), normal = tex('snake_normal.webp', false);
+const strands = tl.load('fur_strands.webp'); strands.wrapS = strands.wrapT = THREE.RepeatWrapping;
+
+const manifest = await (await fetch('manifest.json')).json();
+const gltf = await new GLTFLoader().loadAsync('snake.glb');
+scene.add(gltf.scene);
+let body = null;
+gltf.scene.traverse(o => {
+  if (o.isSkinnedMesh && o.name.startsWith('Body')) body = o;
+  if (o.isMesh && /Eye/.test(o.name)) o.material = new THREE.MeshStandardMaterial({ color: 0x050303, roughness: 0.08, metalness: 0 });
+  if (o.isMesh && /Tongue/.test(o.name)) o.material = new THREE.MeshStandardMaterial({ color: 0xf0b5c3, roughness: 0.4 });
+});
+body.material = new THREE.MeshStandardMaterial({ map: albedo, normalMap: normal, normalScale: new THREE.Vector2(0.35, 0.35),
+  roughness: 0.92, color: 0xb8b8b8 });
+body.castShadow = true;
+
+// shells: the same skinned geometry pushed out along the skinned normal
+const L = manifest.mesh.lengthD, circ = Math.PI * 0.74;
+const shells = [];
+for (let i = 1; i <= SHELLS; i++) {
+  const h = i / SHELLS;
+  const m = new THREE.MeshStandardMaterial({ map: albedo, roughness: 0.9 });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uH = { value: h }; sh.uniforms.uLen = { value: FUR_D }; sh.uniforms.uStr = { value: strands };
+    sh.uniforms.uRep = { value: new THREE.Vector2(L / TILE_D, circ / TILE_D) };
+    sh.vertexShader = 'uniform float uH; uniform float uLen;\n' + sh.vertexShader.replace('#include <skinning_vertex>',
+      '#include <skinning_vertex>\n transformed += normalize(objectNormal) * uLen * uH;');
+    sh.fragmentShader = 'uniform float uH; uniform sampler2D uStr; uniform vec2 uRep;\n' + sh.fragmentShader.replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+       vec3 st = texture2D(uStr, vMapUv * uRep).rgb;
+       if (st.r < uH) discard;
+       diffuseColor.rgb *= mix(0.55, 1.12, uH) * (0.9 + 0.2 * st.g);
+       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb + 0.25 * (1.0 - diffuseColor.rgb), uH * uH * 0.6);`);
+  };
+  const s = new THREE.SkinnedMesh(body.geometry, m);
+  s.bind(body.skeleton, body.bindMatrix);
+  s.frustumCulled = false; s.renderOrder = i;
+  body.parent.add(s); shells.push(s);
+}
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ opacity: 0.18 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = manifest.axes.floorY; floor.receiveShadow = true;
+scene.add(floor);
+
+const camera = gltf.cameras[0] || new THREE.PerspectiveCamera(13.6, innerWidth / innerHeight, 0.1, 1000);
+gltf.scene.updateMatrixWorld(true);
+const camPos = camera.getWorldPosition(new THREE.Vector3()), camQ = camera.getWorldQuaternion(new THREE.Quaternion());
+const target = new THREE.Vector3(0, 0, -1).applyQuaternion(camQ).multiplyScalar(32).add(camPos);
+const cam = new THREE.PerspectiveCamera(camera.fov, innerWidth / innerHeight, 0.1, 1000);
+cam.position.copy(camPos); cam.quaternion.copy(camQ);
+const controls = new OrbitControls(cam, renderer.domElement); controls.target.copy(target); controls.enabled = false;
+cam.position.copy(camPos); cam.quaternion.copy(camQ);      // the constructor turned the camera to the origin
+const fit = () => { cam.aspect = innerWidth / innerHeight;
+  // keep the 16:9 framing of CamHero on any window shape
+  const a0 = 1280 / 720, f0 = THREE.MathUtils.degToRad(camera.fov);
+  cam.fov = cam.aspect >= a0 ? camera.fov : THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(f0 / 2) * a0 / cam.aspect));
+  cam.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); };
+addEventListener('resize', fit); fit();
+
+const mixer = new THREE.AnimationMixer(gltf.scene);
+const clip = gltf.animations.find(c => c.name === 'idle_lookaround') || gltf.animations[0];
+mixer.clipAction(clip).play();
+const $ = id => document.getElementById(id);
+$('info').textContent = `${clip.name} · ${clip.duration.toFixed(1)} c · ${body.skeleton.bones.length} костей`;
+$('fur').onchange = e => shells.forEach(s => s.visible = e.target.checked);
+$('orbit').onchange = e => { controls.enabled = e.target.checked; };
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  if ($('play').checked) mixer.update(dt);
+  if (controls.enabled) controls.update();
+  renderer.render(scene, cam);
+});
+</script>
+</body>
+</html>

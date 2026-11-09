@@ -47,6 +47,26 @@ blender -b --factory-startup --python blender/snake_scene.py -- --render --previ
 (`RINGS_PX` проецируются на линию): 19 колец, у первого чёрная кайма только со стороны хвоста. Цвета
 подобраны по средним цветам розовых, кремовых и чёрных пикселей фото.
 
+## Анимация «покой + оглядывание» и экспорт — `blender/snake_anim.py`
+
+```bash
+blender -b --factory-startup --python blender/snake_anim.py -- --bake      # ключи на кости -> renders/snake_anim.blend
+blender -b --factory-startup --python blender/snake_anim.py -- --clip      # A: Cycles, 180 кадров 1280×720, проходы PNG
+blender -b --factory-startup --python blender/snake_anim.py -- --encode    # A: WebM VP9 с альфой + MP4-превью (ffmpeg)
+blender -b --factory-startup --python blender/snake_anim.py -- --glb       # B: snake.glb + текстуры + manifest.json
+blender -b --factory-startup --python blender/snake_anim.py -- --fur-tile  # B: fur_strands.webp
+```
+
+6 с, 30 кадров/с, поза «ae», зациклено: два вдоха (тело раздувается на ~2 %), голова смотрит в одну сторону,
+в другую, чуть вверх и возвращается (поворот делят голова и пять шейных позвонков), язык дважды высовывается.
+Поза Spline IK запекается в обычные ключи костей, поэтому та же анимация уходит в glTF.
+
+- `export/clipA/` — `snake_idle.webm` (VP9 с альфой, змея с тенью), `snake_idle_preview.mp4` (на розовом фоне).
+  Проходы PNG (`rgba_####.png` — змея на прозрачном, `shadow_####.png` — чёрный спрайт тени) лежат локально
+  в `C:/Users/vladk/ae-studio/renders/clipA_frames` (около 300 МБ, в git не кладём).
+- `export/` — `snake.glb` (кожа со скином, 59 костей, анимация `idle_lookaround`, камера `CamHero`),
+  `snake_albedo.webp`, `snake_normal.webp`, `fur_strands.webp`, `manifest.json` (оси, масштабы, мех, файлы).
+
 ## Монтажи для одобрения — `blender/renders/`
 
 - `compare_photo_render.webp` — фото | рендер;
