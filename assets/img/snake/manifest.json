@@ -1,526 +1,274 @@
 {
-  "version": 1,
-  "generator": "Blender 4.2 Cycles (CPU, OIDN), numpy-groomed hair curves; see scratchpad/blender/sprites.py",
-  "ref_R": 64,
-  "light_screen": [
-    -0.42,
-    -0.58,
-    0.7
+ "version": 1,
+ "generator": "Blender 4.2 Cycles (CPU, OIDN), numpy-groomed hair curves; see scratchpad/blender/sprites.py",
+ "ref_R": 64,
+ "light_screen": [
+  -0.42,
+  -0.58,
+  0.7
+ ],
+ "fuzz": 0.578,
+ "grade": {
+  "exposure_ev": 0.6,
+  "black_tint_linear": [
+   0.56,
+   0.31,
+   0.29
+  ]
+ },
+ "body": {
+  "file": "body.webp",
+  "angles": 16,
+  "cell": [
+   202,
+   202
   ],
-  "fuzz": 0.578,
+  "origin": [
+   101,
+   101
+  ],
+  "rows": [
+   {
+    "kind": "pink",
+    "variant": 0
+   },
+   {
+    "kind": "pink",
+    "variant": 1
+   },
+   {
+    "kind": "pink",
+    "variant": 2
+   },
+   {
+    "kind": "cream",
+    "variant": 0
+   },
+   {
+    "kind": "cream",
+    "variant": 1
+   },
+   {
+    "kind": "black",
+    "variant": 0
+   },
+   {
+    "kind": "black",
+    "variant": 1
+   }
+  ],
+  "oriented": true,
+  "mask": "feather",
+  "along": 0.62,
+  "feather": 0.16,
+  "recommended_step_R": 0.3,
+  "notes": "column k is pre-rotated to screen angle k/angles*PI (body axis (cos, sin), y down) and lit by the fixed screen light; rotate by the residual (<= half a bucket). Each cell is a window cut from a continuous rendered fur tube: |along| <= along*R*(1-(|across|/1.5R)^4)^0.25 with a +-feather*R smoothstep cross-fade, the sides keep the real silhouette fuzz (fuzz = reach beyond R). Stamp it every ~0.3R (dense 0.075R stamping only shows a thin rim slice of each cell and smears the fur into streaks). Straight alpha."
+ },
+ "head": {
+  "version": 2,
+  "generator": "Blender 4.2 Cycles (CPU, OIDN); head v2 measured from the client photo; scratchpad/blender/head-v2/atlas_head.py",
+  "file": "head.webp",
+  "buckets": 32,
+  "cols": 8,
+  "ref_R": 64,
+  "rh_ref": 76.8,
+  "head_scale": 1.2,
+  "cell": [
+   330,
+   242
+  ],
+  "origin": [
+   113,
+   121
+  ],
+  "eyes": true,
+  "fade_baked": true,
+  "tongue": false,
+  "light_screen": [
+   -0.41941323192584123,
+   -0.5791897012309236,
+   0.6990220532097353
+  ],
   "grade": {
-    "exposure_ev": 0.6,
-    "black_tint_linear": [
-      0.56,
-      0.31,
-      0.29
+   "exposure_ev": 0.6
+  },
+  "neck_fade_R": [
+   -1.0,
+   -1.8
+  ],
+  "eye": {
+   "centres": [
+    [
+     0.3269,
+     -0.938
+    ],
+    [
+     0.3269,
+     0.938
     ]
-  },
-  "body": {
-    "file": "body.webp",
-    "angles": 16,
-    "cell": [
-      202,
-      202
+   ],
+   "radius": 0.27,
+   "per_bucket": [
+    [
+     0
     ],
-    "origin": [
-      101,
-      101
+    [
+     0
     ],
-    "rows": [
-      {
-        "kind": "pink",
-        "variant": 0
-      },
-      {
-        "kind": "pink",
-        "variant": 1
-      },
-      {
-        "kind": "pink",
-        "variant": 2
-      },
-      {
-        "kind": "cream",
-        "variant": 0
-      },
-      {
-        "kind": "cream",
-        "variant": 1
-      },
-      {
-        "kind": "black",
-        "variant": 0
-      },
-      {
-        "kind": "black",
-        "variant": 1
-      }
+    [
+     0
     ],
-    "oriented": true,
-    "mask": "feather",
-    "along": 0.62,
-    "feather": 0.16,
-    "recommended_step_R": 0.3,
-    "notes": "column k is pre-rotated to screen angle k/angles*PI (body axis (cos, sin), y down) and lit by the fixed screen light; rotate by the residual (<= half a bucket). Each cell is a window cut from a continuous rendered fur tube: |along| <= along*R*(1-(|across|/1.5R)^4)^0.25 with a +-feather*R smoothstep cross-fade, the sides keep the real silhouette fuzz (fuzz = reach beyond R). Stamp it every ~0.3R (dense 0.075R stamping only shows a thin rim slice of each cell and smears the fur into streaks). Straight alpha."
-  },
-  "head": {
-    "version": 2,
-    "generator": "Blender 4.2 Cycles (CPU, OIDN); head v2 measured from the client photo; scratchpad/blender/head-v2/atlas_head.py",
-    "file": "head.webp",
-    "buckets": 32,
-    "cols": 8,
-    "ref_R": 64,
-    "rh_ref": 76.8,
-    "head_scale": 1.2,
-    "cell": [
-      271,
-      242
+    [
+     0
     ],
-    "origin": [
-      113,
-      121
+    [
+     0
     ],
-    "eyes": true,
-    "fade_baked": true,
-    "tongue": false,
-    "light_screen": [
-      -0.41941323192584123,
-      -0.5791897012309236,
-      0.6990220532097353
+    [
+     0
     ],
-    "grade": {
-      "exposure_ev": 0.6
-    },
-    "neck_fade_R": [
-      -1.0,
-      -1.8
+    [
+     0
     ],
-    "eye": {
-      "centres": [
-        [
-          0.3269,
-          -0.938
-        ],
-        [
-          0.3269,
-          0.938
-        ]
-      ],
-      "radius": 0.27,
-      "per_bucket": [
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ],
-        [
-          0
-        ]
-      ],
-      "two_eyes_below_abs_cos": 0.3,
-      "notes": "head-local units of R (body radius), x forward, y down (sprite space, before rotation). Eye 0 is drawn when the screen-up side is local -y (cos th > 0), eye 1 when cos th < 0, both when |cos th| < two_eyes_below_abs_cos. Use for a pointer glint overlay; the beads + key-light glint are already baked."
-    },
-    "silhouette": {
-      "polar_R_from_origin": [
-        2.289,
-        2.359,
-        2.359,
-        2.203,
-        2.109,
-        2.008,
-        1.938,
-        1.906,
-        1.867,
-        1.836,
-        1.758,
-        1.68,
-        1.68,
-        1.664,
-        1.711,
-        1.75,
-        1.875,
-        1.93,
-        1.961,
-        1.766,
-        1.617,
-        1.516,
-        1.453,
-        1.414,
-        1.406,
-        1.414,
-        1.453,
-        1.516,
-        1.617,
-        1.766,
-        1.961,
-        1.984,
-        1.906,
-        1.734,
-        1.711,
-        1.742,
-        1.719,
-        1.742,
-        1.789,
-        1.836,
-        1.836,
-        1.891,
-        1.961,
-        2.047,
-        2.109,
-        2.242,
-        2.328,
-        2.344
-      ],
-      "polygon_R": [
-        [
-          2.289,
-          0.0
-        ],
-        [
-          2.339,
-          0.308
-        ],
-        [
-          2.279,
-          0.611
-        ],
-        [
-          2.035,
-          0.843
-        ],
-        [
-          1.827,
-          1.055
-        ],
-        [
-          1.593,
-          1.222
-        ],
-        [
-          1.37,
-          1.37
-        ],
-        [
-          1.16,
-          1.512
-        ],
-        [
-          0.934,
-          1.617
-        ],
-        [
-          0.703,
-          1.696
-        ],
-        [
-          0.455,
-          1.698
-        ],
-        [
-          0.219,
-          1.665
-        ],
-        [
-          0.0,
-          1.68
-        ],
-        [
-          -0.217,
-          1.65
-        ],
-        [
-          -0.443,
-          1.653
-        ],
-        [
-          -0.67,
-          1.617
-        ],
-        [
-          -0.937,
-          1.624
-        ],
-        [
-          -1.175,
-          1.531
-        ],
-        [
-          -1.387,
-          1.387
-        ],
-        [
-          -1.401,
-          1.075
-        ],
-        [
-          -1.401,
-          0.809
-        ],
-        [
-          -1.4,
-          0.58
-        ],
-        [
-          -1.404,
-          0.376
-        ],
-        [
-          -1.402,
-          0.185
-        ],
-        [
-          -1.406,
-          0.0
-        ],
-        [
-          -1.402,
-          -0.185
-        ],
-        [
-          -1.404,
-          -0.376
-        ],
-        [
-          -1.4,
-          -0.58
-        ],
-        [
-          -1.401,
-          -0.809
-        ],
-        [
-          -1.401,
-          -1.075
-        ],
-        [
-          -1.387,
-          -1.387
-        ],
-        [
-          -1.208,
-          -1.574
-        ],
-        [
-          -0.953,
-          -1.651
-        ],
-        [
-          -0.664,
-          -1.602
-        ],
-        [
-          -0.443,
-          -1.653
-        ],
-        [
-          -0.227,
-          -1.727
-        ],
-        [
-          -0.0,
-          -1.719
-        ],
-        [
-          0.227,
-          -1.727
-        ],
-        [
-          0.463,
-          -1.728
-        ],
-        [
-          0.703,
-          -1.696
-        ],
-        [
-          0.918,
-          -1.59
-        ],
-        [
-          1.151,
-          -1.5
-        ],
-        [
-          1.387,
-          -1.387
-        ],
-        [
-          1.624,
-          -1.246
-        ],
-        [
-          1.827,
-          -1.055
-        ],
-        [
-          2.072,
-          -0.858
-        ],
-        [
-          2.249,
-          -0.603
-        ],
-        [
-          2.324,
-          -0.306
-        ]
-      ],
-      "alpha_threshold": 0.5,
-      "skin": {
-        "front": 2.0,
-        "back_top": 1.8,
-        "back_bottom": 2.6,
-        "half_width": 1.2,
-        "half_height_top": 1.03,
-        "half_height_bottom": 0.98,
-        "front_exponent": 3.0,
-        "neck_radius": 1.0
-      },
-      "notes": "polygon_R: 48 points (k/48 * 2PI from +x, y down) of the mean alpha>=0.5 outline incl. fur; the back (x < -1.00 R) is the neck stub fading into the body stamps. Skin = superellipsoid egg (units of R)."
-    },
-    "neck_band": {
-      "start_w": 0.575,
-      "cream_w": 0.62,
-      "black_w": 0.15,
-      "leading_black": false,
-      "visible_from_w": 0.66,
-      "next_band_w": 2.0,
-      "units": "body widths (w = 2R) of arc length behind the head origin (head centre = path head point)",
-      "photo": "pink head fur -> cream -> black -> pink (no black edge on the head side); measured cream ~0.4-0.5 w visible, black ~0.12-0.18 w, next regular band's leading black ~1.4 R after the neck band",
-      "notes": "Not baked into head.webp. Engine: first band = cream at start_w (its front ~0.1 w hides under the head's back fur / fade), black right after it, then pink; regular black|cream|black bands resume at next_band_w. Equivalently uStart = uAt(start_w * w) with the first period starting at its cream (skip BAND[0])."
-    },
-    "scale": {
-      "draw_scale": "cell px * (R / ref_R)",
-      "head_scale_vs_R": 1.2,
-      "notes": "the head is 2*1.20 R wide (skin) / ~3.46 R incl. fur; draw the cell at R/ref_R with the origin on the path's head point (head centre). Equivalent: rh = head_scale * R, scale = rh / rh_ref."
-    },
-    "bytes": 419560,
-    "webp_quality": 82,
-    "render": {
-      "spp": 48,
-      "per_cell_s": 16.98,
-      "render_s": 543.5,
-      "strands_head": 109702,
-      "strands_neck": 71471
-    },
-    "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R). Eyes baked (see eye). No tongue (engine draws it; base at the snout tip, see tongue_base_R). Straight alpha.",
-    "tongue_base_R": [
-      1.9,
-      0.0
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
+    ],
+    [
+     0
     ]
+   ],
+   "two_eyes_below_abs_cos": 0.3,
+   "notes": "head-local units of R (body radius), x forward, y down (sprite space, before rotation). Eye 0 is drawn when the screen-up side is local -y (cos th > 0), eye 1 when cos th < 0, both when |cos th| < two_eyes_below_abs_cos. Use for a pointer glint overlay; the beads + key-light glint are already baked."
   },
-  "cap": {
-    "file": "cap.webp",
-    "rc_ref": 40,
-    "cell": [
-      120,
-      120
-    ],
-    "origin": [
-      60,
-      60
-    ],
-    "notes": "furry ball of radius rc_ref px with body-scale fur (scale by rc/rc_ref)."
+  "neck_band": {
+   "start_w": 0.575,
+   "cream_w": 0.62,
+   "black_w": 0.15,
+   "leading_black": false,
+   "visible_from_w": 0.66,
+   "next_band_w": 2.0,
+   "units": "body widths (w = 2R) of arc length behind the head origin (head centre = path head point)",
+   "photo": "pink head fur -> cream -> black -> pink (no black edge on the head side); measured cream ~0.4-0.5 w visible, black ~0.12-0.18 w, next regular band's leading black ~1.4 R after the neck band",
+   "notes": "Not baked into head.webp. Engine: first band = cream at start_w (its front ~0.1 w hides under the head's back fur / fade), black right after it, then pink; regular black|cream|black bands resume at next_band_w. Equivalently uStart = uAt(start_w * w) with the first period starting at its cream (skip BAND[0])."
   },
-  "bytes": {
-    "body": 757218,
-    "head": 419560,
-    "cap": 4832,
-    "total": 1181610
+  "scale": {
+   "draw_scale": "cell px * (R / ref_R)",
+   "head_scale_vs_R": 1.2,
+   "notes": "the head is 2*1.20 R wide (skin) / ~3.46 R incl. fur; draw the cell at R/ref_R with the origin on the path's head point (head centre). Equivalent: rh = head_scale * R, scale = rh / rh_ref."
+  },
+  "bytes": 419560,
+  "webp_quality": 82,
+  "render": {
+   "spp": 48,
+   "per_cell_s": 16.98,
+   "render_s": 543.5,
+   "strands_head": 109702,
+   "strands_neck": 71471
+  },
+  "notes": "cell b at column b % cols, row floor(b / cols); head points +x, lit for heading th = b/buckets*2PI with the fixed screen key light (rotate the cell by th about origin). Neck fade baked into alpha (x in neck_fade_R). Eyes baked (see eye). No tongue (engine draws it; base at the snout tip, see tongue_base_R). Straight alpha.",
+  "tongue_base_R": [
+   2.82,
+   0.0
+  ],
+  "shape": {
+   "reshaped": "dev/head-reshape.py",
+   "tip_R": 3.17,
+   "tip_halfwidth_R": 0.62,
+   "keep_R": 0.45
   }
+ },
+ "cap": {
+  "file": "cap.webp",
+  "rc_ref": 40,
+  "cell": [
+   120,
+   120
+  ],
+  "origin": [
+   60,
+   60
+  ],
+  "notes": "furry ball of radius rc_ref px with body-scale fur (scale by rc/rc_ref)."
+ },
+ "bytes": {
+  "body": 757218,
+  "head": 412210,
+  "cap": 4832,
+  "total": 1181610
+ }
 }
