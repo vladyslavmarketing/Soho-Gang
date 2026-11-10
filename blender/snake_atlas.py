@@ -35,7 +35,7 @@ K_R = 1.3                                  # fur edge (0.5 D) = K_R x the engine
 PX = 64 * K_R / 0.5                        # px per D at 1x
 SS = 2
 BODY_FRAME = 320                           # 1x px, square (cell 216 turned by any angle fits)
-HEAD_CELL, HEAD_ORG = (336, 256), (116, 128)   # engine cell (head pointing +x) and its origin
+HEAD_CELL, HEAD_ORG = (384, 256), (164, 128)   # engine cell (head pointing +x) and its origin
 HEAD_S0 = 1.0                              # arc length of the engine's head point behind the snout tip (D)
 WIN_S0, WIN_STEP = 5.0, 2.6                # body windows: centres at WIN_S0 + i * WIN_STEP
 KINDS = ['pink', 'pink', 'pink', 'cream', 'cream', 'black', 'black']
