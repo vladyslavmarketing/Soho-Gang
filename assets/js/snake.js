@@ -291,7 +291,9 @@
   // Stamp window ("lens", x R): along the body |a| <= a0 - (a0 - a1) c^2 for |c| <= 1 (a1 beyond), +- fe soft edge.
   // The tail edge of each stamp is the visible band boundary, so the curve makes bands wrap round the body like
   // rings (the cells' own window is a straight cut); a1 keeps stamps overlapping at the silhouette.
-  var ATL_LENS = { a0: 0.55, a1: 0.36, fe: 0.1 }, ATL_LENS_SMALL = { a0: 0.55, a1: 0.36, fe: 0.14 }, LENS_FE_MAX = 0.16;   // thin tail: softer
+  // a1 0.36 left notches along the outer rim of bends tighter than ~1.8 R (the stamps fanned apart there); 0.52
+  // keeps the rim closed down to ~0.8 R
+  var ATL_LENS = { a0: 0.58, a1: 0.52, fe: 0.1 }, ATL_LENS_SMALL = { a0: 0.58, a1: 0.52, fe: 0.14 }, LENS_FE_MAX = 0.16;   // thin tail: softer
   // Grade toward the reference photo, per kind: an alpha-preserving lerp toward a colour ('source-atop' fill) -
   // warmer rose (head + cap too), ivory cream, near-black velvet stripes (the baked cells read dusty mauve,
   // beige-grey and charcoal on the site's backdrop).
