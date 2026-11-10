@@ -561,7 +561,12 @@ def look_matrices(rest, M, yaw, pit):
     return Mt
 
 
-def key_action(rest, name, keys, look=None, tongue=None):
+def breath_w(i, n_sp=56):
+    """breath weight of Spine_i, as in snake_anim.bake()"""
+    return math.sin(math.pi * min(max((i - 2) / (n_sp * 0.85), 0), 1))
+
+
+def key_action(rest, name, keys, look=None, tongue=None, breath=0.0):
     """keys: list of (blender frame number (float), time s, bone matrices). Mutes Spline IK and writes FK."""
     arm = rest.arm
     set_curve(rest, rest.rest)
@@ -581,6 +586,7 @@ def key_action(rest, name, keys, look=None, tongue=None):
         tg = smooth_keys(tongue, t) if tongue else 0.03
         Mt['Tongue'] = Mt['Head'] @ rel('Tongue') @ Matrix.Diagonal((tg, tg, tg, 1))
         Mt['Jaw'] = Mt['Head'] @ rel('Jaw')
+        kb = lambda n: 1 + 0.022 * breath * breath_w(int(n[6:])) if (breath and n.startswith('Spine_')) else 1.0
         for n in names:
             bn = arm.data.bones[n]
             if bn.parent is None:
@@ -588,6 +594,9 @@ def key_action(rest, name, keys, look=None, tongue=None):
             else:
                 B = ((bn.parent.matrix_local.inverted() @ bn.matrix_local).inverted() @ Mt[bn.parent.name].inverted()
                      @ Mt[n])
+            if breath and n.startswith('Spine_'):       # breath: own X/Z scale, not inherited (no shear drift)
+                bn.inherit_scale = 'NONE'
+                B = B @ Matrix.Diagonal((kb(n), 1, kb(n), 1))
             loc, q, scl = B.decompose()
             if n in prevq and q.dot(prevq[n]) < 0:
                 q = -q

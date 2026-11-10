@@ -213,6 +213,9 @@ def ring_s():
 
 
 RING_S = ring_s()
+if '--uniform-rings' in argv:      # journey (J1) variant: evenly spaced rings so the crawl loop repeats seamlessly
+    _p = float(arg('--uniform-rings', 1.325))
+    RING_S = np.arange(RING_S[0], RING_S[-1] + 1e-6, _p)
 log('rings at s =', np.round(RING_S, 2))
 
 

@@ -1,0 +1,85 @@
+{
+ "reports": {
+  "hero": {
+   "mask_feather_p99_Dmax": 4.462083339691162,
+   "mask_breathW_note": "feather vs breathW < 0.25 not asserted",
+   "rangeDeg": [
+    0,
+    4
+   ],
+   "rect_gate_max_outside_R": 0.0,
+   "neutral_cell_mean_diff": 0.09558933973312378,
+   "tongue_rect": [
+    456,
+    504,
+    288,
+    216
+   ],
+   "breath_qa": {
+    "area_px_H3_minus_H3b": -5017.6875,
+    "warped_plus_minus_H3b": 128.4375,
+    "warped_minus_minus_H3b": -10064.875,
+    "amp": 0.8
+   },
+   "containment": {
+    "mask_in_look": true,
+    "tongue_in_mask": true,
+    "look_in_cell": true,
+    "look_in_stage": true
+   },
+   "lit_pink": [
+    239,
+    159,
+    174
+   ]
+  },
+  "gauge": {
+   "mask_feather_p99_Dmax": 0.3899550437927246,
+   "mask_breathW_note": "feather vs breathW < 0.25 not asserted",
+   "rangeDeg": [
+    -2,
+    2
+   ],
+   "rect_gate_max_outside_R": 0.0,
+   "neutral_cell_mean_diff": 0.04389215260744095,
+   "tongue_rect": [
+    720,
+    72,
+    216,
+    144
+   ],
+   "breath_qa": {
+    "area_px_H3_minus_H3b": -5906.0,
+    "warped_plus_minus_H3b": -271.3125,
+    "warped_minus_minus_H3b": -11415.625,
+    "amp": 0.8
+   },
+   "containment": {
+    "mask_in_look": true,
+    "tongue_in_mask": true,
+    "look_in_cell": true,
+    "look_in_stage": true
+   },
+   "lit_pink": [
+    255,
+    219,
+    249
+   ]
+  }
+ },
+ "log": [
+  "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
+  "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
+  "hero mask feather p99 Dmax 4.4 > 4: dilating 8 px more",
+  "hero mask feather p99 Dmax 4.4 > 4: dilating 8 px more",
+  "hero mask feather p99 Dmax 4.5 > 4: dilating 8 px more",
+  "hero mask rect [432, 168, 744, 768] look rect [432, 168, 744, 768] range [0, 4] neutral diff 0.10, gate 0.0, p99 4.5",
+  "hero breath QA (alpha area vs H3b): H3 -5018 px, +flow +128, -flow -10065 -> amp 0.8",
+  "hero containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
+  "hero stage [360, 96, 1752, 1152] still rect [504, 264, 1608, 840] anchors {'aeBox': [541, 302, 1571, 769], 'eye': [698, 447], 'snout': [552, 486], 'headDir': [-0.943, 0.333]}",
+  "gauge mask rect [480, 0, 960, 792] look rect [480, 0, 960, 792] range [-2, 2] neutral diff 0.04, gate 0.0, p99 0.4",
+  "gauge breath QA (alpha area vs H3b): H3 -5906 px, +flow -271, -flow -11416 -> amp 0.8",
+  "gauge containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
+  "gauge stage [72, 0, 1656, 1344] still rect [72, 24, 1632, 1296] anchors {'eye': [968, 314], 'snout': [888, 167], 'headDir': [-0.891, -0.454], 'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520, 'coilOuterRadius': 598, 'exitRamp': [1440, 1680], 'tipX': 0.85}"
+ ]
+}

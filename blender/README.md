@@ -139,6 +139,36 @@ G1 `gauge_arrive`: 96 кадров, голова от x = 9,6, 14,0 D/с до 2,
 40° к 3,1 с. Проверки: зазор траектории 1,10 D (у головы 1,109 ≥ 1,10), кручение 4°/кадр, спина ≤ 2°, кадр 0 пустой.
 Аниматик: `blender/renders/motion/gauge_arrive_animatic.mp4` (на #1E1618).
 
+## Набор для сайта (web3d) — `web3d_render.py`, `web3d_pack.py`, `encode_web3d.ps1`
+
+```bash
+blender -b --factory-startup --python blender/web3d_render.py -- --scene hero      # H3 H3b H4 H5 -> renders/web3d/
+blender -b --factory-startup --python blender/web3d_render.py -- --scene gauge     # G3 G3b G4 G5
+blender -b --factory-startup --python blender/web3d_render.py -- --clip hero_intro,hero_depart,gauge_arrive,journey
+blender -b --factory-startup --python blender/web3d_pack.py -- --stage pack        # -> web3d_seq/, web3d_qa/
+powershell -NoProfile -ExecutionPolicy Bypass -File blender/encode_web3d.ps1        # -> web3d_enc/
+blender -b --factory-startup --python blender/web3d_pack.py -- --stage finalize    # -> web3d/ (хэш-имена, manifest)
+```
+
+Отгрузка лежит в `blender/web3d/` (дерево = `assets/snake3d/`), QA — в `blender/web3d_qa/` (листы покоя, взглядов,
+языка, `pack_report.json`, `encode_report.json`, `timing.json`). Набор покоя (B12-3) с `clips: {}`.
+
+Отступления от ТЗ (решено в пользу простого):
+- **Без тени** (решение пользователя 10.11): пол/фон остаются ради отражённого света, но невидимы для камеры и не
+  ловят тень; a_s = 0, шаг B8-3 пропущен, проход Shadow Catcher не пишется.
+- Один денойзер — OptiX, без сравнения с OIDN; отражений 8 (цвета меха откалиброваны под 8), в ТЗ 6.
+  Фильтр пикселя в Blender 5 только Blackman-Harris (ширина 1,5).
+- Дыхание H3b: масштаб X/Z позвонков без наследования масштаба (иначе сдвиг цепочки до 0,2 D). Поток B8-9 умножен на
+  0,74 (раздувается кожа радиусом 0,37 D, мех той же длины); проверка — по площади альфы: H3, искажённый потоком, даёт
+  площадь H3b с точностью 3–5 % (поштучное сравнение пикселей тонет в шуме двух рендеров) → `amp` 0,8.
+- Маска взгляда: разность считается против нейтральной ЯЧЕЙКИ (тот же регион и шум), после размытия σ 1,5;
+  «компоненты в 4 D от глаза» — геодезическое наращивание от диска 4 D.
+- Диапазон изгиба сузился до [0, 4]° (герой) и [−2, 2]° (кольцо): маска почти заполняет ячейку 936 px.
+- **Лимиты байтов (M6) превышены у look-атласов** даже при WebP 70: герой S/M/L 254/425/795 КБ при 150/270/580,
+  кольцо 167/282/502 при 110/200/420; язык героя S чуть выше 55 КБ. Причина — большая зона движения головы
+  (поворот −10…60°, кивок 15…65°). Нужно решение: сузить диапазон углов или поднять лимит.
+- J1: кольца змеи равномерные (1,325 D) — с кольцами фото петля не может быть бесшовной; шаттер 0,5.
+
 ## Монтажи для одобрения — `blender/renders/`
 
 - `compare_photo_render.webp` — фото | рендер;

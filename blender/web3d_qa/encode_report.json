@@ -1,0 +1,85 @@
+{
+ "files": {
+  "gauge/L/look.webp": {
+   "bytes": 502200,
+   "cap": 420000
+  },
+  "gauge/L/rest.webp": {
+   "bytes": 179200,
+   "cap": 300000
+  },
+  "gauge/L/tongue.webp": {
+   "bytes": 33206,
+   "cap": 130000
+  },
+  "gauge/M/look.webp": {
+   "bytes": 281512,
+   "cap": 200000
+  },
+  "gauge/M/rest.webp": {
+   "bytes": 100336,
+   "cap": 150000
+  },
+  "gauge/M/tongue.webp": {
+   "bytes": 24696,
+   "cap": 65000
+  },
+  "gauge/S/look.webp": {
+   "bytes": 167154,
+   "cap": 110000
+  },
+  "gauge/S/rest.webp": {
+   "bytes": 63788,
+   "cap": 90000
+  },
+  "gauge/S/tongue.webp": {
+   "bytes": 15746,
+   "cap": 40000
+  },
+  "hero/L/look.webp": {
+   "bytes": 794606,
+   "cap": 580000
+  },
+  "hero/L/rest.webp": {
+   "bytes": 186484,
+   "cap": 260000
+  },
+  "hero/L/tongue.webp": {
+   "bytes": 123322,
+   "cap": 180000
+  },
+  "hero/M/look.webp": {
+   "bytes": 425410,
+   "cap": 270000
+  },
+  "hero/M/rest.webp": {
+   "bytes": 101070,
+   "cap": 130000
+  },
+  "hero/M/tongue.webp": {
+   "bytes": 83716,
+   "cap": 90000
+  },
+  "hero/S/look.webp": {
+   "bytes": 254148,
+   "cap": 150000
+  },
+  "hero/S/rest.webp": {
+   "bytes": 62324,
+   "cap": 80000
+  },
+  "hero/S/tongue.webp": {
+   "bytes": 58204,
+   "cap": 55000
+  }
+ },
+ "over_cap": [
+  "gauge/L/look.webp",
+  "gauge/M/look.webp",
+  "gauge/S/look.webp",
+  "hero/L/look.webp",
+  "hero/M/look.webp",
+  "hero/S/look.webp",
+  "hero/S/tongue.webp"
+ ]
+}
