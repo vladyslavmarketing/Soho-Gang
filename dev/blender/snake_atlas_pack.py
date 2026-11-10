@@ -118,7 +118,17 @@ def main():
     d = np.hypot(np.minimum(xr, 0) / BACK[0], yr / BACK[1])
     fade = (1 - sstep(1 - BACK[2], 1, d))[..., None]
     for b in range(nh):
-        a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])])[::-1, ::-1], SS)   # turned by 180 deg
+        a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])], sym=True)[::-1, ::-1], SS)   # turned by 180 deg
+        # the head is never mirrored by the engine, so it must read the same whichever way it points: the bead eye
+        # is moved onto the head axis and the silhouette made symmetric about it (no "upside down" heading left)
+        dark = (a[..., :3].sum(-1) < 0.6) & (a[..., 3] > 0.95)
+        ey = int(round(np.nonzero(dark)[0].mean() - (oy0 - 0.5))) if dark.sum() > 20 else 0
+        a = np.roll(a, -ey, 0)
+        if ey > 0: a[-ey:] = 0
+        elif ey < 0: a[:-ey] = 0
+        mir = a[::-1][..., 3]
+        a = a * (np.minimum(a[..., 3], mir) / np.maximum(a[..., 3], 1e-4))[..., None]
+        print('head: eye moved by', -ey, 'px onto the axis')
         a = np.clip(np.stack([np.asarray(Image.fromarray(a[..., i], 'F').resize((hw, hh), Image.LANCZOS)) for i in range(4)], -1), 0, 1) * fade
         r, c = divmod(b, cols)
         head[r * hh:(r + 1) * hh, c * hw:(c + 1) * hw] = a
@@ -154,7 +164,7 @@ def main():
             'head_scale': 1.2, 'cell': [hw, hh], 'origin': [round(ox, 2), round(oy, 2)], 'eyes': True, 'fade_baked': True, 'tongue': False,
             'neck_fade_R': list(NECK_FADE),
             'eye': {'per_bucket': [[1]] * 32,
-                    'centres': [[round((INFO['head_s0'] - nose - 0.86) * d2r, 3), round(-0.05 * d2r, 3)]]},
+                    'centres': [[round((INFO['head_s0'] - nose - 0.86) * d2r, 3), 0]]},
             'tongue_base_R': [round((INFO['head_s0'] - nose - 0.05) * d2r, 3), round(1.09 * HEAD_K, 3)],
             'shape': {'source': 'blender/snake_scene.py head_profile (head v6)',
                       'frame': 'units of R; x forward from the head point; cell image y: jaw toward -y, brow toward +y'},

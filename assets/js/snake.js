@@ -848,7 +848,7 @@
     // rest cache (progressive rebuild for breathing)
     var cacheA = null, cacheB = null, cacheX = 0, cacheY = 0, restReady = false, cacheReady = false, cacheCursor = 0, cacheBreath = 1, restT0 = 0, job = null;
     // look / head / tongue
-    var lookA = 0, lookDX = 0, lookDY = 0, eyeX = 0, eyeY = 0, bobT = 0;
+    var lookMoving = false, lookA = 0, lookDX = 0, lookDY = 0, eyeX = 0, eyeY = 0, bobT = 0;
     var tongueT = -1, nextFlick = 2.5, lastFlickEnd = -9;
     var headCX = 0, headCY = 0, headAng = PI;   // last drawn head (css px)
     // free motion (chase / wander)
@@ -2218,6 +2218,13 @@
         if (pointerActive && ptr.type === 'mouse' && (!jm || Math.abs(ptr.y - poseR.hy / dpr) < 1.2 * Hview)) { lkX = ptr.x; lkY = ptr.y; lkMax = 0.32; }
         else if (jm && restAt === REST_END && gaugeC) { lkX = gaugeC.x; lkY = gaugeC.y + gaugeC.r * 0.15; lkMax = 0.12; }   // a slight nod to the readout, no kink
       }
+      // on the way to the calculator the head turns toward the gauge (it would otherwise hang nose-down along the
+      // lane); the turn fades in as the gauge comes near and out again where the body joins the ring
+      if (jm && state === ST_JOURNEY && gaugeC && poseR && bank) {
+        var gx = gaugeC.x - poseR.hx / dpr, gy = gaugeC.y - poseR.hy / dpr, gd = Math.hypot(gx, gy), gr = gaugeC.r;
+        var gw = (1 - smooth(4.5 * gr, 7 * gr, gd)) * smooth(1.5 * gr, 2.6 * gr, gd);
+        if (gw > 0.001) tA += clamp(wrapA(Math.atan2(gy, gx) - poseR.ha), -0.65, 0.65) * gw;
+      }
       if (lkX === lkX) {
         var hx = poseR.hx / dpr, hy = poseR.hy / dpr, dx = lkX - hx, dy = lkY - hy, d = Math.hypot(dx, dy) || 1;
         tA += clamp(wrapA(Math.atan2(dy, dx) - poseR.ha), -lkMax, lkMax) * smooth(0.4 * rh, 3 * rh, d);
@@ -2227,6 +2234,8 @@
       var kl = 1 - Math.exp(-dt * 4.5);
       lookA += (tA - lookA) * kl; lookDX += (tX - lookDX) * kl; lookDY += (tY - lookDY) * kl;
       eyeX += (eX2 - eyeX) * kl; eyeY += (eY2 - eyeY) * kl;
+      lookMoving = Math.abs(tA - lookA) > 0.003 || Math.abs(tX - lookDX) > 0.05 || Math.abs(tY - lookDY) > 0.05;
+      if (!lookMoving && state === ST_JOURNEY) { lookA = tA; lookDX = tX; lookDY = tY; }
 
       if (jm) updateJourney(dt);
       if (state === ST_ROUTE) {
@@ -2324,14 +2333,14 @@
         var key = '';
         if (jm && state === ST_JOURNEY) {
           key = uJ + ':' + oyDev;
-          if (key === drawnKey && drawn && tongueT < 0 && !lookingNow() && !debug) {   // still frame
+          if (key === drawnKey && drawn && tongueT < 0 && !lookMoving && !debug) {   // still frame
             if (animatingJ() || job) raf = requestAnimationFrame(frame); else goIdle();
             return;
           }
           fillTrailJ(uJ);
         }
         renderMoving(); forceDraw = false;
-        drawnKey = tongueT >= 0 || lookingNow() ? '' : key;
+        drawnKey = tongueT >= 0 || lookMoving ? '' : key;
       }
       if (debug) drawDebug();
       var ms = now() - t0, st = api.stats;
