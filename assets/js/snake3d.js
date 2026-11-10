@@ -1075,15 +1075,16 @@
     var ls = S.layer.style;
     ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', s * fr[1] + 'px');
     ls.setProperty('--s3d-y', 0.62 * H - cy * s + 'px');             // cruise head at 62 % of the viewport
-    var bodyL = c.bodyLeft != null ? c.bodyLeft : 0.49 * S.m.pxPerD;  // leftmost body pixel in the frame (centre − amplitude − radius)
-    ls.setProperty('--s3d-x', JOURNEY_EDGE - bodyL * s + 'px');        // pressed to the LEFT edge (user decision)
+    var bodyR = c.bodyRight != null ? c.bodyRight : 0.49 * S.m.pxPerD; // frame px right of her body (radius + amplitude margin)
+    ls.setProperty('--s3d-x', d.documentElement.clientWidth - s * fr[0] + bodyR * s - JOURNEY_EDGE + 'px');   // pressed to the RIGHT edge
+    // she leaves the logo through the right edge (H2), comes back in from the right edge, crawls down, and leaves through the
+    // right edge again before the gauge, where G1 brings her in from the right: every hand-off happens off-screen
     S.y0 = hero.sb * hero.vh;
-    var sec = gauge && gauge.sec.closest('section');                  // the block she slides into (the income section)
-    S.secTop = sec ? sec.getBoundingClientRect().top + scrollY : d.documentElement.scrollHeight;
-    S.y1 = S.secTop;                                                   // until that block's top edge reaches the viewport top
-    S.layY = 0.62 * H - cy * s; S.layH = s * fr[1];
-    S.ppf = 14;                                                        // one clip frame per 14 px of scroll
-    S.fits = mm('(min-width: 960px)') && S.y1 - S.y0 > (sg.in[1] + 20) * S.ppf;
+    S.y1 = gauge && gauge.docTop ? gauge.docTop - H : d.documentElement.scrollHeight - H;   // the arrival starts here (p_g = 0)
+    var a = sg.in[1], L = sg.loop[1] - sg.loop[0], o = c.frames - sg.out[0], R = S.y1 - S.y0;
+    S.n = Math.max(1, Math.round((R / 14 - a - o) / L));              // whole loops, so one frame is ~14 px of scroll
+    S.tot = a + S.n * L + o; S.ppf = R / S.tot;
+    S.fits = mm('(min-width: 960px)') && R > S.tot * 6;
     if (!S.tier) S.tier = tierFor(S.D * Math.min(w.devicePixelRatio || 1, 2), S.m);
     S.need = S.D * Math.min(w.devicePixelRatio || 1, 2);
     S.size(S.tier); S.dirty = true;
@@ -1092,7 +1093,8 @@
     var sg = this.sm.clips.journey.segments, a = sg.in[1], b = sg.loop[0], L = sg.loop[1] - b, N = this.sm.clips.journey.frames;
     U = Math.max(0, Math.floor(U));
     if (U < a) return U;
-    return b + ((U - a) % L);                                          // she keeps crawling; the next block's edge swallows her
+    var u = U - a, loops = this.n * L;
+    return u < loops ? b + (u % L) : Math.min(N - 1, sg.out[0] + (u - loops));
   };
   Journey.prototype.onClipFrame = function () { this.dirty = true; };
   Journey.prototype.onStill = function (on) { if (on) { this.pauseAll(); this.hide(0); } };
@@ -1101,10 +1103,8 @@
     var S = this, c = S.clips.journey;
     if (hero && hero.st !== 'gone' && hero.st !== 'still' && hero.vis === 0 && scrollY > S.y0 && S.fits && mode === 'motion') hero.toGone(false);   // hero out of view: she has left
     var want = mode === 'motion' && S.fits && video === 'ok' && !jumping && hero && hero.st === 'gone' &&
-      (!gauge || gauge.st === 'empty' || gauge.st === 'off' || gauge.st === 'arrive') && scrollY > S.y0 && scrollY < S.y1;
-    if (!want) { S.hide(jumping ? 200 : gauge && gauge.st === 'rest' ? 300 : 0); return; }
-    var cut = Math.max(0, Math.round(S.layY + S.layH - (S.secTop - scrollY)));   // clip her at the next block's top edge
-    if (cut !== S.cut) { S.cut = cut; S.layer.style.clipPath = cut ? 'inset(0 0 ' + cut + 'px 0)' : ''; }
+      (!gauge || gauge.st === 'empty' || gauge.st === 'off') && scrollY > S.y0 && scrollY < S.y1;
+    if (!want) { S.hide(jumping ? 200 : 0); return; }
     if (!S.ready('journey')) {
       if (!S.loading && !hero.p4 && !(S.clipFail && S.clipFail.journey) && S.gl()) {   /* never while the hero still loads its pair into hero B */ S.loading = true; S.loadClip('journey', pool[1], 'low').then(function () { S.loading = false; kick(); }, function () { S.loading = false; }); }
       return;

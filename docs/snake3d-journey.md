@@ -63,7 +63,7 @@ the counts below are targets, not hard rules.
 
 Files: `journey/S/journey.<h8>.{av1,hevc,h264}.mp4`, `journey/M/…`. No rest still, no look, no flow.
 
-## J-W. Web behaviour (implemented)
+## J-W. Web behaviour (implemented; see the final update below for the right edge)
 
 - A fixed layer at the right edge of the viewport, scaled 1:1 with the hero snake, cruise point at 62 % of the viewport, `z-index: 3`: above section backgrounds,
   under content wrappers (`z-index ≥ 4`). On laptops she slides under the cards and shows in margins and gaps; on wide
@@ -78,31 +78,27 @@ Files: `journey/S/journey.<h8>.{av1,hevc,h264}.mp4`, `journey/M/…`. No rest st
 
 ---
 
-## Update 2026-11-10: left edge, and she crawls from the block above into the ring
+## Update 2026-11-10 (final): right edge, every hand-off off-screen
 
-User decisions: **the journey runs along the LEFT edge**, and at the calculator «она должна лаконично переходить из
-блока выше и заворачиваться вокруг круга калькулятора». The ring stays in the right column (user's choice).
-A mock of the whole path is in the preview; the mock generators are `dev/snake3d-journey-mock.py` and
-`dev/snake3d-gauge-mock.py` (geometry reference for the Blender session).
+User: «змея на первом экране рисует «ae» и потом уходит вправо при скролле и начинает ползти вниз до калькулятора и
+завивается вокруг него». An intermediate left-edge variant looked unnatural (seams at the block edge, a leftover piece of
+body); it is dropped. The story is now one creature weaving in and out of the **right** edge, so no seam is ever on screen:
 
-**J1 changes**
-- The layer is pinned to the left edge: her leftmost body pixel 8 css px from the viewport edge (`JOURNEY_EDGE`,
-  `clips.journey.bodyLeft` = leftmost body x in master px, default 0.49 D). The frame stays symmetric; no mirroring.
-- The `out` segment is **no longer used.** She keeps crawling (the loop repeats) and the top edge of the income section
-  swallows her: the player clips the layer at that edge, so she slides into the next block. `out` can be dropped.
+1. **H2 (depart)** leaves the logo through the right edge (as specified).
+2. **J1 `in`**: she comes back **in through the frame's right edge** at ≈ 22 % of the frame height (head first, heading
+   left), turns down with a ≈ 1 D radius, and crawls down; the camera starts tracking so the entry turn leaves the frame
+   through the top before the loop begins.
+3. **J1 `loop`**: seamless crawl down along the right edge (as above). **Seam rule:** the band phase must repeat, so the
+   camera travel per loop must equal a whole number of band periods measured **along the body** (the wavy arc length of
+   2 λ, not 2 λ itself); adjust λ or the travel until both repeat.
+4. **J1 `out`**: from the loop's first pose she goes down to the next crest, turns **right** (≈ 1 D radius) and leaves
+   **through the right edge**, accelerating, until the tail end has left the frame (last frame empty).
+5. **G1 (arrive)** is **unchanged from the spec** (B6): she enters from the right and coils counter-clockwise, head at 12:30.
 
-**G1 is reframed (replaces B6's right entry): she comes from the top-left and crosses diagonally to the ring.**
-- Frame **3360 × 2112** master px (21.5 × 13.5 D), ring centre **(2592, 1440)**, ring r = 390, coil radius 520.
-  The frame's top edge lies above the income section's top at every desktop width, so she emerges from under the
-  boundary between the blocks (the section clips her: `.income { overflow: hidden }`).
-- Path: enters through the frame's **top edge at x ≈ 720** (12 D left of the ring centre; on a 1440 screen that is
-  ≈ 120 css px from the viewport's left edge, right under where J1 dives), slithers diagonally down-right, reaches
-  the ring at its upper-left (θ = 240°), then coils **clockwise one lap + 45°**; the head rests at **12:30**, heading
-  right (`headDir` ≈ [0.97, 0.25]), neck lifted over the first lap (B6 clearance rule). Her tail trails back up-left
-  toward the entry and stays fully inside the frame at rest.
-- 96 frames, ease-out; frame 0 empty. Exit edge: **top** (no exit ramp on the right any more).
-- No shadow. Look cells / tongue as in G3–G5, re-posed for this rest pose.
-- Size: S clips 1120 × 1440 (6300 MBs); M (2240 × 2880, 25 200 MBs) exceeds H.264 level 4 — ship **S only** for G1, or
-  M as AV1/HEVC level 5.1. Stills may stay S/M/L.
-- On the page the copy column sits above her (`.income__copy` z 1) with an ink text halo, so she passes under the
-  title and sliders on her way to the ring.
+- Exit edge of J1: **right** (top/bottom/left keep 24 px clear, except the body that runs up out of the top during the loop).
+- Suggested counts: `in` 96 (56 entry + 40 tracking), `loop` 60, `out` 96; the player reads them from `segments`.
+- Manifest extras: `clips.journey.cruiseY` (head y in the loop, master px) and `clips.journey.bodyRight` (frame px right of
+  her body; the player keeps her body 8 css px from the viewport's right edge).
+- Web: the journey shows from the hero's p = 1 to the scroll where the gauge's top meets the viewport bottom (the arrival
+  starts there); the loop repeats n times so a frame is ≈ 14 px of scroll; same size as the hero (1:1); desktop only.
+- Mock with exactly this geometry: `dev/snake3d-journey-mock.py` (used for the preview video).

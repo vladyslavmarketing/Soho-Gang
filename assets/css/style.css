@@ -943,12 +943,6 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 }
 .income .eyebrow { color: var(--cream-70); }
 .income .section-lead { color: var(--cream-70); }
-/* the plush snake crawls under this copy on her way to the ring: an ink halo (invisible on the ink band)
-   keeps cream type readable over her body; the copy sits above her layer */
-.income .eyebrow, .income .section-title, .income .section-lead, .income .calc {
-  text-shadow: 0 0 2px var(--ink), 0 0 6px rgba(30, 22, 24, .9), 0 0 14px rgba(30, 22, 24, .75);
-}
-.income__copy { position: relative; z-index: 1; }
 .income__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2836,7 +2830,7 @@ html.reduced-motion .hero__hint { display: none; }
    --s3d-x/-y/-w/-h (px, relative to .hero / .gauge). The rest still covers the whole layer. */
 .snake3d { position: absolute; left: var(--s3d-x, 0); top: var(--s3d-y, 0); width: var(--s3d-w, 0); height: var(--s3d-h, 0); pointer-events: none; user-select: none; }
 .snake3d--hero { z-index: 1; }   /* under .hero__studio (z 1, later in the DOM), the vignette (3), the viewfinder (4), the copy (5) */
-/* left-edge journey between the hero and #income (desktop): fixed, above section backgrounds, under content (z ≥ 4) */
+/* right-edge journey between the hero and #income (desktop): fixed, above section backgrounds, under content (z ≥ 4) */
 .snake3d--journey { position: fixed; left: var(--s3d-x, 0); top: var(--s3d-y, 0); z-index: 3; }
 @media (max-width: 959px) { .snake3d--journey { display: none; } }
 html:not(.js) .snake3d--hero, .snake3d--hero.is-fallback {   /* stage from the CSS logo box; constants = W5, from the shipped manifest (animatic set) */
