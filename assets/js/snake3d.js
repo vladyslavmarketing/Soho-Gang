@@ -1067,10 +1067,13 @@
   Journey.prototype = Object.create(Scene.prototype);
   Journey.prototype.layout = function () {
     var S = this, sm = S.sm; if (!sm || !hero || !hero.sb) return;
-    var H = vh(), fr = sm.frame, s = H / fr[1], c = sm.clips.journey, sg = c.segments;
+    var H = vh(), fr = sm.frame, c = sm.clips.journey, sg = c.segments;
+    var s = hero.s || H / fr[1];                                     // the same size as the hero snake (user: «1 в 1 как с верхней»)
+    var cy = c.cruiseY != null ? c.cruiseY : 0.62 * fr[1];          // head y during the loop, master px
     S.s = s; S.vh = H; S.D = s * S.m.pxPerD;
     var ls = S.layer.style;
-    ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', H + 'px');
+    ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', s * fr[1] + 'px');
+    ls.setProperty('--s3d-y', 0.62 * H - cy * s + 'px');             // cruise head at 62 % of the viewport
     S.y0 = hero.sb * hero.vh;
     S.y1 = gauge && gauge.docTop ? gauge.docTop - H : d.documentElement.scrollHeight - H;
     var a = sg.in[1], L = sg.loop[1] - sg.loop[0], o = c.frames - sg.out[0], R = S.y1 - S.y0;
