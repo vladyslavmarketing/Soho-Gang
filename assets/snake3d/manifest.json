@@ -246,6 +246,53 @@
           }
         }
       }
+    },
+    "journey": {
+      "frame": [
+        480,
+        2496
+      ],
+      "camera": {
+        "name": "interim mock (dev/snake3d-journey-mock.py)",
+        "type": "ortho"
+      },
+      "stage": [
+        0,
+        0,
+        480,
+        2496
+      ],
+      "exit": "right",
+      "clips": {
+        "journey": {
+          "frames": 252,
+          "rect": [
+            0,
+            0,
+            480,
+            2496
+          ],
+          "from": "empty",
+          "to": "empty",
+          "cruiseY": 1548,
+          "bodyRight": 115,
+          "segments": {
+            "in": [
+              0,
+              96
+            ],
+            "loop": [
+              96,
+              156
+            ],
+            "out": [
+              156,
+              252
+            ]
+          },
+          "intra": true
+        }
+      }
     }
   },
   "files": {
@@ -320,6 +367,16 @@
         528,
         336
       ]
+    },
+    "journey/S/journey.h264.mp4": {
+      "file": "journey/S/journey.h264.mp4",
+      "bytes": 1188845,
+      "codec": "avc1.64001F",
+      "size": [
+        160,
+        1696
+      ],
+      "frames": 252
     }
   }
 }

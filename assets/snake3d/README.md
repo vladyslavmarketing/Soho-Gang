@@ -24,6 +24,10 @@ from the Blender session's animatics (`blender/renders/motion/*_animatic.mp4`, b
 - Files are not content-hashed (interim); the finals from `web3d_pack.py` will be.
 - `aeBox [534, 312, 1056, 756]`; gauge anchors use the spec's ring (720, 672, r 390).
 
+- `journey/S/journey.h264.mp4`: **interim mock** of the right-edge journey (J1), drawn by `dev/snake3d-journey-mock.py`
+  in the animatic style (not a Blender render), so the live site shows the whole story until J1 is rendered.
+  Replace it with the Blender delivery (docs/snake3d-journey.md).
+
 **For the final renders:** drop the shadow-catcher floor (B2, B8-3) too, otherwise the grey shadow returns.
 
 The earlier plush placeholder (idle loop from `snake_idle.webm`, `loopRest`) is in git history; `dev/snake3d-noshadow.py`
