@@ -10,8 +10,9 @@ Opens renders/snake.blend (snake_scene.py), deletes the Sweep and the hero light
     CamGauge   orthographic, ortho_scale 13.538 D (= 2112 / 156), at (2.154, 0, 40): the ring centre lands
                on master px (720, 672), the right frame edge at x = +8.92 D
     Floor      60 x 60 D shadow catcher, Principled base #1E1618 (linear 0.0129, 0.0080, 0.0091), rough 0.9
-    lights     key (area 10 D at (-18, 2, 14) -> (0, 0, 0.5), 3300 W, spread 50), front (area 14 D at
-               (-4, 6, 30), 4500 W, spread 60), pink rim without shadows (area 6 D at (9, -9, 2.5), 1200 W,
+    lights     (watts calibrated so lit pink matches the hero, dE76 1.2, B7-1; spec start values 3300 / 4500 / 1200)
+               key (area 10 D at (-18, 2, 14) -> (0, 0, 0.5), 990 W, spread 50), front (area 14 D at
+               (-4, 6, 30), 1125 W, spread 60), pink rim without shadows (area 6 D at (9, -9, 2.5), 180 W,
                (1, .62, .70)), inner glow (sphere r 1.2 D at (0, 0, 0.6), 120 W); world (0.12, .085, .09) x .25
 Master path (tail end first, arc-length parametrised; B6):
     A lead-in  (50, 1.665) -> (12, 1.665)   (spec: from 40; longer so the tail end of frame 0 lies on it)
@@ -85,9 +86,9 @@ def build_set(rest):
         sc.collection.objects.link(ob)
         return ob
 
-    light('GKey', 'AREA', (-18, 2, 14), float(arg('--key', 3300)), (1.0, 0.97, 0.95), size=10, aim=(0, 0, 0.5), spread=50)
-    light('GFront', 'AREA', (-4, 6, 30), float(arg('--front', 4500)), (1.0, 0.97, 0.96), size=14, aim=(0, 0, 0), spread=60)
-    light('GRim', 'AREA', (9, -9, 2.5), float(arg('--rim', 1200)), (1.0, 0.62, 0.70), size=6, aim=(0, 0, 0), shadow=False)
+    light('GKey', 'AREA', (-18, 2, 14), float(arg('--key', 990)), (1.0, 0.97, 0.95), size=10, aim=(0, 0, 0.5), spread=50)
+    light('GFront', 'AREA', (-4, 6, 30), float(arg('--front', 1125)), (1.0, 0.97, 0.96), size=14, aim=(0, 0, 0), spread=60)
+    light('GRim', 'AREA', (9, -9, 2.5), float(arg('--rim', 180)), (1.0, 0.62, 0.70), size=6, aim=(0, 0, 0), shadow=False)
     light('GGlow', 'POINT', (0, 0, 0.6), float(arg('--glow', 120)), (0.84, 0.54, 0.60), radius=1.2)
     bg = sc.world.node_tree.nodes['Background']
     bg.inputs['Color'].default_value = (0.12, 0.085, 0.09, 1)

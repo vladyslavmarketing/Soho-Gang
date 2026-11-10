@@ -712,7 +712,7 @@ def depart_motion(rest, NF):
         t_mid = np.interp(tr0.sig + rest.L / 2, sg, tg)
         t_s = np.maximum(t_mid, SETTLE_DELAY)          # letters and the step down beside the "a" (w < 1) settle
         state = (lambda t_s, prof: (lambda t: depart_state(rest, tr0, t, t_s, prof)))(t_s, prof)
-        trT, shT = state(T)
+        trT, shT = state(T - 0.5 / FPS)                # empty with motion blur too (shutter 1.0 reaches f - 0.5)
         P, cum, ss = trT.window(rest, shT)
         if offscreen(rest, P, cum):
             break

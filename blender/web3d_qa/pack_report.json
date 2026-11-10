@@ -34,14 +34,14 @@
    ]
   },
   "gauge": {
-   "mask_feather_p99_Dmax": 0.3899550437927246,
+   "mask_feather_p99_Dmax": 2.0548222064971924,
    "mask_breathW_note": "feather vs breathW < 0.25 not asserted",
    "rangeDeg": [
     -2,
     2
    ],
    "rect_gate_max_outside_R": 0.0,
-   "neutral_cell_mean_diff": 0.04389215260744095,
+   "neutral_cell_mean_diff": 0.4006040096282959,
    "tongue_rect": [
     720,
     72,
@@ -49,9 +49,9 @@
     144
    ],
    "breath_qa": {
-    "area_px_H3_minus_H3b": -5906.0,
-    "warped_plus_minus_H3b": -271.3125,
-    "warped_minus_minus_H3b": -11415.625,
+    "area_px_H3_minus_H3b": -5795.375,
+    "warped_plus_minus_H3b": -386.3125,
+    "warped_minus_minus_H3b": -11081.4375,
     "amp": 0.8
    },
    "containment": {
@@ -61,13 +61,144 @@
     "look_in_stage": true
    },
    "lit_pink": [
-    255,
-    219,
-    249
+    244,
+    167,
+    182
    ]
+  },
+  "clips": {
+   "intro": {
+    "frames": 84,
+    "rect": [
+     480,
+     192,
+     1632,
+     960
+    ],
+    "continuity": {
+     "S": {
+      "mean_rgb": 0.17,
+      "p99_rgb": 0.88,
+      "mean_a": 0.04,
+      "p99_a": 0.54
+     },
+     "M": {
+      "mean_rgb": 0.17,
+      "p99_rgb": 1.05,
+      "mean_a": 0.0,
+      "p99_a": 0.0
+     }
+    },
+    "empty_frames_maxA_255": {
+     "0": 0.0,
+     "1": 0.0,
+     "2": 0.0
+    },
+    "empty_ok": true,
+    "stacked": {
+     "S": [
+      816,
+      1008
+     ],
+     "M": [
+      1088,
+      1344
+     ]
+    },
+    "macroblocks": {
+     "S": 3213,
+     "M": 5712
+    },
+    "mb_ok": true
+   },
+   "depart": {
+    "frames": 48,
+    "rect": [
+     96,
+     192,
+     2016,
+     1056
+    ],
+    "continuity": {
+     "S": {
+      "mean_rgb": 0.17,
+      "p99_rgb": 0.88,
+      "mean_a": 0.04,
+      "p99_a": 0.54
+     },
+     "M": {
+      "mean_rgb": 0.17,
+      "p99_rgb": 1.05,
+      "mean_a": 0.0,
+      "p99_a": 0.0
+     }
+    },
+    "empty_frames_maxA_255": {
+     "47": 0.0
+    },
+    "empty_ok": true,
+    "stacked": {
+     "S": [
+      1008,
+      1104
+     ],
+     "M": [
+      1344,
+      1472
+     ]
+    },
+    "macroblocks": {
+     "S": 4347,
+     "M": 7728
+    },
+    "mb_ok": true
+   },
+   "arrive": {
+    "frames": 96,
+    "rect": [
+     0,
+     0,
+     1632,
+     1344
+    ],
+    "continuity": {
+     "S": {
+      "mean_rgb": 0.13,
+      "p99_rgb": 0.73,
+      "mean_a": 0.05,
+      "p99_a": 0.55
+     },
+     "M": {
+      "mean_rgb": 0.14,
+      "p99_rgb": 0.9,
+      "mean_a": 0.01,
+      "p99_a": 0.37
+     }
+    },
+    "empty_frames_maxA_255": {
+     "0": 0.0
+    },
+    "empty_ok": true,
+    "stacked": {
+     "S": [
+      816,
+      1392
+     ],
+     "M": [
+      1088,
+      1856
+     ]
+    },
+    "macroblocks": {
+     "S": 4437,
+     "M": 7888
+    },
+    "mb_ok": true
+   }
   }
  },
  "log": [
+  "clip rects {'intro': [480, 192, 1632, 960], 'depart': [96, 192, 2016, 1056], 'arrive': [0, 0, 1632, 1344]}",
   "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
   "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
   "hero mask feather p99 Dmax 4.4 > 4: dilating 8 px more",
@@ -76,10 +207,13 @@
   "hero mask rect [432, 168, 744, 768] look rect [432, 168, 744, 768] range [0, 4] neutral diff 0.10, gate 0.0, p99 4.5",
   "hero breath QA (alpha area vs H3b): H3 -5018 px, +flow +128, -flow -10065 -> amp 0.8",
   "hero containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
-  "hero stage [360, 96, 1752, 1152] still rect [504, 264, 1608, 840] anchors {'aeBox': [541, 302, 1571, 769], 'eye': [698, 447], 'snout': [552, 486], 'headDir': [-0.943, 0.333]}",
-  "gauge mask rect [480, 0, 960, 792] look rect [480, 0, 960, 792] range [-2, 2] neutral diff 0.04, gate 0.0, p99 0.4",
-  "gauge breath QA (alpha area vs H3b): H3 -5906 px, +flow -271, -flow -11416 -> amp 0.8",
+  "hero stage [96, 96, 2016, 1152] still rect [504, 264, 1608, 840] anchors {'aeBox': [541, 302, 1571, 769], 'eye': [698, 447], 'snout': [552, 486], 'headDir': [-0.943, 0.333]}",
+  "gauge mask rect [480, 0, 960, 792] look rect [480, 0, 960, 792] range [-2, 2] neutral diff 0.40, gate 0.0, p99 2.1",
+  "gauge breath QA (alpha area vs H3b): H3 -5795 px, +flow -386, -flow -11081 -> amp 0.8",
   "gauge containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
-  "gauge stage [72, 0, 1656, 1344] still rect [72, 24, 1632, 1296] anchors {'eye': [968, 314], 'snout': [888, 167], 'headDir': [-0.891, -0.454], 'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520, 'coilOuterRadius': 598, 'exitRamp': [1440, 1680], 'tipX': 0.85}"
+  "gauge stage [0, 0, 1728, 1344] still rect [72, 24, 1536, 1296] anchors {'eye': [968, 314], 'snout': [888, 167], 'headDir': [-0.891, -0.454], 'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520, 'coilOuterRadius': 598, 'exitRamp': [1344, 1584], 'tipX': 0.85}",
+  "intro {'frames': 84, 'rect': [480, 192, 1632, 960], 'continuity': {'S': {'mean_rgb': 0.17, 'p99_rgb': 0.88, 'mean_a': 0.04, 'p99_a': 0.54}, 'M': {'mean_rgb': 0.17, 'p99_rgb': 1.05, 'mean_a': 0.0, 'p99_a': 0.0}}, 'empty_frames_maxA_255': {'0': 0.0, '1': 0.0, '2': 0.0}, 'empty_ok': True, 'stacked': {'S': [816, 1008], 'M': [1088, 1344]}, 'macroblocks': {'S': 3213, 'M': 5712}, 'mb_ok': True}",
+  "depart {'frames': 48, 'rect': [96, 192, 2016, 1056], 'continuity': {'S': {'mean_rgb': 0.17, 'p99_rgb': 0.88, 'mean_a': 0.04, 'p99_a': 0.54}, 'M': {'mean_rgb': 0.17, 'p99_rgb': 1.05, 'mean_a': 0.0, 'p99_a': 0.0}}, 'empty_frames_maxA_255': {'47': 0.0}, 'empty_ok': True, 'stacked': {'S': [1008, 1104], 'M': [1344, 1472]}, 'macroblocks': {'S': 4347, 'M': 7728}, 'mb_ok': True}",
+  "arrive {'frames': 96, 'rect': [0, 0, 1632, 1344], 'continuity': {'S': {'mean_rgb': 0.13, 'p99_rgb': 0.73, 'mean_a': 0.05, 'p99_a': 0.55}, 'M': {'mean_rgb': 0.14, 'p99_rgb': 0.9, 'mean_a': 0.01, 'p99_a': 0.37}}, 'empty_frames_maxA_255': {'0': 0.0}, 'empty_ok': True, 'stacked': {'S': [816, 1392], 'M': [1088, 1856]}, 'macroblocks': {'S': 4437, 'M': 7888}, 'mb_ok': True}"
  ]
 }

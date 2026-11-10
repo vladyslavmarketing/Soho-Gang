@@ -1,39 +1,63 @@
 {
  "files": {
   "gauge/L/look.webp": {
-   "bytes": 502200,
+   "bytes": 502264,
    "cap": 420000
   },
   "gauge/L/rest.webp": {
-   "bytes": 179200,
+   "bytes": 167888,
    "cap": 300000
   },
   "gauge/L/tongue.webp": {
-   "bytes": 33206,
+   "bytes": 33898,
    "cap": 130000
   },
+  "gauge/M/arrive.av1.mp4": {
+   "bytes": 355749,
+   "cap": 700000
+  },
+  "gauge/M/arrive.h264.mp4": {
+   "bytes": 647615,
+   "cap": 1190000
+  },
+  "gauge/M/arrive.hevc.mp4": {
+   "bytes": 510035,
+   "cap": 875000
+  },
   "gauge/M/look.webp": {
-   "bytes": 281512,
+   "bytes": 277588,
    "cap": 200000
   },
   "gauge/M/rest.webp": {
-   "bytes": 100336,
+   "bytes": 95288,
    "cap": 150000
   },
   "gauge/M/tongue.webp": {
-   "bytes": 24696,
+   "bytes": 26678,
    "cap": 65000
   },
+  "gauge/S/arrive.av1.mp4": {
+   "bytes": 234926,
+   "cap": 400000
+  },
+  "gauge/S/arrive.h264.mp4": {
+   "bytes": 390502,
+   "cap": 680000
+  },
+  "gauge/S/arrive.hevc.mp4": {
+   "bytes": 320998,
+   "cap": 500000
+  },
   "gauge/S/look.webp": {
-   "bytes": 167154,
+   "bytes": 165618,
    "cap": 110000
   },
   "gauge/S/rest.webp": {
-   "bytes": 63788,
+   "bytes": 59508,
    "cap": 90000
   },
   "gauge/S/tongue.webp": {
-   "bytes": 15746,
+   "bytes": 18188,
    "cap": 40000
   },
   "hero/L/look.webp": {
@@ -41,31 +65,103 @@
    "cap": 580000
   },
   "hero/L/rest.webp": {
-   "bytes": 186484,
+   "bytes": 186308,
    "cap": 260000
   },
   "hero/L/tongue.webp": {
    "bytes": 123322,
    "cap": 180000
   },
+  "hero/M/depart-rev.av1.mp4": {
+   "bytes": 203889,
+   "cap": 350000
+  },
+  "hero/M/depart-rev.h264.mp4": {
+   "bytes": 409435,
+   "cap": 595000
+  },
+  "hero/M/depart-rev.hevc.mp4": {
+   "bytes": 282514,
+   "cap": 437500
+  },
+  "hero/M/depart.av1.mp4": {
+   "bytes": 229229,
+   "cap": 350000
+  },
+  "hero/M/depart.h264.mp4": {
+   "bytes": 415812,
+   "cap": 595000
+  },
+  "hero/M/depart.hevc.mp4": {
+   "bytes": 291802,
+   "cap": 437500
+  },
+  "hero/M/intro.av1.mp4": {
+   "bytes": 433033,
+   "cap": 600000
+  },
+  "hero/M/intro.h264.mp4": {
+   "bytes": 690333,
+   "cap": 1020000
+  },
+  "hero/M/intro.hevc.mp4": {
+   "bytes": 532548,
+   "cap": 750000
+  },
   "hero/M/look.webp": {
    "bytes": 425410,
    "cap": 270000
   },
   "hero/M/rest.webp": {
-   "bytes": 101070,
+   "bytes": 100658,
    "cap": 130000
   },
   "hero/M/tongue.webp": {
    "bytes": 83716,
    "cap": 90000
   },
+  "hero/S/depart-rev.av1.mp4": {
+   "bytes": 137728,
+   "cap": 200000
+  },
+  "hero/S/depart-rev.h264.mp4": {
+   "bytes": 250951,
+   "cap": 340000
+  },
+  "hero/S/depart-rev.hevc.mp4": {
+   "bytes": 168663,
+   "cap": 250000
+  },
+  "hero/S/depart.av1.mp4": {
+   "bytes": 153901,
+   "cap": 200000
+  },
+  "hero/S/depart.h264.mp4": {
+   "bytes": 257001,
+   "cap": 340000
+  },
+  "hero/S/depart.hevc.mp4": {
+   "bytes": 176867,
+   "cap": 250000
+  },
+  "hero/S/intro.av1.mp4": {
+   "bytes": 289795,
+   "cap": 340000
+  },
+  "hero/S/intro.h264.mp4": {
+   "bytes": 427086,
+   "cap": 578000
+  },
+  "hero/S/intro.hevc.mp4": {
+   "bytes": 330359,
+   "cap": 425000
+  },
   "hero/S/look.webp": {
    "bytes": 254148,
    "cap": 150000
   },
   "hero/S/rest.webp": {
-   "bytes": 62324,
+   "bytes": 62388,
    "cap": 80000
   },
   "hero/S/tongue.webp": {
@@ -81,5 +177,298 @@
   "hero/M/look.webp",
   "hero/S/look.webp",
   "hero/S/tongue.webp"
- ]
+ ],
+ "decode": {
+  "videos": {
+   "gauge/M/arrive.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "gauge/M/arrive.h264.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "gauge/M/arrive.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "gauge/S/arrive.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "gauge/S/arrive.h264.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    }
+   },
+   "gauge/S/arrive.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "95": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart-rev.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart-rev.h264.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart-rev.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart.h264.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    }
+   },
+   "hero/M/depart.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/M/intro.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/M/intro.h264.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    }
+   },
+   "hero/M/intro.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart-rev.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart-rev.h264.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart-rev.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart.h264.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   },
+   "hero/S/depart.hevc.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "47": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    }
+   },
+   "hero/S/intro.av1.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "hero/S/intro.h264.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    }
+   },
+   "hero/S/intro.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    },
+    "83": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 3.0,
+     "ok": true
+    }
+   }
+  },
+  "failing": []
+ }
 }

@@ -30,9 +30,9 @@
     ]
    },
    "stage": [
-    360,
     96,
-    1752,
+    96,
+    2016,
     1152
    ],
    "exit": "right",
@@ -56,45 +56,50 @@
      0.333
     ],
     "silhouetteBottom": {
-     "x0": 360,
+     "x0": 96,
      "step": 48,
      "y": [
       null,
       null,
       null,
-      514,
-      948,
-      1006,
-      1040,
-      1064,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      898,
+      984,
+      1024,
+      1053,
       1070,
       1069,
-      1067,
-      1054,
-      1033,
-      1005,
-      961,
-      997,
-      1021,
-      1037,
-      1047,
+      1069,
+      1062,
+      1046,
+      1020,
+      976,
+      977,
+      1009,
+      1030,
+      1045,
       1052,
-      1043,
-      1041,
-      1029,
-      1021,
-      1000,
-      975,
+      1045,
+      1042,
+      1034,
+      1026,
+      1012,
+      990,
+      961,
+      928,
+      904,
+      893,
+      907,
+      921,
+      935,
       943,
-      920,
-      897,
-      900,
-      914,
-      930,
-      942,
-      945,
       949,
-      955,
+      951,
       961
      ]
     }
@@ -103,18 +108,18 @@
     "still": {
      "file": "rest.webp",
      "rect": [
-      360,
       96,
-      1752,
+      96,
+      2016,
       1152
      ]
     },
     "flow": {
      "file": "flow.png",
      "rect": [
-      360,
       96,
-      1752,
+      96,
+      2016,
       1152
      ],
      "fileScale": 0.5,
@@ -300,7 +305,48 @@
      ]
     }
    },
-   "clips": {}
+   "clips": {
+    "intro": {
+     "frames": 84,
+     "rect": [
+      480,
+      192,
+      1632,
+      960
+     ],
+     "from": "empty",
+     "to": "rest",
+     "events": {
+      "written": 70
+     }
+    },
+    "depart-rev": {
+     "frames": 48,
+     "rect": [
+      96,
+      192,
+      2016,
+      1056
+     ],
+     "from": "empty",
+     "to": "rest"
+    },
+    "depart": {
+     "frames": 48,
+     "rect": [
+      96,
+      192,
+      2016,
+      1056
+     ],
+     "from": "rest",
+     "to": "empty",
+     "events": {
+      "unwritten": 2
+     },
+     "reverse": "depart-rev"
+    }
+   }
   },
   "gauge": {
    "frame": [
@@ -313,9 +359,9 @@
     "orthoScaleD": 13.538
    },
    "stage": [
-    72,
     0,
-    1656,
+    0,
+    1728,
     1344
    ],
    "exit": "right",
@@ -341,8 +387,8 @@
     "coilRadius": 520,
     "coilOuterRadius": 598,
     "exitRamp": [
-     1440,
-     1680
+     1344,
+     1584
     ],
     "tipX": 0.85
    },
@@ -350,18 +396,18 @@
     "still": {
      "file": "rest.webp",
      "rect": [
-      72,
       0,
-      1656,
+      0,
+      1728,
       1344
      ]
     },
     "flow": {
      "file": "flow.png",
      "rect": [
-      72,
       0,
-      1656,
+      0,
+      1728,
       1344
      ],
      "fileScale": 0.5,
@@ -527,7 +573,22 @@
      ]
     }
    },
-   "clips": {}
+   "clips": {
+    "arrive": {
+     "frames": 96,
+     "rect": [
+      0,
+      0,
+      1632,
+      1344
+     ],
+     "from": "empty",
+     "to": "rest",
+     "events": {
+      "arrived": 95
+     }
+    }
+   }
   }
  },
  "videoLayout": {
@@ -569,88 +630,148 @@
  },
  "files": {
   "gauge/L/look.webp": {
-   "file": "gauge/L/look.1df4c6a6.webp",
-   "bytes": 502200,
+   "file": "gauge/L/look.a48b6605.webp",
+   "bytes": 502264,
    "size": [
     3872,
     2400
    ]
   },
   "gauge/L/rest.webp": {
-   "file": "gauge/L/rest.7fbf6069.webp",
-   "bytes": 179200,
+   "file": "gauge/L/rest.66cfdf2f.webp",
+   "bytes": 167888,
    "size": [
-    1656,
+    1728,
     1344
    ]
   },
   "gauge/L/tongue.webp": {
-   "file": "gauge/L/tongue.d26520c1.webp",
-   "bytes": 33206,
+   "file": "gauge/L/tongue.4ed90fc1.webp",
+   "bytes": 33898,
    "size": [
     1120,
     1672
    ]
   },
+  "gauge/M/arrive.av1.mp4": {
+   "file": "gauge/M/arrive.a93b837e.av1.mp4",
+   "bytes": 355749,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1088,
+    1856
+   ],
+   "frames": 96
+  },
+  "gauge/M/arrive.h264.mp4": {
+   "file": "gauge/M/arrive.f3d591a8.h264.mp4",
+   "bytes": 647615,
+   "codec": "avc1.640028",
+   "size": [
+    1088,
+    1856
+   ],
+   "frames": 96
+  },
+  "gauge/M/arrive.hevc.mp4": {
+   "file": "gauge/M/arrive.9d52b0c3.hevc.mp4",
+   "bytes": 510035,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1088,
+    1856
+   ],
+   "frames": 96
+  },
   "gauge/M/look.webp": {
-   "file": "gauge/M/look.d9b97f45.webp",
-   "bytes": 281512,
+   "file": "gauge/M/look.dd5e11b9.webp",
+   "bytes": 277588,
    "size": [
     2592,
     1608
    ]
   },
   "gauge/M/rest.webp": {
-   "file": "gauge/M/rest.4a133a95.webp",
-   "bytes": 100336,
+   "file": "gauge/M/rest.7ff49721.webp",
+   "bytes": 95288,
    "size": [
-    1104,
+    1152,
     896
    ]
   },
   "gauge/M/tongue.webp": {
-   "file": "gauge/M/tongue.2527b6f2.webp",
-   "bytes": 24696,
+   "file": "gauge/M/tongue.f9ad871a.webp",
+   "bytes": 26678,
    "size": [
     760,
     1144
    ]
   },
+  "gauge/S/arrive.av1.mp4": {
+   "file": "gauge/S/arrive.4587f7b4.av1.mp4",
+   "bytes": 234926,
+   "codec": "av01.0.08M.08",
+   "size": [
+    816,
+    1392
+   ],
+   "frames": 96
+  },
+  "gauge/S/arrive.h264.mp4": {
+   "file": "gauge/S/arrive.0450bc6c.h264.mp4",
+   "bytes": 390502,
+   "codec": "avc1.640020",
+   "size": [
+    816,
+    1392
+   ],
+   "frames": 96
+  },
+  "gauge/S/arrive.hevc.mp4": {
+   "file": "gauge/S/arrive.6cd14f5e.hevc.mp4",
+   "bytes": 320998,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    816,
+    1392
+   ],
+   "frames": 96
+  },
   "gauge/S/look.webp": {
-   "file": "gauge/S/look.7959b8b6.webp",
-   "bytes": 167154,
+   "file": "gauge/S/look.0784e01e.webp",
+   "bytes": 165618,
    "size": [
     1952,
     1212
    ]
   },
   "gauge/S/rest.webp": {
-   "file": "gauge/S/rest.c54d85c4.webp",
-   "bytes": 63788,
+   "file": "gauge/S/rest.883521dd.webp",
+   "bytes": 59508,
    "size": [
-    828,
+    864,
     672
    ]
   },
   "gauge/S/tongue.webp": {
-   "file": "gauge/S/tongue.c10b120b.webp",
-   "bytes": 15746,
+   "file": "gauge/S/tongue.5428d206.webp",
+   "bytes": 18188,
    "size": [
     580,
     880
    ]
   },
   "gauge/flow.png": {
-   "file": "gauge/flow.0a84b539.png",
-   "bytes": 78363,
+   "file": "gauge/flow.ffcb080c.png",
+   "bytes": 77079,
    "size": [
-    828,
+    864,
     672
    ]
   },
   "gauge/mask.png": {
-   "file": "gauge/mask.3aeef293.png",
-   "bytes": 12776,
+   "file": "gauge/mask.24349337.png",
+   "bytes": 12069,
    "size": [
     480,
     396
@@ -665,10 +786,10 @@
    ]
   },
   "hero/L/rest.webp": {
-   "file": "hero/L/rest.0e56def2.webp",
-   "bytes": 186484,
+   "file": "hero/L/rest.a0b702a5.webp",
+   "bytes": 186308,
    "size": [
-    1752,
+    2016,
     1152
    ]
   },
@@ -680,6 +801,96 @@
     3360
    ]
   },
+  "hero/M/depart-rev.av1.mp4": {
+   "file": "hero/M/depart-rev.e38e7c32.av1.mp4",
+   "bytes": 203889,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/depart-rev.h264.mp4": {
+   "file": "hero/M/depart-rev.e335c499.h264.mp4",
+   "bytes": 409435,
+   "codec": "avc1.640028",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/depart-rev.hevc.mp4": {
+   "file": "hero/M/depart-rev.b627f80b.hevc.mp4",
+   "bytes": 282514,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/depart.av1.mp4": {
+   "file": "hero/M/depart.58ce6a7c.av1.mp4",
+   "bytes": 229229,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/depart.h264.mp4": {
+   "file": "hero/M/depart.8c910b72.h264.mp4",
+   "bytes": 415812,
+   "codec": "avc1.640028",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/depart.hevc.mp4": {
+   "file": "hero/M/depart.6217e64e.hevc.mp4",
+   "bytes": 291802,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1344,
+    1472
+   ],
+   "frames": 48
+  },
+  "hero/M/intro.av1.mp4": {
+   "file": "hero/M/intro.4b4b4782.av1.mp4",
+   "bytes": 433033,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1088,
+    1344
+   ],
+   "frames": 84
+  },
+  "hero/M/intro.h264.mp4": {
+   "file": "hero/M/intro.e329834c.h264.mp4",
+   "bytes": 690333,
+   "codec": "avc1.640028",
+   "size": [
+    1088,
+    1344
+   ],
+   "frames": 84
+  },
+  "hero/M/intro.hevc.mp4": {
+   "file": "hero/M/intro.afd5eeb7.hevc.mp4",
+   "bytes": 532548,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1088,
+    1344
+   ],
+   "frames": 84
+  },
   "hero/M/look.webp": {
    "file": "hero/M/look.2d1d2d7a.webp",
    "bytes": 425410,
@@ -689,10 +900,10 @@
    ]
   },
   "hero/M/rest.webp": {
-   "file": "hero/M/rest.2261068b.webp",
-   "bytes": 101070,
+   "file": "hero/M/rest.cc163009.webp",
+   "bytes": 100658,
    "size": [
-    1168,
+    1344,
     768
    ]
   },
@@ -704,6 +915,96 @@
     2280
    ]
   },
+  "hero/S/depart-rev.av1.mp4": {
+   "file": "hero/S/depart-rev.f88feff2.av1.mp4",
+   "bytes": 137728,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/depart-rev.h264.mp4": {
+   "file": "hero/S/depart-rev.d5851f17.h264.mp4",
+   "bytes": 250951,
+   "codec": "avc1.640020",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/depart-rev.hevc.mp4": {
+   "file": "hero/S/depart-rev.6188aef7.hevc.mp4",
+   "bytes": 168663,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/depart.av1.mp4": {
+   "file": "hero/S/depart.3ef7c0c3.av1.mp4",
+   "bytes": 153901,
+   "codec": "av01.0.08M.08",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/depart.h264.mp4": {
+   "file": "hero/S/depart.3c5c1b8a.h264.mp4",
+   "bytes": 257001,
+   "codec": "avc1.640020",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/depart.hevc.mp4": {
+   "file": "hero/S/depart.dc28d589.hevc.mp4",
+   "bytes": 176867,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    1008,
+    1104
+   ],
+   "frames": 48
+  },
+  "hero/S/intro.av1.mp4": {
+   "file": "hero/S/intro.eb23133b.av1.mp4",
+   "bytes": 289795,
+   "codec": "av01.0.05M.08",
+   "size": [
+    816,
+    1008
+   ],
+   "frames": 84
+  },
+  "hero/S/intro.h264.mp4": {
+   "file": "hero/S/intro.711434f9.h264.mp4",
+   "bytes": 427086,
+   "codec": "avc1.64001F",
+   "size": [
+    816,
+    1008
+   ],
+   "frames": 84
+  },
+  "hero/S/intro.hevc.mp4": {
+   "file": "hero/S/intro.a01d7a59.hevc.mp4",
+   "bytes": 330359,
+   "codec": "hvc1.1.6.L93.B0",
+   "size": [
+    816,
+    1008
+   ],
+   "frames": 84
+  },
   "hero/S/look.webp": {
    "file": "hero/S/look.7af5729f.webp",
    "bytes": 254148,
@@ -713,10 +1014,10 @@
    ]
   },
   "hero/S/rest.webp": {
-   "file": "hero/S/rest.cc99450b.webp",
-   "bytes": 62324,
+   "file": "hero/S/rest.d2b7b600.webp",
+   "bytes": 62388,
    "size": [
-    876,
+    1008,
     576
    ]
   },
@@ -729,10 +1030,10 @@
    ]
   },
   "hero/flow.png": {
-   "file": "hero/flow.204e0876.png",
-   "bytes": 105786,
+   "file": "hero/flow.5dbe7877.png",
+   "bytes": 108665,
    "size": [
-    876,
+    1008,
     576
    ]
   },
@@ -747,5 +1048,5 @@
  },
  "probe": "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMObW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAACIAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAjl0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAACIAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAAiAAAAAAABAAAAAAGxbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAA8AAAAAgBVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABXG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAARxzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFExhdmM2My4xLjEwMiBsaWJ4MjY0AAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMA8DxImSABAAVoy4PLIAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAlrQAAAAAAAAABhzdHRzAAAAAAAAAAEAAAABAAACAAAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAKDAAAAAQAAABRzdGNvAAAAAAAAAAEAAAM+AAAAYXVkdGEAAABZbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAsaWxzdAAAACSpdG9vAAAAHGRhdGEAAAABAAAAAExhdmY2My4xLjEwMgAAAAhmcmVlAAACi21kYXQAAAJxBgX//23cRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY1IHIzMjIzIDA0ODBjYjAgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDI1IC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAApliIQJ8mKAAKFu",
  "fallback": "hero/M/rest.webp",
- "build": "2026-11-10T02:33:04Z"
+ "build": "2026-11-10T04:59:58Z"
 }

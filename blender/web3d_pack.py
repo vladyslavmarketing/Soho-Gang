@@ -38,7 +38,7 @@ SCENES = {
         'name': 'CamGauge', 'type': 'ortho', 'orthoScaleD': 13.538}),
 }
 GAUGE_ANCHORS = {'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520,
-                 'coilOuterRadius': 598, 'exitRamp': [1440, 1680]}
+                 'coilOuterRadius': 598, 'exitRamp': [1344, 1584]}   # moved in by 96 px: G1 M was 8352 MBs (B9-7)
 LOG = []
 
 
@@ -234,7 +234,10 @@ def reconstruct(seed, allowed):
         cur = nxt
 
 
-def pack_scene(scene):
+REST_F = {}
+
+
+def pack_scene(scene, extra_rects=()):
     cfg = SCENES[scene]
     meta = json.load(open(os.path.join(SRC, '%s_meta.json' % scene)))
     rig = json.load(open(os.path.join(SRC, 'rig', 'rig_%s.json' % scene)))
@@ -252,6 +255,8 @@ def pack_scene(scene):
     # ---- stage (B9-2): the spec's starting stage, grown to the still's content if needed
     still_rect = bbox(A >= 3 / 255, 16)
     stage = union(cfg['stage'], still_rect)
+    for r_ in extra_rects:                                # clips (B9-2: the stage is the union of every rect)
+        stage = union(stage, r_)
     cell_rect = meta['cell_rect']
     # ---- warp parameters (B8-12)
     pivot = np.array(rig['joints']['base'], float)
@@ -402,6 +407,7 @@ def pack_scene(scene):
 
     # ---- tiers (B8-6, B8-13)
     rest_f = feather(still, stage, cfg['exit_x'])
+    REST_F[scene] = rest_f
     keep = (dilate(mask > 0, 4) > 0)[..., None]                # outside the mask the player never shows a cell
     look_cells = [feather(cells[n][0], look_rect) * keep for n in names]
     lw = look_rect[2] + 8
@@ -506,6 +512,126 @@ def qa(scene, rest_f, stage, cells, names, tongues, tnames, trect, look_rect):
         write_png(os.path.join(QA, '%s_%s_sheet.png' % (scene, nm)), sheet)
 
 
+# ======================================================================================== clips (B8-7, B9)
+CLIPS = {  # logical name: scene, source shot, from, to, events
+    'intro': ('hero', 'hero_intro', 'empty', 'rest', {'written': 70}),
+    'depart': ('hero', 'hero_depart', 'rest', 'empty', {'unwritten': 2}),
+    'arrive': ('gauge', 'gauge_arrive', 'empty', 'rest', {'arrived': 95}),
+}
+STRIP = [round(255 * i / 15) for i in range(16)]
+
+
+def clip_frames(shot):
+    return sorted(glob.glob(os.path.join(SRC, shot, '[0-9][0-9][0-9][0-9].exr')))
+
+
+def read_clip(path, ramp):
+    """one clip frame: premultiplied display RGBA at clip px (2/3 master)"""
+    b = oiio.ImageBuf(path)
+    names = list(b.spec().channelnames)
+    idx = [next(i for i, n in enumerate(names) if n.endswith('Combined.' + c)) for c in 'RGBA']
+    px = b.get_pixels(oiio.FLOAT)[..., idx].astype(np.float32)
+    if px.shape[1] != 1408:                                 # end frames re-rendered with the still settings (B8-15)
+        px = resize(px, 1408, 896)
+    im = display(px)
+    if ramp:
+        x0, x1 = (v * 2 / 3 for v in GAUGE_ANCHORS['exitRamp'])
+        t = np.clip((np.arange(im.shape[1]) - x0) / (x1 - x0), 0, 1)
+        im *= (1 - t * t * (3 - 2 * t))[None, :, None].astype(np.float32)
+    return im
+
+
+def clip_rect(name):
+    """bbox of A >= 3/255 over all frames + 16 master px, snapped outward to 96 (master px)"""
+    scene, shot = CLIPS[name][:2]
+    acc = None
+    for f in clip_frames(shot):
+        a = read_clip(f, scene == 'gauge')[..., 3] >= 3 / 255
+        acc = a if acc is None else acc | a
+    ys, xs = np.where(acc)
+    r = [xs.min() * 1.5 - 16, ys.min() * 1.5 - 16, (xs.max() + 1 - xs.min()) * 1.5 + 32,
+         (ys.max() + 1 - ys.min()) * 1.5 + 32]
+    return snap(r, 96)
+
+
+def stacked(img, k, gutter_rgb):
+    """premultiplied RGBA crop at tier k (master -> tier) -> stacked-alpha RGB uint8 (colour, gutter, alpha)"""
+    h, w = img.shape[:2]
+    g = int(round(96 * k))
+    out = np.zeros((2 * h + g, w, 3), np.float32)
+    out[:h] = img[..., :3] * 255
+    y0, y1 = h + int(round(24 * k)), h + int(round(48 * k))
+    pw = w // 16
+    for i, v in enumerate(STRIP):
+        out[y0:y1, i * pw:(w if i == 15 else (i + 1) * pw)] = v
+    y0, y1 = h + int(round(60 * k)), h + int(round(84 * k))
+    pw = w // 4
+    for i, c in enumerate(gutter_rgb):
+        out[y0:y1, i * pw:(w if i == 3 else (i + 1) * pw)] = c
+    out[h + g:] = img[..., 3:4] * 255
+    return (out + 0.5).clip(0, 255).astype(np.uint8)
+
+
+def lowpass_cmp(a, b):
+    """B8-15 metric on premultiplied RGBA at one tier: sigma 1.5 tier px, inside the snake mask (dilated 8)"""
+    m = dilate(np.maximum(a[..., 3], b[..., 3]) >= 0.5, 8) > 0
+    d = np.abs(gauss(a, 1.5) - gauss(b, 1.5)) * 255
+    dc, da = d[..., :3].max(2)[m], d[..., 3][m]
+    return {'mean_rgb': round(float(dc.mean()), 2), 'p99_rgb': round(float(np.percentile(dc, 99)), 2),
+            'mean_a': round(float(da.mean()), 2), 'p99_a': round(float(np.percentile(da, 99)), 2)}
+
+
+def pack_clip(name, rect, patches, man):
+    scene, shot, frm, to, events = CLIPS[name]
+    files = clip_frames(shot)
+    N = len(files)
+    rc = [int(round(v * 2 / 3)) for v in rect]
+    rep = {'frames': N, 'rect': rect}
+    outs = {T_: [os.path.join(SEQ, scene, name, T_)] for T_ in CLIP_TIERS}
+    if name == 'depart':
+        for T_ in CLIP_TIERS:
+            outs[T_].append(os.path.join(SEQ, scene, 'depart-rev', T_))
+    for ds in outs.values():
+        for d in ds:
+            shutil.rmtree(d, ignore_errors=True)
+            os.makedirs(d)
+    x, y, w, h = rc
+    yy, xx = np.mgrid[0:h, 0:w]
+    ss = lambda t: np.clip(t, 0, 1) ** 2 * (3 - 2 * np.clip(t, 0, 1))
+    ff = ss(xx / 16) * ss(yy / 16) * ss((h - yy) / 16)
+    if not (scene == 'hero' and rect[0] + rect[2] >= MW):
+        ff = ff * ss((w - xx) / 16)
+    ff = ff[..., None].astype(np.float32)
+    maxA, sizes = [], {}
+    for j, f in enumerate(files):
+        im = read_clip(f, scene == 'gauge')
+        maxA.append(float(im[..., 3].max()))
+        cr = im[y:y + h, x:x + w] * ff
+        for T_ in CLIP_TIERS:
+            t = tier(cr, TIERS[T_] * 1.5)                  # tier px per clip px: M 1, S 3/4
+            fr = stacked(t, TIERS[T_], patches)
+            sizes[T_] = [int(fr.shape[1]), int(fr.shape[0])]
+            write_png(os.path.join(outs[T_][0], '%04d.png' % j), fr)
+            if len(outs[T_]) > 1:
+                write_png(os.path.join(outs[T_][1], '%04d.png' % (N - 1 - j)), fr)
+            if (j == N - 1 and to == 'rest') or (j == 0 and frm == 'rest'):
+                still_t = tier(crop(REST_F[scene], rect), TIERS[T_])[:t.shape[0], :t.shape[1]]
+                rep.setdefault('continuity', {})[T_] = lowpass_cmp(t, still_t)
+    empty = {'intro': [0, 1, 2], 'depart': [N - 1], 'arrive': [0]}[name]
+    rep['empty_frames_maxA_255'] = {str(i): round(maxA[i] * 255, 2) for i in empty}
+    rep['empty_ok'] = all(maxA[i] * 255 <= 3 for i in empty)
+    rep['stacked'] = sizes
+    rep['macroblocks'] = {T_: math.ceil(sz[0] / 16) * math.ceil(sz[1] / 16) for T_, sz in sizes.items()}
+    rep['mb_ok'] = all(v <= 8192 for v in rep['macroblocks'].values())
+    clip = {'frames': N, 'rect': rect, 'from': frm, 'to': to, 'events': events}
+    if name == 'depart':
+        clip['reverse'] = 'depart-rev'
+        man['scenes'][scene]['clips']['depart-rev'] = {'frames': N, 'rect': rect, 'from': 'empty', 'to': 'rest'}
+    man['scenes'][scene]['clips'][name] = clip
+    log(name, rep)
+    return rep
+
+
 # ======================================================================================== stages
 def stage_pack():
     t0 = time.time()
@@ -514,10 +640,15 @@ def stage_pack():
            'fps': 30, 'pxPerD': PXD, 'tiers': {'S': 0.5, 'M': 0.6666667, 'L': 1},
            'clipRenderScale': 0.6666667, 'clipTiers': CLIP_TIERS, 'scenes': {}}
     reports = {}
+    rects = {} if '--no-clips' in argv else {n: clip_rect(n) for n, c in CLIPS.items() if clip_frames(c[1])}
+    log('clip rects', rects)
     for scene in arg('--scenes', 'hero,gauge').split(','):
         if os.path.exists(os.path.join(SRC, '%s_rest' % scene)):
-            man['scenes'][scene], reports[scene] = pack_scene(scene)
+            man['scenes'][scene], reports[scene] = pack_scene(scene, [r for n, r in rects.items() if CLIPS[n][0] == scene])
     pink = reports.get('hero', reports.get('gauge', {})).get('lit_pink', [226, 140, 160])
+    patches = [pink, [241, 214, 218], [191, 0, 0], [0, 0, 191]]
+    for n, r in rects.items():
+        reports.setdefault('clips', {})[n] = pack_clip(n, r, patches, man)
     man['videoLayout'] = {'gutter': 96, 'strip': {'y': 24, 'h': 24, 'steps': 16},
                           'patches': {'y': 60, 'h': 24, 'rgb': [pink, [241, 214, 218], [191, 0, 0], [0, 0, 191]]},
                           'premultiplied': True, 'matrix': 'bt709', 'range': 'tv'}
@@ -542,6 +673,46 @@ CAPS = {  # M6, KB for AV1 / WebP (HEVC x1.25, H.264 x1.7)
     ('hero', 'intro'): (340, 600, 1250), ('hero', 'depart'): (200, 350, 720), ('hero', 'depart-rev'): (200, 350, 720),
     ('gauge', 'arrive'): (400, 700, 1450),
 }
+
+
+def decode_check(man):
+    """B10-4: decode frames 0 and N-1 of every video; grey strip 17 i +- 3, colour patches +- 4"""
+    ff = find_ff('ffmpeg.exe')
+    vl = man['videoLayout']
+    out, tmp = {}, os.path.join(QA, '_decode')
+    os.makedirs(tmp, exist_ok=True)
+    for key, ent in man['files'].items():
+        if not key.endswith('.mp4'):
+            continue
+        scene, T_, leaf = key.split('/')
+        clip = leaf.split('.')[0]
+        cl = man['scenes'].get(scene, {}).get('clips', {}).get(clip)
+        if not cl:
+            continue
+        k = man['tiers'][T_]
+        h = int(round(cl['rect'][3] * k))
+        res = {}
+        for fi in (0, cl['frames'] - 1):
+            png = os.path.join(tmp, 'f.png')
+            subprocess.run([ff, '-y', '-loglevel', 'error', '-i', os.path.join(WEB, ent['file']), '-vf',
+                            'select=eq(n\\,%d),scale=in_color_matrix=bt709:in_range=tv,format=rgb24' % fi,
+                            '-frames:v', '1', png], check=True)
+            im = oiio.ImageBuf(png).get_pixels(oiio.FLOAT) * 255
+            w = im.shape[1]
+            y0, y1 = h + int(round(vl['strip']['y'] * k)), h + int(round((vl['strip']['y'] + vl['strip']['h']) * k))
+            pw = w // 16
+            strip = [float(np.median(im[y0 + 2:y1 - 2, i * pw + 3:(i + 1) * pw - 3, 1])) for i in range(16)]
+            serr = max(abs(v - round(255 * i / 15)) for i, v in enumerate(strip))
+            y0, y1 = h + int(round(vl['patches']['y'] * k)), h + int(round((vl['patches']['y'] + vl['patches']['h']) * k))
+            pw = w // 4
+            perr = max(float(np.abs(np.median(im[y0 + 2:y1 - 2, i * pw + 3:(i + 1) * pw - 3].reshape(-1, 3), 0)
+                                    - np.array(c)).max()) for i, c in enumerate(vl['patches']['rgb']))
+            res[str(fi)] = {'strip_max_err': round(serr, 1), 'patch_max_err': round(perr, 1),
+                            'ok': serr <= 3 and perr <= 4}
+        out[key] = res
+    bad = [k for k, v in out.items() if not all(r['ok'] for r in v.values())]
+    log('decode check: %d videos, failing: %s' % (len(out), bad or 'none'))
+    return {'videos': out, 'failing': bad}
 
 
 def stage_finalize():
@@ -597,6 +768,7 @@ def stage_finalize():
     for p in glob.glob(os.path.join(WEB, '**', '*.*'), recursive=True):
         if os.path.normpath(p) not in keep:
             os.remove(p)
+    report['decode'] = decode_check(man)
     os.makedirs(QA, exist_ok=True)
     json.dump(report, open(os.path.join(QA, 'encode_report.json'), 'w'), indent=1)
     log('finalize: %d files, over cap: %s' % (len(files), report['over_cap'] or 'none'))

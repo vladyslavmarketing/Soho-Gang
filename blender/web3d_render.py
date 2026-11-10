@@ -304,8 +304,8 @@ class Shoot:
 
 
 CLIPS = {  # blend, shutter, region rect (master px of its own frame)
-    'hero_intro': ('hero_intro.blend', 0.5, STAGE['hero']), 'hero_depart': ('hero_depart.blend', 1.0, STAGE['hero']),
-    'gauge_arrive': ('gauge_arrive.blend', 0.5, STAGE['gauge']), 'journey': ('journey.blend', 0.5, [0, 0, 480, 3120]),
+    'hero_intro': ('hero_intro.blend', 0.5, [0, 0, MW, MH]), 'hero_depart': ('hero_depart.blend', 1.0, [0, 0, MW, MH]),
+    'gauge_arrive': ('gauge_arrive.blend', 0.5, [0, 0, MW, MH]), 'journey': ('journey.blend', 0.5, [0, 0, 480, 3120]),
 }
 
 
@@ -344,8 +344,13 @@ def render_clip(name):
     os.makedirs(d, exist_ok=True)
     region = [int(round(r.border_min_x * fw)), int(round((1 - r.border_max_y) * fh)),
               int(round((r.border_max_x - r.border_min_x) * fw)), int(round((r.border_max_y - r.border_min_y) * fh))]
-    json.dump({'region': region, 'rect': rect, 'frame': [fw, fh], 'shutter': shutter,
-               'frames': [sc.frame_start, sc.frame_end]}, open(os.path.join(d, 'region.json'), 'w'), indent=1)
+    if '--hq' not in argv:
+        json.dump({'region': region, 'rect': rect, 'frame': [fw, fh], 'shutter': shutter,
+                   'frames': [sc.frame_start, sc.frame_end]}, open(os.path.join(d, 'region.json'), 'w'), indent=1)
+    if '--hq' in argv:                                 # B8-15 fix: end frames with the still settings, no blur
+        sc.render.resolution_percentage = 150
+        c.samples, c.adaptive_threshold, c.adaptive_min_samples = 160, 0.01, 64
+        sc.render.use_motion_blur = False
     fr = arg('--frames', None)
     if fr:
         sc.frame_start, sc.frame_end = [int(v) + 1 for v in fr.split('-')]
