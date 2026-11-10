@@ -154,7 +154,7 @@
     'uniform sampler2D uBase, uFlow, uMask, uLook, uTong; uniform vec4 uBaseR, uFlowR, uMaskR, uLookR, uTongR;\n' +
     'uniform vec2 uBaseS, uFlowS, uMaskS, uLookS, uTongS; uniform float uK, uHalf; uniform vec2 uCellA, uCellB; uniform float uCellMix;\n' +
     'uniform vec2 uTongO; uniform float uTongOn; uniform vec2 uPivot, uAxis; uniform float uStart, uLen, uWarp;\n' +
-    'uniform float uBreath, uFlowZero, uFlowPx, uOpacity; varying vec2 vQ;\n' +
+    'uniform float uBreath, uFlowZero, uFlowPx, uOpacity; uniform vec4 uMF; varying vec2 vQ;\n' +
     'bool inR(vec2 q, vec4 r){ return q.x >= r.x && q.y >= r.y && q.x < r.x + r.z && q.y < r.y + r.w; }\n' +
     'vec4 tex(sampler2D t, vec2 size, vec2 o, vec4 r, float k, vec2 q){ vec2 p = clamp((q - r.xy) * k, vec2(0.5), r.zw * k - 0.5); return texture2D(t, (o + p) / size); }\n' +
     'void main(){\n' +
@@ -163,6 +163,12 @@
     '  vec2 qb = q - uBreath * f;\n' +
     '  vec4 o = inR(qb, uBaseR) ? tex(uBase, uBaseS, vec2(0.0), uBaseR, uK, qb) : vec4(0.0);\n' +
     '  float m = inR(q, uMaskR) ? tex(uMask, uMaskS, vec2(0.0), uMaskR, uHalf, q).r : 0.0;\n' +
+    '  if (m > 0.0) {\n' +                                       // feather mask edges the packer left hard (uMF: master px per edge, 0 = off)
+    '    if (uMF.x > 0.0) m *= smoothstep(uMaskR.x, uMaskR.x + uMF.x, q.x);\n' +
+    '    if (uMF.y > 0.0) m *= smoothstep(uMaskR.y, uMaskR.y + uMF.y, q.y);\n' +
+    '    if (uMF.z > 0.0) m *= 1.0 - smoothstep(uMaskR.x + uMaskR.z - uMF.z, uMaskR.x + uMaskR.z, q.x);\n' +
+    '    if (uMF.w > 0.0) m *= 1.0 - smoothstep(uMaskR.y + uMaskR.w - uMF.w, uMaskR.y + uMaskR.w, q.y);\n' +
+    '  }\n' +
     '  if (m > 0.0) {\n' +
     '    float w = smoothstep(uStart, uStart + uLen, dot(q - uPivot, uAxis));\n' +
     '    float a = -uWarp * w; vec2 dd = q - uPivot;\n' +
@@ -281,6 +287,20 @@
     return G;
   }
 
+  /* a mask edge the packer left hard (> 16/255 on the edge) gets a web-side feather of w master px, unless it lies on the stage edge */
+  function hardEdges(im, r, st, w) {
+    try {
+      var c = d.createElement('canvas'), W = c.width = im.naturalWidth, H = c.height = im.naturalHeight, x = c.getContext('2d');
+      x.drawImage(im, 0, 0); var px = x.getImageData(0, 0, W, H).data;
+      var col = function (i) { var m = 0; for (var y = 0; y < H; y++) m = Math.max(m, px[(y * W + i) * 4]); return m; };
+      var row = function (j) { var m = 0; for (var i = 0; i < W; i++) m = Math.max(m, px[(j * W + i) * 4]); return m; };
+      var f = [col(0) > 16 && r[0] > st[0] ? w : 0, row(0) > 16 && r[1] > st[1] ? w : 0,
+               col(W - 1) > 16 && r[0] + r[2] < st[0] + st[2] ? w : 0, row(H - 1) > 16 && r[1] + r[3] < st[1] + st[3] ? w : 0];
+      if (f.some(Boolean)) log('mask has hard edges; feathering', f);
+      return f;
+    } catch (e) { return [0, 0, 0, 0]; }
+  }
+
   /* calibration maths (W6) */
   function fitLut(m) {                                               // m[i] = decoded grey of 17*i
     var best = null;
@@ -346,11 +366,13 @@
   }
   function playV(v) {
     if (!v.paused || v._pending) return;
-    v._pending = true;
-    var p; try { p = v.play(); } catch (e) { v._pending = false; return; }
-    if (p && p.then) p.then(function () { v._pending = false; }, function (e) { v._pending = false; if (e && e.name === 'NotAllowedError') setVideo('blocked'); });
-    else v._pending = false;
+    var tok = v._pending = {};                                       // token: a pause() of ours voids it (see pauseV)
+    var p; try { p = v.play(); } catch (e) { v._pending = null; return; }
+    var done = function () { if (v._pending === tok) v._pending = null; };
+    if (p && p.then) p.then(done, function (e) { done(); log('play rejected', v._name, e && e.name); if (e && e.name === 'NotAllowedError') setVideo('blocked'); });
+    else done();
   }
+  function pauseV(v) { v.pause(); v._pending = null; }               // pause() rejects a pending play() with AbortError: not pending any more
   function release(v) { if (!v) return; v.pause(); v.removeAttribute('src'); try { v.load(); } catch (e) { /* ignore */ } if (probeSrc) v.src = probeSrc; v._clip = null; }
 
   /* ------------------------------------------------------------------ Clip */
@@ -390,13 +412,13 @@
     if (!G) return Promise.reject('nogl');
     if (!c.tex) c.tex = G.tex();
     return new Promise(function (res, rej) {
-      var notReady = 0, failing = 0, t = setTimeout(function () { c.priming = null; v.pause(); rej('prime-timeout'); }, env.touch ? 8000 : 6000);
+      var notReady = 0, failing = 0, t = setTimeout(function () { c.priming = null; pauseV(v); rej('prime-timeout'); }, env.touch ? 8000 : 6000);
       c.priming = function () {
         G.up(c.tex, v, false);
         var r = c.s.calibrate(c);
         if (r === 'retry' && ++notReady < 10) return;
-        if (r === 'fail' || r === 'retry') { if (++failing < 3) return; clearTimeout(t); c.priming = null; v.pause(); setVideo('broken'); rej('broken'); return; }
-        clearTimeout(t); c.priming = null; v.pause();
+        if (r === 'fail' || r === 'retry') { if (++failing < 3) return; clearTimeout(t); c.priming = null; pauseV(v); setVideo('broken'); rej('broken'); return; }
+        clearTimeout(t); c.priming = null; pauseV(v);
         try { v.currentTime = 0.5 / FPS; } catch (e) { /* ignore */ }
         c.primed = true; c.F = -1; res(c);
       };
@@ -441,7 +463,7 @@
     if (v.paused) { this.playT = now(); this.armed = false; }
     this.watch(); playV(v);
   };
-  Clip.prototype.pause = function () { if (!this.v.paused) this.v.pause(); };
+  Clip.prototype.pause = function () { if (!this.v.paused || this.v._pending) pauseV(this.v); };
   Clip.prototype.seek = function (F) {
     var c = this; F = clamp(Math.round(F), 0, c.N - 1);
     c.seekTo = F; c.seekT = now(); c.pollN = 3;
@@ -493,7 +515,7 @@
       if (f > 0.999) { i++; f = 0; }
       if (R.flick) { i = R.flick.cell; f = 0; }
       R.cell = f > 0.5 ? i + 1 : i;
-      U.uMaskR = L.mask.rect; U.uMaskS = R.sz.mask; U.uLookR = L.rect; U.uLookS = R.sz.look;
+      U.uMaskR = L.mask.rect; U.uMaskS = R.sz.mask; U.uMF = R.maskFeather || [0, 0, 0, 0]; U.uLookR = L.rect; U.uLookS = R.sz.look;
       U.uCellA = R.cellOrigin(i); U.uCellB = R.cellOrigin(Math.min(i + 1, n - 1)); U.uCellMix = f;
       U.uPivot = L.warp.pivot; U.uAxis = L.warp.axis; U.uStart = L.warp.start; U.uLen = L.warp.length;
       U.uWarp = R.th * Math.PI / 180 * (L.warp.positive === 'ccw' ? -1 : 1);
@@ -501,7 +523,7 @@
       U.uTongOn = tf >= 0 ? 1 : 0; U.uTongS = R.sz.tong || [1, 1];
       U.uTongR = tf >= 0 ? R.tg.origins[fl.cell].concat(R.tg.slot) : Z; U.uTongO = tf >= 0 ? R.tongOrigin(fl.cell, tf) : [0, 0];
     } else {
-      U.uMaskR = Z; U.uMaskS = [1, 1]; U.uLookR = Z; U.uLookS = [1, 1]; U.uCellA = [0, 0]; U.uCellB = [0, 0]; U.uCellMix = 0;
+      U.uMaskR = Z; U.uMaskS = [1, 1]; U.uMF = Z; U.uLookR = Z; U.uLookS = [1, 1]; U.uCellA = [0, 0]; U.uCellB = [0, 0]; U.uCellMix = 0;
       U.uPivot = [0, 0]; U.uAxis = [1, 0]; U.uStart = 0; U.uLen = 1; U.uWarp = 0; U.uTongOn = 0; U.uTongS = [1, 1]; U.uTongR = Z; U.uTongO = [0, 0];
     }
     return U;
@@ -623,6 +645,7 @@
           var G = S.G; if (!G) return;
           R.src = R.src || {}; R.src[it[0]] = im; R.sz = R.sz || {};
           R.t[it[0]] = R.t[it[0]] || G.tex(); G.up(R.t[it[0]], im, it[2]); R.sz[it[0]] = [im.naturalWidth, im.naturalHeight];
+          if (it[0] === 'mask') R.maskFeather = hardEdges(im, sm.look.mask.rect, sm.stage, 0.75 * S.m.pxPerD);
           S.dirty = true;
         });
         kick();
@@ -832,7 +855,7 @@
     } else if (S.st === 'intro') {
       c = S.clips.intro;
       if (S.vis === 0 || (c && c.stall(t) && stallHit(c))) { c.pause(); S.introEnd(); S.pHold = p; }
-      else if (c) { c.poll(); if (c.F >= 0 && c.last()) S.introEnd(); }
+      else if (c) { c.poll(); if (c.F >= 0 && c.last()) S.introEnd(); else if (c.v.paused && !c.v._pending && !c.v.ended && c.primed && !d.hidden) c.play(1); }   // a play() lost to a pause(): retry
     } else if (S.st === 'rest') {
       if (gauge && t - S.restT > 4000) gauge.p5();
       var lc = S.clips.intro;                                         // placeholder (clips.intro.loopRest): rest = the looping idle clip
@@ -1075,7 +1098,7 @@
     var ls = S.layer.style;
     ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', s * fr[1] + 'px');
     ls.setProperty('--s3d-y', 0.62 * H - cy * s + 'px');             // cruise head at 62 % of the viewport
-    var bodyR = c.bodyRight != null ? c.bodyRight : 0.49 * S.m.pxPerD; // frame px right of her body (radius + amplitude margin)
+    var bodyR = c.bodyRight != null ? fr[0] - c.bodyRight : 0.49 * S.m.pxPerD; // bodyRight = her rightmost body x in the frame (master px)
     ls.setProperty('--s3d-x', d.documentElement.clientWidth - s * fr[0] + bodyR * s - JOURNEY_EDGE + 'px');   // pressed to the RIGHT edge
     // she leaves the logo through the right edge (H2), comes back in from the right edge, crawls down, and leaves through the
     // right edge again before the gauge, where G1 brings her in from the right: every hand-off happens off-screen
@@ -1327,6 +1350,7 @@
     probeAutoplay().then(function () {
       var deep = B.deep || hero.vis < 0.3 || hero.p >= 0.5;
       if (deep) {
+        if (/^#./.test(location.hash)) { jumping = true; jumpT = now(); jumpScrolls = 0; sawScrollEnd = false; }   // the load-time anchor jump: no re-form, no journey on the way
         if (B.abort) try { B.abort(); } catch (e) { /* ignore */ }
         hero.toGone(false); hero.lastClipEnd = now() - 1000;
         if (gauge) gauge.p5();

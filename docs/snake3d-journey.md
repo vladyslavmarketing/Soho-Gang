@@ -97,8 +97,8 @@ body); it is dropped. The story is now one creature weaving in and out of the **
 
 - Exit edge of J1: **right** (top/bottom/left keep 24 px clear, except the body that runs up out of the top during the loop).
 - Suggested counts: `in` 96 (56 entry + 40 tracking), `loop` 60, `out` 96; the player reads them from `segments`.
-- Manifest extras: `clips.journey.cruiseY` (head y in the loop, master px) and `clips.journey.bodyRight` (frame px right of
-  her body; the player keeps her body 8 css px from the viewport's right edge).
+- Manifest extras: `clips.journey.cruiseY` (head y in the loop, master px) and `clips.journey.bodyRight` (her rightmost body x
+  in the frame, master px; the player keeps her body 8 css px from the viewport's right edge).
 - Web: the journey shows from the hero's p = 1 to the scroll where the gauge's top meets the viewport bottom (the arrival
   starts there); the loop repeats n times so a frame is ≈ 14 px of scroll; same size as the hero (1:1); desktop only.
 - Mock with exactly this geometry: `dev/snake3d-journey-mock.py` (used for the preview video).
