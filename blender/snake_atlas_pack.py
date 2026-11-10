@@ -8,7 +8,7 @@ ae studio - pack the cells rendered by snake_atlas.py into the canvas snake's at
 Writes body.webp (7 rows x 16 angles), head.webp (32 lighting cells), cap.webp and manifest.json in the format
 assets/js/snake.js reads (see the manifest notes). Needs numpy + Pillow.
 """
-import json, math, os, sys
+import glob, hashlib, json, math, os, sys
 import numpy as np
 from PIL import Image
 
@@ -148,13 +148,21 @@ def main():
     k_r, nose = INFO['k_r'], INFO['nose_ext']
     d2r = 2 * k_r * HEAD_K                                           # D -> engine R
     sizes = {n: os.path.getsize(os.path.join(SITE, n + '.webp')) for n in ('body', 'head', 'cap')}
+    # content-hashed file names: a browser can never pair a cached old image with the new manifest
+    names = {}
+    for n in ('body', 'head', 'cap'):
+        src = os.path.join(SITE, n + '.webp')
+        for old in glob.glob(os.path.join(SITE, n + '.*.webp')):
+            os.remove(old)
+        names[n] = '%s.%s.webp' % (n, hashlib.sha1(open(src, 'rb').read()).hexdigest()[:8])
+        os.replace(src, os.path.join(SITE, names[n]))
     man = {
         'version': 2,
         'generator': 'Blender 5.1 Cycles: the plush snake of blender/snake_scene.py; blender/snake_atlas.py + snake_atlas_pack.py',
         'ref_R': R, 'light_screen': [-0.42, -0.58, 0.7], 'fuzz': round(BODY_CELL / 2 / R - 1 - 0.05, 3),
         'engine_grade': False,
         'body': {
-            'file': 'body.webp', 'angles': nb, 'cell': [BODY_CELL, BODY_CELL], 'origin': [BODY_CELL // 2, BODY_CELL // 2],
+            'file': names['body'], 'angles': nb, 'cell': [BODY_CELL, BODY_CELL], 'origin': [BODY_CELL // 2, BODY_CELL // 2],
             'rows': [{'kind': k, 'variant': sum(1 for q in kinds[:i] if q == k)} for i, k in enumerate(kinds)],
             'oriented': True, 'mask': 'feather', 'along': ALONG, 'feather': FEATHER, 'recommended_step_R': 0.3,
             'fur_edge_R': k_r,
@@ -163,7 +171,7 @@ def main():
                      'cut from a rendered straight body: |along| <= along*R*(1-(|across|/1.5R)^4)^0.25 with a '
                      '+-feather*R cross-fade; the fur edge sits at fur_edge_R * R. Straight alpha.'},
         'head': {
-            'version': 6, 'file': 'head.webp', 'buckets': nh, 'cols': cols, 'ref_R': R, 'rh_ref': R * 1.2,
+            'version': 6, 'file': names['head'], 'buckets': nh, 'cols': cols, 'ref_R': R, 'rh_ref': R * 1.2,
             'head_scale': 1.2, 'cell': [hw, hh], 'origin': [round(ox, 2), round(oy, 2)], 'eyes': True, 'fade_baked': True, 'tongue': False,
             'neck_fade_R': list(NECK_FADE),
             'eye': {'per_bucket': [[1]] * 32,
@@ -174,7 +182,7 @@ def main():
             'notes': 'cell b at column b % cols, row floor(b / cols); head points +x (jaw toward -y), lit for heading '
                      'th = b/buckets*2PI by the fixed hero lights. Neck fade baked into alpha (x in neck_fade_R). '
                      'One bead eye baked. No tongue (engine draws it from tongue_base_R). Straight alpha.'},
-        'cap': {'file': 'cap.webp', 'rc_ref': 40, 'cell': [120, 120], 'origin': [60, 60],
+        'cap': {'file': names['cap'], 'rc_ref': 40, 'cell': [120, 120], 'origin': [60, 60],
                 'notes': 'round patch of the pink body fur (scale by rc/rc_ref).'},
         'bytes': dict(sizes, total=sum(sizes.values())),
     }
