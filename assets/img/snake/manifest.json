@@ -67,12 +67,12 @@
   "rh_ref": 76.8,
   "head_scale": 1.2,
   "cell": [
-   330,
-   220
+   307,
+   205
   ],
   "origin": [
-   140.94,
-   110.0
+   131.11,
+   102.5
   ],
   "eyes": true,
   "fade_baked": true,
@@ -182,14 +182,14 @@
    ],
    "centres": [
     [
-     -0.067,
+     -0.062,
      0
     ]
    ]
   },
   "tongue_base_R": [
-   1.744,
-   0.937
+   1.622,
+   0.872
   ],
   "shape": {
    "source": "blender/snake_scene.py head_profile (head v6)",
@@ -212,8 +212,8 @@
  },
  "bytes": {
   "body": 35136,
-  "head": 11086,
+  "head": 10004,
   "cap": 3152,
-  "total": 49374
+  "total": 48292
  }
 }
