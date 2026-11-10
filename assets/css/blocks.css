@@ -1736,7 +1736,7 @@ html:not(.js) .float-tg { display: none; }
 .alert.is-waiting { opacity: 0; transform: translateY(26px) scale(.9); }
 .alert.is-waiting.is-in { animation: alert-pop .75s var(--ease-soft) forwards; }
 .alert.is-in .alert__badge::after { animation: alert-ding 1s var(--ease-out) .25s; }
-.alert.is-in .alert__timer { animation: alert-timer 3.4s linear .3s; }
+.alert__timer { display: none; }   /* the running timer bar on the cards: removed at the owner's request */
 @keyframes alert-pop {
   0% { opacity: 0; transform: translateY(26px) scale(.9); }
   55% { opacity: 1; transform: translateY(-4px) scale(1.02); }
