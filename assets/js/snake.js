@@ -79,7 +79,7 @@
   var NECK_TOP = 1.7;          // head + this many body widths of neck (inside the pink neck) are always drawn on top
   // atlas head fur is lighter than the body fur: multiply the head cells by this to match (measured on the atlases)
   var HEAD_TINT = [0.91, 0.8, 0.83];
-  var TIP = 0.36;             // tail-tip radius / body radius
+  var TIP = 0.15;            // tail-tip radius / body radius
   var SMALL = 0.6;            // radius of the low-res sprite set used by the thin tail
   var MAX_RDEV = 58;          // cap on the body radius in device px (memory / fill-rate guard)
   var BLOB = [1.06, 0.92, 0.8, 0.69, 0.59, 0.5, 0.42, 0.35];
