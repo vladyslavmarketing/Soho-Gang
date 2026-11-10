@@ -10,7 +10,7 @@
  "fuzz": 0.637,
  "engine_grade": false,
  "body": {
-  "file": "body.webp",
+  "file": "body.ec5b8e50.webp",
   "angles": 1,
   "cell": [
    216,
@@ -60,7 +60,7 @@
  },
  "head": {
   "version": 6,
-  "file": "head.webp",
+  "file": "head.023a5bab.webp",
   "buckets": 1,
   "cols": 1,
   "ref_R": 64,
@@ -198,7 +198,7 @@
   "notes": "cell b at column b % cols, row floor(b / cols); head points +x (jaw toward -y), lit for heading th = b/buckets*2PI by the fixed hero lights. Neck fade baked into alpha (x in neck_fade_R). One bead eye baked. No tongue (engine draws it from tongue_base_R). Straight alpha."
  },
  "cap": {
-  "file": "cap.webp",
+  "file": "cap.f34b0c7d.webp",
   "rc_ref": 40,
   "cell": [
    120,

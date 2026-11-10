@@ -357,7 +357,7 @@
     function done(d) { if (ATL.state !== 'loading') return; ATL.data = d; ATL.state = d ? 'done' : 'fail'; notifyAtlas(); }
     try {
       if (!window.fetch || !window.Promise) { done(null); return; }
-      window.fetch(assetUrl('snake/manifest.json')).then(function (r) {
+      window.fetch(assetUrl('snake/manifest.json'), { cache: 'no-cache' }).then(function (r) {
         if (!r.ok) throw new Error('manifest ' + r.status);
         return r.json();
       }).then(function (m) {
