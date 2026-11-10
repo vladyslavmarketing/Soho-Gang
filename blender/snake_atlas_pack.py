@@ -18,7 +18,10 @@ INFO = json.load(open(os.path.join(CELLS, 'info.json')))
 SS, R = INFO['ss'], 64
 BODY_CELL = 216
 ALONG, FEATHER = 0.62, 0.16
-NECK_FADE = (-1.1, -1.7)   # behind the head's own taper into the neck: size and colour already match the body
+NECK_FADE = (-1.0, -1.5)   # nominal (manifest); the real cut is the round back below
+HEAD_K = 0.86              # head drawn smaller: its fur edge sits ~1.5 R, just over the body's 1.3 R
+BACK = (1.5, 1.8, 0.22)    # back of the head = soft half-ellipse about the head point (R along, R across, edge):
+                           # a straight cut left corners poking past the neck when the head turned
 Q = int(os.environ.get('ATLAS_Q', 80))
 
 
@@ -106,13 +109,17 @@ def main():
             body[i * BODY_CELL:(i + 1) * BODY_CELL, k * BODY_CELL:(k + 1) * BODY_CELL] = body_cell(i, k, nb)
     Image.fromarray(straight(body), 'RGBA').save(os.path.join(SITE, 'body.webp'), quality=Q, method=6)
 
-    hw, hh = INFO['head_cell']; ox, oy = INFO['head_origin']
+    hw0, hh0 = INFO['head_cell']; ox0, oy0 = INFO['head_origin']
+    hw, hh = int(round(hw0 * HEAD_K)), int(round(hh0 * HEAD_K)); ox, oy = ox0 * hw / hw0, oy0 * hh / hh0
     cols = 1
     head = np.zeros((math.ceil(nh / cols) * hh, cols * hw, 4), np.float32)
-    xr = (np.arange(hw) + 0.5 - ox) / R
-    fade = sstep(NECK_FADE[1], NECK_FADE[0], xr)[None, :, None]
+    yy, xx = np.mgrid[0:hh, 0:hw]
+    xr = (xx + 0.5 - ox) / R; yr = (yy + 0.5 - oy) / R
+    d = np.hypot(np.minimum(xr, 0) / BACK[0], yr / BACK[1])
+    fade = (1 - sstep(1 - BACK[2], 1, d))[..., None]
     for b in range(nh):
-        a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])])[::-1, ::-1], SS) * fade   # turned by 180 deg
+        a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])])[::-1, ::-1], SS)   # turned by 180 deg
+        a = np.clip(np.stack([np.asarray(Image.fromarray(a[..., i], 'F').resize((hw, hh), Image.LANCZOS)) for i in range(4)], -1), 0, 1) * fade
         r, c = divmod(b, cols)
         head[r * hh:(r + 1) * hh, c * hw:(c + 1) * hw] = a
     Image.fromarray(straight(head), 'RGBA').save(os.path.join(SITE, 'head.webp'), quality=Q, method=6)
@@ -126,7 +133,7 @@ def main():
     Image.fromarray(straight(cap), 'RGBA').save(os.path.join(SITE, 'cap.webp'), quality=Q, method=6)
 
     k_r, nose = INFO['k_r'], INFO['nose_ext']
-    d2r = 2 * k_r                                           # D -> engine R
+    d2r = 2 * k_r * HEAD_K                                           # D -> engine R
     sizes = {n: os.path.getsize(os.path.join(SITE, n + '.webp')) for n in ('body', 'head', 'cap')}
     man = {
         'version': 2,
@@ -144,11 +151,11 @@ def main():
                      '+-feather*R cross-fade; the fur edge sits at fur_edge_R * R. Straight alpha.'},
         'head': {
             'version': 6, 'file': 'head.webp', 'buckets': nh, 'cols': cols, 'ref_R': R, 'rh_ref': R * 1.2,
-            'head_scale': 1.2, 'cell': [hw, hh], 'origin': [ox, oy], 'eyes': True, 'fade_baked': True, 'tongue': False,
+            'head_scale': 1.2, 'cell': [hw, hh], 'origin': [round(ox, 2), round(oy, 2)], 'eyes': True, 'fade_baked': True, 'tongue': False,
             'neck_fade_R': list(NECK_FADE),
             'eye': {'per_bucket': [[1]] * 32,
                     'centres': [[round((INFO['head_s0'] - nose - 0.86) * d2r, 3), round(-0.05 * d2r, 3)]]},
-            'tongue_base_R': [round((INFO['head_s0'] - nose - 0.05) * d2r, 3), 1.09],
+            'tongue_base_R': [round((INFO['head_s0'] - nose - 0.05) * d2r, 3), round(1.09 * HEAD_K, 3)],
             'shape': {'source': 'blender/snake_scene.py head_profile (head v6)',
                       'frame': 'units of R; x forward from the head point; cell image y: jaw toward -y, brow toward +y'},
             'notes': 'cell b at column b % cols, row floor(b / cols); head points +x (jaw toward -y), lit for heading '
