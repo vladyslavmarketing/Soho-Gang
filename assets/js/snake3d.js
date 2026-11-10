@@ -17,6 +17,7 @@
   /* ------------------------------------------------------------------ constants */
   var HERO_FIT = { dx: -0.011, dy: -0.044, h: 1.085, edge: 8 };      // W5, measured on the approved 1440 layout
   var HERO_SCROLL = { desk: [0.03, 0.38], phone: [0.02, 0.22] };     // W9
+  var JOURNEY_EDGE = 8;                                              // css px between the viewport's left edge and her body
   var TPX = { S: 78, M: 104, L: 156 }, ORD = 'SML', FPS = 30;
   var B = w.__aeSnake3dBoot || {};
   var root = d.documentElement;
@@ -1074,12 +1075,15 @@
     var ls = S.layer.style;
     ls.setProperty('--s3d-w', s * fr[0] + 'px'); ls.setProperty('--s3d-h', s * fr[1] + 'px');
     ls.setProperty('--s3d-y', 0.62 * H - cy * s + 'px');             // cruise head at 62 % of the viewport
+    var bodyL = c.bodyLeft != null ? c.bodyLeft : 0.49 * S.m.pxPerD;  // leftmost body pixel in the frame (centre − amplitude − radius)
+    ls.setProperty('--s3d-x', JOURNEY_EDGE - bodyL * s + 'px');        // pressed to the LEFT edge (user decision)
     S.y0 = hero.sb * hero.vh;
-    S.y1 = gauge && gauge.docTop ? gauge.docTop - H : d.documentElement.scrollHeight - H;
-    var a = sg.in[1], L = sg.loop[1] - sg.loop[0], o = c.frames - sg.out[0], R = S.y1 - S.y0;
-    S.n = Math.max(1, Math.round((R / 14 - a - o) / L));
-    S.tot = a + S.n * L + o; S.ppf = R / S.tot;
-    S.fits = mm('(min-width: 960px)') && R > S.tot * 4;
+    var sec = gauge && gauge.sec.closest('section');                  // the block she slides into (the income section)
+    S.secTop = sec ? sec.getBoundingClientRect().top + scrollY : d.documentElement.scrollHeight;
+    S.y1 = S.secTop;                                                   // until that block's top edge reaches the viewport top
+    S.layY = 0.62 * H - cy * s; S.layH = s * fr[1];
+    S.ppf = 14;                                                        // one clip frame per 14 px of scroll
+    S.fits = mm('(min-width: 960px)') && S.y1 - S.y0 > (sg.in[1] + 20) * S.ppf;
     if (!S.tier) S.tier = tierFor(S.D * Math.min(w.devicePixelRatio || 1, 2), S.m);
     S.need = S.D * Math.min(w.devicePixelRatio || 1, 2);
     S.size(S.tier); S.dirty = true;
@@ -1088,8 +1092,7 @@
     var sg = this.sm.clips.journey.segments, a = sg.in[1], b = sg.loop[0], L = sg.loop[1] - b, N = this.sm.clips.journey.frames;
     U = Math.max(0, Math.floor(U));
     if (U < a) return U;
-    var u = U - a, loops = this.n * L;
-    return u < loops ? b + (u % L) : Math.min(N - 1, sg.out[0] + (u - loops));
+    return b + ((U - a) % L);                                          // she keeps crawling; the next block's edge swallows her
   };
   Journey.prototype.onClipFrame = function () { this.dirty = true; };
   Journey.prototype.onStill = function (on) { if (on) { this.pauseAll(); this.hide(0); } };
@@ -1098,8 +1101,10 @@
     var S = this, c = S.clips.journey;
     if (hero && hero.st !== 'gone' && hero.st !== 'still' && hero.vis === 0 && scrollY > S.y0 && S.fits && mode === 'motion') hero.toGone(false);   // hero out of view: she has left
     var want = mode === 'motion' && S.fits && video === 'ok' && !jumping && hero && hero.st === 'gone' &&
-      (!gauge || gauge.st === 'empty' || gauge.st === 'off') && scrollY > S.y0 && scrollY < S.y1;
-    if (!want) { S.hide(jumping ? 200 : 0); return; }
+      (!gauge || gauge.st === 'empty' || gauge.st === 'off' || gauge.st === 'arrive') && scrollY > S.y0 && scrollY < S.y1;
+    if (!want) { S.hide(jumping ? 200 : gauge && gauge.st === 'rest' ? 300 : 0); return; }
+    var cut = Math.max(0, Math.round(S.layY + S.layH - (S.secTop - scrollY)));   // clip her at the next block's top edge
+    if (cut !== S.cut) { S.cut = cut; S.layer.style.clipPath = cut ? 'inset(0 0 ' + cut + 'px 0)' : ''; }
     if (!S.ready('journey')) {
       if (!S.loading && !hero.p4 && !(S.clipFail && S.clipFail.journey) && S.gl()) {   /* never while the hero still loads its pair into hero B */ S.loading = true; S.loadClip('journey', pool[1], 'low').then(function () { S.loading = false; kick(); }, function () { S.loading = false; }); }
       return;

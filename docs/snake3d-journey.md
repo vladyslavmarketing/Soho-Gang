@@ -75,3 +75,34 @@ Files: `journey/S/journey.<h8>.{av1,hevc,h264}.mp4`, `journey/M/…`. No rest st
   layout. Scrolling up runs everything backwards.
 - Visible only while the hero is gone and the gauge is empty (one snake at a time). Anchor jumps skip it (200 ms fade).
 - Uses the hero B decoder (depart-rev) while active; the hero reloads it from the cached blob when she re-forms.
+
+---
+
+## Update 2026-11-10: left edge, and she crawls from the block above into the ring
+
+User decisions: **the journey runs along the LEFT edge**, and at the calculator «она должна лаконично переходить из
+блока выше и заворачиваться вокруг круга калькулятора». The ring stays in the right column (user's choice).
+A mock of the whole path is in the preview; the mock generators are `dev/snake3d-journey-mock.py` and
+`dev/snake3d-gauge-mock.py` (geometry reference for the Blender session).
+
+**J1 changes**
+- The layer is pinned to the left edge: her leftmost body pixel 8 css px from the viewport edge (`JOURNEY_EDGE`,
+  `clips.journey.bodyLeft` = leftmost body x in master px, default 0.49 D). The frame stays symmetric; no mirroring.
+- The `out` segment is **no longer used.** She keeps crawling (the loop repeats) and the top edge of the income section
+  swallows her: the player clips the layer at that edge, so she slides into the next block. `out` can be dropped.
+
+**G1 is reframed (replaces B6's right entry): she comes from the top-left and crosses diagonally to the ring.**
+- Frame **3360 × 2112** master px (21.5 × 13.5 D), ring centre **(2592, 1440)**, ring r = 390, coil radius 520.
+  The frame's top edge lies above the income section's top at every desktop width, so she emerges from under the
+  boundary between the blocks (the section clips her: `.income { overflow: hidden }`).
+- Path: enters through the frame's **top edge at x ≈ 720** (12 D left of the ring centre; on a 1440 screen that is
+  ≈ 120 css px from the viewport's left edge, right under where J1 dives), slithers diagonally down-right, reaches
+  the ring at its upper-left (θ = 240°), then coils **clockwise one lap + 45°**; the head rests at **12:30**, heading
+  right (`headDir` ≈ [0.97, 0.25]), neck lifted over the first lap (B6 clearance rule). Her tail trails back up-left
+  toward the entry and stays fully inside the frame at rest.
+- 96 frames, ease-out; frame 0 empty. Exit edge: **top** (no exit ramp on the right any more).
+- No shadow. Look cells / tongue as in G3–G5, re-posed for this rest pose.
+- Size: S clips 1120 × 1440 (6300 MBs); M (2240 × 2880, 25 200 MBs) exceeds H.264 level 4 — ship **S only** for G1, or
+  M as AV1/HEVC level 5.1. Stills may stay S/M/L.
+- On the page the copy column sits above her (`.income__copy` z 1) with an ink text halo, so she passes under the
+  title and sliders on her way to the ring.
