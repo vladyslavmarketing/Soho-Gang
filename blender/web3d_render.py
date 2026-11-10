@@ -33,6 +33,8 @@ HERO_YAW = [-10 + 5 * i for i in range(15)]            # H4, i = 2 neutral
 GAUGE_NOD = [15 + 5 * i for i in range(11)]            # G4, i = 5 neutral
 TONGUE_FR = [('e1', 0.35, 0), ('e2', 0.70, 0), ('e3', 1.0, 0), ('f1', 1.0, 14), ('f2', 1.0, -14)]
 TIMING = {}
+CELL = 9 * 156                                         # look-cell square (spec 6 D; 9 D leaves room for the head bend)
+GAUGE_ROLL = float(arg('--gauge-roll', 40))            # gauge head tilt so an eye faces the top-down camera
 
 
 def snap(rect, unit):
@@ -118,8 +120,10 @@ class Shoot:
             pitch = self.nod_sign * pitch
         else:
             yaw = self.yaw_sign * yaw
+        roll = math.radians(GAUGE_ROLL) if self.scene == 'gauge' else 0.0
         sp.key_action(self.rest, 'web3d_pose', [(1.0, 0.0, self.M)],
-                      look=([(0, math.radians(yaw))], [(0, math.radians(pitch))]), tongue=[(0, tongue)], breath=breath)
+                      look=([(0, math.radians(yaw))], [(0, math.radians(pitch))], [(0, roll)]), tongue=[(0, tongue)],
+                      breath=breath)
         self.sc.frame_set(1)
         bpy.context.view_layer.update()
 
@@ -268,7 +272,7 @@ class Shoot:
         meta = json.load(open(mp)) if os.path.exists(mp) else {}
         self.pose(**{self.look_key: neutral})
         e2, _ = self.eye()
-        cell = clip_rect(snap([e2[0] - 468, e2[1] - 468, 936, 936], 24))
+        cell = clip_rect(snap([e2[0] - CELL / 2, e2[1] - CELL / 2, CELL, CELL], 24))
         meta.update(neutral_eye=[float(e2[0]), float(e2[1])], cell_rect=cell, angles=angles,
                     neutral=angles.index(neutral), look_sign=self.yaw_sign if scene == 'hero' else self.nod_sign)
         if S + '3' in shots:
@@ -336,6 +340,10 @@ def render_clip(name):
         ob = bpy.data.objects[nm]
         ob.cycles.use_motion_blur = True
         ob.cycles.use_deform_motion = True
+    if name == 'journey' or '--low-mem' in argv:       # 6 GB VRAM: the long body + deformed fur blur does not fit
+        bpy.data.objects['Fur'].cycles.use_deform_motion = False      # B15-1: object blur stays on
+    if name in ('journey', 'gauge_arrive') or '--low-mem' in argv:
+        sc.render.use_persistent_data = False
     x, y, w, h = rect
     r = sc.render
     r.border_min_x, r.border_max_x = max((x - 128) / fw, 0), min((x + w + 128) / fw, 1)

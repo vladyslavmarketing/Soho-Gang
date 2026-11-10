@@ -1,68 +1,68 @@
 {
  "files": {
   "gauge/L/look.webp": {
-   "bytes": 502264,
-   "cap": 420000
+   "bytes": 873880,
+   "cap": 1300000
   },
   "gauge/L/rest.webp": {
-   "bytes": 167888,
+   "bytes": 166210,
    "cap": 300000
   },
   "gauge/L/tongue.webp": {
-   "bytes": 33898,
+   "bytes": 79278,
    "cap": 130000
   },
   "gauge/M/arrive.av1.mp4": {
-   "bytes": 355749,
+   "bytes": 465505,
    "cap": 700000
   },
   "gauge/M/arrive.h264.mp4": {
-   "bytes": 647615,
+   "bytes": 794276,
    "cap": 1190000
   },
   "gauge/M/arrive.hevc.mp4": {
-   "bytes": 510035,
+   "bytes": 642512,
    "cap": 875000
   },
   "gauge/M/look.webp": {
-   "bytes": 277588,
-   "cap": 200000
+   "bytes": 481654,
+   "cap": 650000
   },
   "gauge/M/rest.webp": {
-   "bytes": 95288,
+   "bytes": 94502,
    "cap": 150000
   },
   "gauge/M/tongue.webp": {
-   "bytes": 26678,
+   "bytes": 55598,
    "cap": 65000
   },
   "gauge/S/arrive.av1.mp4": {
-   "bytes": 234926,
+   "bytes": 297666,
    "cap": 400000
   },
   "gauge/S/arrive.h264.mp4": {
-   "bytes": 390502,
+   "bytes": 475575,
    "cap": 680000
   },
   "gauge/S/arrive.hevc.mp4": {
-   "bytes": 320998,
+   "bytes": 386759,
    "cap": 500000
   },
   "gauge/S/look.webp": {
-   "bytes": 165618,
-   "cap": 110000
+   "bytes": 282726,
+   "cap": 350000
   },
   "gauge/S/rest.webp": {
-   "bytes": 59508,
+   "bytes": 59382,
    "cap": 90000
   },
   "gauge/S/tongue.webp": {
-   "bytes": 18188,
+   "bytes": 38770,
    "cap": 40000
   },
   "hero/L/look.webp": {
-   "bytes": 794606,
-   "cap": 580000
+   "bytes": 1842662,
+   "cap": 2050000
   },
   "hero/L/rest.webp": {
    "bytes": 186308,
@@ -70,30 +70,30 @@
   },
   "hero/L/tongue.webp": {
    "bytes": 123322,
-   "cap": 180000
+   "cap": 240000
   },
   "hero/M/depart-rev.av1.mp4": {
-   "bytes": 203889,
+   "bytes": 205384,
    "cap": 350000
   },
   "hero/M/depart-rev.h264.mp4": {
-   "bytes": 409435,
+   "bytes": 409767,
    "cap": 595000
   },
   "hero/M/depart-rev.hevc.mp4": {
-   "bytes": 282514,
+   "bytes": 284992,
    "cap": 437500
   },
   "hero/M/depart.av1.mp4": {
-   "bytes": 229229,
+   "bytes": 229613,
    "cap": 350000
   },
   "hero/M/depart.h264.mp4": {
-   "bytes": 415812,
+   "bytes": 417467,
    "cap": 595000
   },
   "hero/M/depart.hevc.mp4": {
-   "bytes": 291802,
+   "bytes": 295658,
    "cap": 437500
   },
   "hero/M/intro.av1.mp4": {
@@ -109,39 +109,39 @@
    "cap": 750000
   },
   "hero/M/look.webp": {
-   "bytes": 425410,
-   "cap": 270000
+   "bytes": 956972,
+   "cap": 1060000
   },
   "hero/M/rest.webp": {
    "bytes": 100658,
    "cap": 130000
   },
   "hero/M/tongue.webp": {
-   "bytes": 83716,
-   "cap": 90000
+   "bytes": 90896,
+   "cap": 120000
   },
   "hero/S/depart-rev.av1.mp4": {
-   "bytes": 137728,
+   "bytes": 139279,
    "cap": 200000
   },
   "hero/S/depart-rev.h264.mp4": {
-   "bytes": 250951,
+   "bytes": 255668,
    "cap": 340000
   },
   "hero/S/depart-rev.hevc.mp4": {
-   "bytes": 168663,
+   "bytes": 170485,
    "cap": 250000
   },
   "hero/S/depart.av1.mp4": {
-   "bytes": 153901,
+   "bytes": 155717,
    "cap": 200000
   },
   "hero/S/depart.h264.mp4": {
-   "bytes": 257001,
+   "bytes": 258262,
    "cap": 340000
   },
   "hero/S/depart.hevc.mp4": {
-   "bytes": 176867,
+   "bytes": 177958,
    "cap": 250000
   },
   "hero/S/intro.av1.mp4": {
@@ -157,27 +157,39 @@
    "cap": 425000
   },
   "hero/S/look.webp": {
-   "bytes": 254148,
-   "cap": 150000
+   "bytes": 557362,
+   "cap": 620000
   },
   "hero/S/rest.webp": {
    "bytes": 62388,
    "cap": 80000
   },
   "hero/S/tongue.webp": {
-   "bytes": 58204,
-   "cap": 55000
+   "bytes": 63270,
+   "cap": 80000
+  },
+  "journey/M/journey.av1.mp4": {
+   "bytes": 1901829,
+   "cap": 2300000
+  },
+  "journey/M/journey.hevc.mp4": {
+   "bytes": 2630399,
+   "cap": 2875000
+  },
+  "journey/S/journey.av1.mp4": {
+   "bytes": 1322851,
+   "cap": 1600000
+  },
+  "journey/S/journey.h264.mp4": {
+   "bytes": 2047230,
+   "cap": 2720000
+  },
+  "journey/S/journey.hevc.mp4": {
+   "bytes": 1848153,
+   "cap": 2000000
   }
  },
- "over_cap": [
-  "gauge/L/look.webp",
-  "gauge/M/look.webp",
-  "gauge/S/look.webp",
-  "hero/L/look.webp",
-  "hero/M/look.webp",
-  "hero/S/look.webp",
-  "hero/S/tongue.webp"
- ],
+ "over_cap": [],
  "decode": {
   "videos": {
    "gauge/M/arrive.av1.mp4": {
@@ -224,7 +236,7 @@
     },
     "95": {
      "strip_max_err": 1.0,
-     "patch_max_err": 2.0,
+     "patch_max_err": 3.0,
      "ok": true
     }
    },
@@ -422,7 +434,7 @@
    },
    "hero/S/depart.hevc.mp4": {
     "0": {
-     "strip_max_err": 2.0,
+     "strip_max_err": 2.5,
      "patch_max_err": 4.0,
      "ok": true
     },
@@ -467,8 +479,73 @@
      "patch_max_err": 3.0,
      "ok": true
     }
+   },
+   "journey/M/journey.av1.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 5.0,
+     "ok": false
+    },
+    "246": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 5.0,
+     "ok": false
+    }
+   },
+   "journey/M/journey.hevc.mp4": {
+    "0": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    },
+    "246": {
+     "strip_max_err": 1.0,
+     "patch_max_err": 2.0,
+     "ok": true
+    }
+   },
+   "journey/S/journey.av1.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 6.0,
+     "ok": false
+    },
+    "246": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 6.0,
+     "ok": false
+    }
+   },
+   "journey/S/journey.h264.mp4": {
+    "0": {
+     "strip_max_err": 3.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "246": {
+     "strip_max_err": 4.0,
+     "patch_max_err": 4.0,
+     "ok": false
+    }
+   },
+   "journey/S/journey.hevc.mp4": {
+    "0": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 4.0,
+     "ok": true
+    },
+    "246": {
+     "strip_max_err": 2.0,
+     "patch_max_err": 5.0,
+     "ok": false
+    }
    }
   },
-  "failing": []
+  "failing": [
+   "journey/M/journey.av1.mp4",
+   "journey/S/journey.av1.mp4",
+   "journey/S/journey.h264.mp4",
+   "journey/S/journey.hevc.mp4"
+  ]
  }
 }

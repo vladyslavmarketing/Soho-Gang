@@ -632,6 +632,59 @@ def pack_clip(name, rect, patches, man):
     return rep
 
 
+# ======================================================================================== journey (J1)
+def pack_journey(man, patches):
+    """J-B / J-M: one clip on its own 480 x 3120 frame, rect = frame, stacked S / M, no rest set"""
+    files = clip_frames('journey')
+    if not files:
+        return None
+    info = json.load(open(os.path.join(ROOT, 'renders', 'journey_info.json')))
+    N = len(files)
+    FWm, FHm = 480, 3120
+    rep = {'frames': N}
+    outs = {T_: os.path.join(SEQ, 'journey', 'journey', T_) for T_ in CLIP_TIERS}
+    for d in outs.values():
+        shutil.rmtree(d, ignore_errors=True)
+        os.makedirs(d)
+    keep = {}
+    F_L, F_E = info['segments']['loop']
+    want = {F_L, F_L + 1, F_E - 1, F_E}
+    maxA, sizes = [], {}
+    for j, f in enumerate(files):
+        b = oiio.ImageBuf(f)
+        names = list(b.spec().channelnames)
+        idx = [next(i for i, n in enumerate(names) if n.endswith('Combined.' + c)) for c in 'RGBA']
+        px = b.get_pixels(oiio.FLOAT)[..., idx].astype(np.float32)
+        if px.shape[1] != FWm * 2 // 3:
+            px = resize(px, FWm * 2 // 3, FHm * 2 // 3)
+        im = display(px)
+        maxA.append(float(im[..., 3].max()))
+        for T_ in CLIP_TIERS:
+            t = tier(im, TIERS[T_] * 1.5)
+            fr = stacked(t, TIERS[T_], patches)
+            sizes[T_] = [int(fr.shape[1]), int(fr.shape[0])]
+            write_png(os.path.join(outs[T_], '%04d.png' % j), fr)
+            if T_ == 'M' and j in want:
+                keep[j] = t
+    # out starts from the loop's first pose (frame F_E == frame F_L); the wrap F_E-1 -> F_L must look like an
+    # ordinary step (compare with F_L -> F_L+1)
+    rep['out_start_vs_loop_start'] = lowpass_cmp(keep[F_E], keep[F_L])
+    rep['wrap_step'] = lowpass_cmp(keep[F_E - 1], keep[F_L])
+    rep['ordinary_step'] = lowpass_cmp(keep[F_L], keep[F_L + 1])
+    rep['empty_frames_maxA_255'] = {'0': round(maxA[0] * 255, 2), str(N - 1): round(maxA[-1] * 255, 2)}
+    rep['empty_ok'] = maxA[0] * 255 <= 3 and maxA[-1] * 255 <= 3
+    rep['stacked'] = sizes
+    rep['macroblocks'] = {T_: math.ceil(sz[0] / 16) * math.ceil(sz[1] / 16) for T_, sz in sizes.items()}
+    man['scenes']['journey'] = {
+        'frame': [FWm, FHm], 'camera': {'name': 'CamJourney', 'type': 'ortho'}, 'stage': [0, 0, FWm, FHm],
+        'exit': 'right',
+        'clips': {'journey': {'frames': N, 'rect': [0, 0, FWm, FHm], 'from': 'empty', 'to': 'empty',
+                              'cruiseY': info['cruiseY'], 'bodyRight': info['bodyRight'],
+                              'segments': info['segments'], 'intra': True}}}
+    log('journey', rep)
+    return rep
+
+
 # ======================================================================================== stages
 def stage_pack():
     t0 = time.time()
@@ -649,6 +702,8 @@ def stage_pack():
     patches = [pink, [241, 214, 218], [191, 0, 0], [0, 0, 191]]
     for n, r in rects.items():
         reports.setdefault('clips', {})[n] = pack_clip(n, r, patches, man)
+    if '--no-clips' not in argv:
+        reports['journey'] = pack_journey(man, patches)
     man['videoLayout'] = {'gutter': 96, 'strip': {'y': 24, 'h': 24, 'steps': 16},
                           'patches': {'y': 60, 'h': 24, 'rgb': [pink, [241, 214, 218], [191, 0, 0], [0, 0, 191]]},
                           'premultiplied': True, 'matrix': 'bt709', 'range': 'tv'}
@@ -667,9 +722,10 @@ def find_ff(exe):
     return exe
 
 
-CAPS = {  # M6, KB for AV1 / WebP (HEVC x1.25, H.264 x1.7)
-    ('hero', 'rest'): (80, 130, 260), ('hero', 'look'): (150, 270, 580), ('hero', 'tongue'): (55, 90, 180),
-    ('gauge', 'rest'): (90, 150, 300), ('gauge', 'look'): (110, 200, 420), ('gauge', 'tongue'): (40, 65, 130),
+CAPS = {  # M6, KB for AV1 / WebP (HEVC x1.25, H.264 x1.7); look / tongue raised by the user on 2026-11-10
+    ('hero', 'rest'): (80, 130, 260), ('hero', 'look'): (620, 1060, 2050), ('hero', 'tongue'): (80, 120, 240),
+    ('gauge', 'rest'): (90, 150, 300), ('gauge', 'look'): (350, 650, 1300), ('gauge', 'tongue'): (40, 65, 130),
+    ('journey', 'journey'): (1600, 2300, 2300),          # all-intra J1 (raised, user 2026-11-10)
     ('hero', 'intro'): (340, 600, 1250), ('hero', 'depart'): (200, 350, 720), ('hero', 'depart-rev'): (200, 350, 720),
     ('gauge', 'arrive'): (400, 700, 1450),
 }

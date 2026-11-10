@@ -74,6 +74,7 @@ LOOK_SHARE = [('Head', 0.45), ('Spine_01', 0.22), ('Spine_02', 0.15), ('Spine_03
               ('Spine_05', 0.03)]
 RAMP_D = 8.0                                 # roll ramp to dorsal-up spreads over this much path (spec: >= 3 D)
 FLOOR_RUN = 2.0                              # a floor segment = >= this much path lying on the floor
+BODY_RMF_S = 0.5                             # hero_depart: blend to the body-carried roll over this time
 SETTLE_S, SETTLE_DELAY = 0.40, 0.05          # hero_depart: letters topple onto the floor
 TWIST_MAX, DORSAL_MAX = 10.0, 15.0
 ASSERT_BONES = ['Head', 'Spine_10', 'Spine_30', 'Spine_50']
@@ -497,6 +498,10 @@ def pose(rest, tr, sh):
     set_curve(rest, P)
     M = {pb.name: pb.matrix.copy() for pb in rest.arm.pose.bones}
     info = {}
+    bw = getattr(tr, 'body_w', 0.0)
+    if bw > 0:                       # roll carried along the body itself from the head (no sliding through ramps)
+        Tb = tangents(P)
+        Fb = rmf(P, Tb, 0, tr.at(ss[0], tr.N))
     for n in rest.chain:
         sb = float(np.interp(rest.bone_s[n], cum, ss))
         Nw = tr.at(sb, tr.N)
@@ -506,6 +511,12 @@ def pose(rest, tr, sh):
         y = R.col[1].normalized()
         zc = (R @ rest.zb[n]).normalized()
         tgt = (Na - Na.dot(y) * y).normalized()
+        if bw > 0:
+            nb = np.array([np.interp(rest.bone_s[n], cum, Fb[:, k]) for k in range(3)])
+            Nb = Vector(rest.Aw_inv @ (nb / max(np.linalg.norm(nb), 1e-9)))
+            t2 = (Nb - Nb.dot(y) * y).normalized()
+            a2 = math.atan2(tgt.cross(t2).dot(y), tgt.dot(t2))
+            tgt = (Matrix.Rotation(a2 * bw, 3, y) @ tgt).normalized()
         phi = math.atan2(zc.cross(tgt).dot(y), zc.dot(tgt))
         M[n] = m @ Matrix.Rotation(phi, 4, 'Y')
         dors = rest.Aw @ np.array((M[n].to_3x3() @ rest.zb[n]).normalized())
@@ -545,8 +556,9 @@ def check_roll(name, Ms, infos):
     return dict(ok=ok, twist=worst_t, dorsal=worst_d)
 
 
-def look_matrices(rest, M, yaw, pit):
-    """LOOK_SHARE turn of head + neck about the head's up (yaw) and side (pitch) axes, as in snake_anim"""
+def look_matrices(rest, M, yaw, pit, roll=0.0):
+    """LOOK_SHARE turn of head + neck about the head's up (yaw) and side (pitch) axes, as in snake_anim;
+    roll = head tilt about its own long axis (gauge: shows an eye to the top-down camera)"""
     arm = rest.arm
     H = arm.data.bones['Head']
     up = (M['Head'].to_3x3() @ (H.matrix_local.to_3x3().inverted() @ Vector((0, 0, 1)))).normalized()
@@ -555,7 +567,8 @@ def look_matrices(rest, M, yaw, pit):
     Cm = Matrix.Identity(4)
     for bn, wgt in reversed(LOOK_SHARE):
         tail = Cm @ (M[bn] @ Vector((0, arm.data.bones[bn].length, 0)))
-        R = (Quaternion(up, yaw * wgt) @ Quaternion(side, pit * wgt)).to_matrix().to_4x4()
+        fwd = (M['Head'].to_3x3() @ Vector((0, 1, 0))).normalized()
+        R = (Quaternion(up, yaw * wgt) @ Quaternion(side, pit * wgt) @ Quaternion(fwd, roll * wgt)).to_matrix().to_4x4()
         Cm = Matrix.Translation(tail) @ R @ Matrix.Translation(-tail) @ Cm
         Mt[bn] = Cm @ M[bn]
     return Mt
@@ -582,7 +595,8 @@ def key_action(rest, name, keys, look=None, tongue=None, breath=0.0):
     data = {n: np.zeros((NK, 10)) for n in names}
     prevq = {}
     for k, (fr, t, M) in enumerate(keys):
-        Mt = look_matrices(rest, M, smooth_keys(look[0], t), smooth_keys(look[1], t)) if look else dict(M)
+        Mt = look_matrices(rest, M, smooth_keys(look[0], t), smooth_keys(look[1], t),
+                           smooth_keys(look[2], t) if look and len(look) > 2 else 0.0) if look else dict(M)
         tg = smooth_keys(tongue, t) if tongue else 0.03
         Mt['Tongue'] = Mt['Head'] @ rel('Tongue') @ Matrix.Diagonal((tg, tg, tg, 1))
         Mt['Jaw'] = Mt['Head'] @ rel('Jaw')
@@ -724,6 +738,7 @@ def depart_motion(rest, NF):
 
 def depart_state(rest, tr0, t, t_s, prof):
     tr = settled(rest, tr0, t, t_s)
+    tr.body_w = float(sstep(0.0, BODY_RMF_S, t))      # H3's field -> roll carried along the body over 0.5 s
     sh = prof(t) + (tr.sig[tr0.nose_index] - tr0.sig[tr0.nose_index])
     return tr, sh
 

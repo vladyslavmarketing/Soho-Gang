@@ -153,24 +153,24 @@
     "neutral": 2,
     "rect": [
      432,
-     168,
-     744,
-     768
+     144,
+     984,
+     960
     ],
-    "envelopeTop": 292,
+    "envelopeTop": 245,
     "atlas": {
      "file": "look.webp",
-     "cols": 5,
-     "rows": 3,
+     "cols": 4,
+     "rows": 4,
      "pad": 4
     },
     "mask": {
      "file": "mask.png",
      "rect": [
-      432,
-      168,
-      744,
-      768
+      456,
+      192,
+      960,
+      912
      ],
      "fileScale": 0.5
     },
@@ -186,8 +186,8 @@
      "start": 54.6,
      "length": 285.6,
      "rangeDeg": [
-      0,
-      4
+      -12,
+      16
      ],
      "positive": "cw"
     },
@@ -367,16 +367,16 @@
    "exit": "right",
    "anchors": {
     "eye": [
-     968,
-     314
+     1042,
+     198
     ],
     "snout": [
-     888,
-     167
+     857,
+     221
     ],
     "headDir": [
-     -0.891,
-     -0.454
+     -0.958,
+     -0.286
     ],
     "ringCenter": [
      720,
@@ -436,39 +436,39 @@
     ],
     "neutral": 5,
     "rect": [
-     480,
+     336,
      0,
-     960,
-     792
+     1248,
+     912
     ],
-    "envelopeTop": 37,
+    "envelopeTop": 33,
     "atlas": {
      "file": "look.webp",
-     "cols": 4,
-     "rows": 3,
+     "cols": 3,
+     "rows": 4,
      "pad": 4
     },
     "mask": {
      "file": "mask.png",
      "rect": [
-      480,
+      336,
       0,
-      960,
-      792
+      1248,
+      912
      ],
      "fileScale": 0.5
     },
     "warp": {
      "pivot": [
-      1247.1,
-      562.8
+      1246.6,
+      563.2
      ],
      "axis": [
-      -0.5068,
-      -0.8621
+      -0.5596,
+      -0.8287
      ],
      "start": 39.0,
-     "length": 352.6,
+     "length": 341.5,
      "rangeDeg": [
       -2,
       2
@@ -484,7 +484,7 @@
      },
      "slot": [
       216,
-      144
+      240
      ],
      "frames": [
       "e1",
@@ -496,47 +496,47 @@
      "origins": [
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ],
       [
        720,
-       72
+       24
       ]
      ],
      "single": [
@@ -589,6 +589,53 @@
      }
     }
    }
+  },
+  "journey": {
+   "frame": [
+    480,
+    3120
+   ],
+   "camera": {
+    "name": "CamJourney",
+    "type": "ortho"
+   },
+   "stage": [
+    0,
+    0,
+    480,
+    3120
+   ],
+   "exit": "right",
+   "clips": {
+    "journey": {
+     "frames": 247,
+     "rect": [
+      0,
+      0,
+      480,
+      3120
+     ],
+     "from": "empty",
+     "to": "empty",
+     "cruiseY": 1872,
+     "bodyRight": 404,
+     "segments": {
+      "in": [
+       0,
+       91
+      ],
+      "loop": [
+       91,
+       151
+      ],
+      "out": [
+       151,
+       247
+      ]
+     },
+     "intra": true
+    }
+   }
   }
  },
  "videoLayout": {
@@ -630,32 +677,32 @@
  },
  "files": {
   "gauge/L/look.webp": {
-   "file": "gauge/L/look.a48b6605.webp",
-   "bytes": 502264,
+   "file": "gauge/L/look.0cc4caae.webp",
+   "bytes": 873880,
    "size": [
-    3872,
-    2400
+    3768,
+    3680
    ]
   },
   "gauge/L/rest.webp": {
-   "file": "gauge/L/rest.66cfdf2f.webp",
-   "bytes": 167888,
+   "file": "gauge/L/rest.c2ee1974.webp",
+   "bytes": 166210,
    "size": [
     1728,
     1344
    ]
   },
   "gauge/L/tongue.webp": {
-   "file": "gauge/L/tongue.4ed90fc1.webp",
-   "bytes": 33898,
+   "file": "gauge/L/tongue.6d0670cd.webp",
+   "bytes": 79278,
    "size": [
     1120,
-    1672
+    2728
    ]
   },
   "gauge/M/arrive.av1.mp4": {
-   "file": "gauge/M/arrive.a93b837e.av1.mp4",
-   "bytes": 355749,
+   "file": "gauge/M/arrive.281ac640.av1.mp4",
+   "bytes": 465505,
    "codec": "av01.0.08M.08",
    "size": [
     1088,
@@ -664,8 +711,8 @@
    "frames": 96
   },
   "gauge/M/arrive.h264.mp4": {
-   "file": "gauge/M/arrive.f3d591a8.h264.mp4",
-   "bytes": 647615,
+   "file": "gauge/M/arrive.2204b1e6.h264.mp4",
+   "bytes": 794276,
    "codec": "avc1.640028",
    "size": [
     1088,
@@ -674,8 +721,8 @@
    "frames": 96
   },
   "gauge/M/arrive.hevc.mp4": {
-   "file": "gauge/M/arrive.9d52b0c3.hevc.mp4",
-   "bytes": 510035,
+   "file": "gauge/M/arrive.1afd5101.hevc.mp4",
+   "bytes": 642512,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     1088,
@@ -684,32 +731,32 @@
    "frames": 96
   },
   "gauge/M/look.webp": {
-   "file": "gauge/M/look.dd5e11b9.webp",
-   "bytes": 277588,
+   "file": "gauge/M/look.74f51bef.webp",
+   "bytes": 481654,
    "size": [
-    2592,
-    1608
+    2520,
+    2464
    ]
   },
   "gauge/M/rest.webp": {
-   "file": "gauge/M/rest.7ff49721.webp",
-   "bytes": 95288,
+   "file": "gauge/M/rest.582f26af.webp",
+   "bytes": 94502,
    "size": [
     1152,
     896
    ]
   },
   "gauge/M/tongue.webp": {
-   "file": "gauge/M/tongue.f9ad871a.webp",
-   "bytes": 26678,
+   "file": "gauge/M/tongue.a499503e.webp",
+   "bytes": 55598,
    "size": [
     760,
-    1144
+    1848
    ]
   },
   "gauge/S/arrive.av1.mp4": {
-   "file": "gauge/S/arrive.4587f7b4.av1.mp4",
-   "bytes": 234926,
+   "file": "gauge/S/arrive.01d32143.av1.mp4",
+   "bytes": 297666,
    "codec": "av01.0.08M.08",
    "size": [
     816,
@@ -718,8 +765,8 @@
    "frames": 96
   },
   "gauge/S/arrive.h264.mp4": {
-   "file": "gauge/S/arrive.0450bc6c.h264.mp4",
-   "bytes": 390502,
+   "file": "gauge/S/arrive.52b85e2f.h264.mp4",
+   "bytes": 475575,
    "codec": "avc1.640020",
    "size": [
     816,
@@ -728,8 +775,8 @@
    "frames": 96
   },
   "gauge/S/arrive.hevc.mp4": {
-   "file": "gauge/S/arrive.6cd14f5e.hevc.mp4",
-   "bytes": 320998,
+   "file": "gauge/S/arrive.1d1321fd.hevc.mp4",
+   "bytes": 386759,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     816,
@@ -738,51 +785,51 @@
    "frames": 96
   },
   "gauge/S/look.webp": {
-   "file": "gauge/S/look.0784e01e.webp",
-   "bytes": 165618,
+   "file": "gauge/S/look.3995755a.webp",
+   "bytes": 282726,
    "size": [
-    1952,
-    1212
+    1896,
+    1856
    ]
   },
   "gauge/S/rest.webp": {
-   "file": "gauge/S/rest.883521dd.webp",
-   "bytes": 59508,
+   "file": "gauge/S/rest.0b2c42b7.webp",
+   "bytes": 59382,
    "size": [
     864,
     672
    ]
   },
   "gauge/S/tongue.webp": {
-   "file": "gauge/S/tongue.5428d206.webp",
-   "bytes": 18188,
+   "file": "gauge/S/tongue.a31cf7f9.webp",
+   "bytes": 38770,
    "size": [
     580,
-    880
+    1408
    ]
   },
   "gauge/flow.png": {
-   "file": "gauge/flow.ffcb080c.png",
-   "bytes": 77079,
+   "file": "gauge/flow.bfd34abc.png",
+   "bytes": 77165,
    "size": [
     864,
     672
    ]
   },
   "gauge/mask.png": {
-   "file": "gauge/mask.24349337.png",
-   "bytes": 12069,
+   "file": "gauge/mask.9e6eeeca.png",
+   "bytes": 18312,
    "size": [
-    480,
-    396
+    624,
+    456
    ]
   },
   "hero/L/look.webp": {
-   "file": "hero/L/look.4ec49590.webp",
-   "bytes": 794606,
+   "file": "hero/L/look.97e40075.webp",
+   "bytes": 1842662,
    "size": [
-    3760,
-    2328
+    3968,
+    3872
    ]
   },
   "hero/L/rest.webp": {
@@ -802,8 +849,8 @@
    ]
   },
   "hero/M/depart-rev.av1.mp4": {
-   "file": "hero/M/depart-rev.e38e7c32.av1.mp4",
-   "bytes": 203889,
+   "file": "hero/M/depart-rev.84e979d0.av1.mp4",
+   "bytes": 205384,
    "codec": "av01.0.08M.08",
    "size": [
     1344,
@@ -812,8 +859,8 @@
    "frames": 48
   },
   "hero/M/depart-rev.h264.mp4": {
-   "file": "hero/M/depart-rev.e335c499.h264.mp4",
-   "bytes": 409435,
+   "file": "hero/M/depart-rev.93d3517f.h264.mp4",
+   "bytes": 409767,
    "codec": "avc1.640028",
    "size": [
     1344,
@@ -822,8 +869,8 @@
    "frames": 48
   },
   "hero/M/depart-rev.hevc.mp4": {
-   "file": "hero/M/depart-rev.b627f80b.hevc.mp4",
-   "bytes": 282514,
+   "file": "hero/M/depart-rev.76ddf62d.hevc.mp4",
+   "bytes": 284992,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     1344,
@@ -832,8 +879,8 @@
    "frames": 48
   },
   "hero/M/depart.av1.mp4": {
-   "file": "hero/M/depart.58ce6a7c.av1.mp4",
-   "bytes": 229229,
+   "file": "hero/M/depart.0dcbfeed.av1.mp4",
+   "bytes": 229613,
    "codec": "av01.0.08M.08",
    "size": [
     1344,
@@ -842,8 +889,8 @@
    "frames": 48
   },
   "hero/M/depart.h264.mp4": {
-   "file": "hero/M/depart.8c910b72.h264.mp4",
-   "bytes": 415812,
+   "file": "hero/M/depart.a57f0192.h264.mp4",
+   "bytes": 417467,
    "codec": "avc1.640028",
    "size": [
     1344,
@@ -852,8 +899,8 @@
    "frames": 48
   },
   "hero/M/depart.hevc.mp4": {
-   "file": "hero/M/depart.6217e64e.hevc.mp4",
-   "bytes": 291802,
+   "file": "hero/M/depart.d3878719.hevc.mp4",
+   "bytes": 295658,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     1344,
@@ -892,11 +939,11 @@
    "frames": 84
   },
   "hero/M/look.webp": {
-   "file": "hero/M/look.2d1d2d7a.webp",
-   "bytes": 425410,
+   "file": "hero/M/look.774a96dd.webp",
+   "bytes": 956972,
    "size": [
-    2520,
-    1560
+    2656,
+    2592
    ]
   },
   "hero/M/rest.webp": {
@@ -908,16 +955,16 @@
    ]
   },
   "hero/M/tongue.webp": {
-   "file": "hero/M/tongue.97770c3f.webp",
-   "bytes": 83716,
+   "file": "hero/M/tongue.0b8dcb72.webp",
+   "bytes": 90896,
    "size": [
     1000,
     2280
    ]
   },
   "hero/S/depart-rev.av1.mp4": {
-   "file": "hero/S/depart-rev.f88feff2.av1.mp4",
-   "bytes": 137728,
+   "file": "hero/S/depart-rev.771444a2.av1.mp4",
+   "bytes": 139279,
    "codec": "av01.0.08M.08",
    "size": [
     1008,
@@ -926,8 +973,8 @@
    "frames": 48
   },
   "hero/S/depart-rev.h264.mp4": {
-   "file": "hero/S/depart-rev.d5851f17.h264.mp4",
-   "bytes": 250951,
+   "file": "hero/S/depart-rev.7097b53f.h264.mp4",
+   "bytes": 255668,
    "codec": "avc1.640020",
    "size": [
     1008,
@@ -936,8 +983,8 @@
    "frames": 48
   },
   "hero/S/depart-rev.hevc.mp4": {
-   "file": "hero/S/depart-rev.6188aef7.hevc.mp4",
-   "bytes": 168663,
+   "file": "hero/S/depart-rev.df2d552d.hevc.mp4",
+   "bytes": 170485,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     1008,
@@ -946,8 +993,8 @@
    "frames": 48
   },
   "hero/S/depart.av1.mp4": {
-   "file": "hero/S/depart.3ef7c0c3.av1.mp4",
-   "bytes": 153901,
+   "file": "hero/S/depart.02cea9a7.av1.mp4",
+   "bytes": 155717,
    "codec": "av01.0.08M.08",
    "size": [
     1008,
@@ -956,8 +1003,8 @@
    "frames": 48
   },
   "hero/S/depart.h264.mp4": {
-   "file": "hero/S/depart.3c5c1b8a.h264.mp4",
-   "bytes": 257001,
+   "file": "hero/S/depart.0620a24d.h264.mp4",
+   "bytes": 258262,
    "codec": "avc1.640020",
    "size": [
     1008,
@@ -966,8 +1013,8 @@
    "frames": 48
   },
   "hero/S/depart.hevc.mp4": {
-   "file": "hero/S/depart.dc28d589.hevc.mp4",
-   "bytes": 176867,
+   "file": "hero/S/depart.d06631b3.hevc.mp4",
+   "bytes": 177958,
    "codec": "hvc1.1.6.L120.B0",
    "size": [
     1008,
@@ -1006,11 +1053,11 @@
    "frames": 84
   },
   "hero/S/look.webp": {
-   "file": "hero/S/look.7af5729f.webp",
-   "bytes": 254148,
+   "file": "hero/S/look.f5506661.webp",
+   "bytes": 557362,
    "size": [
-    1900,
-    1176
+    2000,
+    1952
    ]
   },
   "hero/S/rest.webp": {
@@ -1022,8 +1069,8 @@
    ]
   },
   "hero/S/tongue.webp": {
-   "file": "hero/S/tongue.d68353b4.webp",
-   "bytes": 58204,
+   "file": "hero/S/tongue.33756b8d.webp",
+   "bytes": 63270,
    "size": [
     760,
     1740
@@ -1038,15 +1085,65 @@
    ]
   },
   "hero/mask.png": {
-   "file": "hero/mask.439de8ed.png",
-   "bytes": 9883,
+   "file": "hero/mask.f3dd3049.png",
+   "bytes": 24566,
    "size": [
-    372,
-    384
+    480,
+    456
    ]
+  },
+  "journey/M/journey.av1.mp4": {
+   "file": "journey/M/journey.0126886d.av1.mp4",
+   "bytes": 1901829,
+   "codec": "av01.0.12M.08",
+   "size": [
+    320,
+    4224
+   ],
+   "frames": 247
+  },
+  "journey/M/journey.hevc.mp4": {
+   "file": "journey/M/journey.70f1c0f1.hevc.mp4",
+   "bytes": 2630399,
+   "codec": "hvc1.1.6.L150.B0",
+   "size": [
+    320,
+    4224
+   ],
+   "frames": 247
+  },
+  "journey/S/journey.av1.mp4": {
+   "file": "journey/S/journey.c333fe01.av1.mp4",
+   "bytes": 1322851,
+   "codec": "av01.0.08M.08",
+   "size": [
+    240,
+    3168
+   ],
+   "frames": 247
+  },
+  "journey/S/journey.h264.mp4": {
+   "file": "journey/S/journey.720534f0.h264.mp4",
+   "bytes": 2047230,
+   "codec": "avc1.640020",
+   "size": [
+    240,
+    3168
+   ],
+   "frames": 247
+  },
+  "journey/S/journey.hevc.mp4": {
+   "file": "journey/S/journey.4867c0e8.hevc.mp4",
+   "bytes": 1848153,
+   "codec": "hvc1.1.6.L120.B0",
+   "size": [
+    240,
+    3168
+   ],
+   "frames": 247
   }
  },
  "probe": "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMObW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAACIAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAjl0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAACIAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAAiAAAAAAABAAAAAAGxbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAA8AAAAAgBVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABXG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAARxzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFExhdmM2My4xLjEwMiBsaWJ4MjY0AAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMA8DxImSABAAVoy4PLIAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAlrQAAAAAAAAABhzdHRzAAAAAAAAAAEAAAABAAACAAAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzegAAAAAAAAKDAAAAAQAAABRzdGNvAAAAAAAAAAEAAAM+AAAAYXVkdGEAAABZbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAsaWxzdAAAACSpdG9vAAAAHGRhdGEAAAABAAAAAExhdmY2My4xLjEwMgAAAAhmcmVlAAACi21kYXQAAAJxBgX//23cRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTY1IHIzMjIzIDA0ODBjYjAgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDI1IC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MCByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgxOjB4MTExIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0wIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9MSBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTAgd2VpZ2h0cD0wIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAApliIQJ8mKAAKFu",
  "fallback": "hero/M/rest.webp",
- "build": "2026-11-10T04:59:58Z"
+ "build": "2026-11-10T13:12:46Z"
 }

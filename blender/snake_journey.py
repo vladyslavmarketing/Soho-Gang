@@ -149,6 +149,7 @@ def main():
     lx = np.arange(turn2[-1, 0], X_EDGE + rest.L + 6, 0.01)
     tr_out = make_trail(rest, np.vstack([tr.xy[:crest + 1], turn2[1:], np.c_[lx, np.full(len(lx), turn2[-1, 1])][1:]]))
     cam.location.y = Y_L
+    bpy.context.view_layer.update()                      # the camera matrix must follow before projecting
     s_out_end = next(sh + 0.1 for sh in np.arange(s_L + rest.L * 0.5, tr_out.sig[-1], 0.1)
                      if sp.offscreen(rest, *tr_out.window(rest, sh)[:2]))
     D_out = s_out_end - s_L
@@ -173,6 +174,7 @@ def main():
 
     for f, lab in ((0, 'first'), (NF - 1, 'last')):
         cam.location.y = cam_y(f)
+        bpy.context.view_layer.update()
         trt, sh = state(f / sp.FPS)
         P, cum, ss = trt.window(rest, sh)
         log('journey %s frame %d empty (centre line test): %s' % (lab, f, sp.offscreen(rest, P, cum, margin=sp.OFF_MARGIN_PX)))

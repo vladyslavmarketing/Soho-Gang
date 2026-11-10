@@ -39,7 +39,20 @@ function Enc-Webp([string]$scene, [string]$name, [string]$tier) {
   Run-FF @('-y','-hide_banner','-loglevel','error','-i',$src,'-frames:v','1','-c:v','libwebp','-pix_fmt','bgra','-quality',"$q",'-compression_level','6',"$dir\$name.webp")
 }
 
+# J1 journey: all-intra (the player seeks on every scroll step, both ways); M is taller than 4096 -> no H.264 M
+function Enc-Journey([string]$tier) {
+  $src = "$SEQ\journey\journey\$tier"
+  if (-not (Test-Path "$src\0000.png")) { return }
+  $id = "journey/$tier/journey"; $dir = "$OUT\journey\$tier"; New-Item -ItemType Directory -Force $dir | Out-Null
+  $in = @('-y','-hide_banner','-loglevel','error','-framerate','30','-start_number','0','-i',"$src\%04d.png",'-vf',$VF)
+  $qa = if ($Crf -gt 0) { "$Crf" } else { '40' }; $qh = if ($Crf -gt 0) { "$Crf" } else { '30' }; $q4 = if ($Crf -gt 0) { "$Crf" } else { '26' }
+  if (Want $id 'av1')  { Run-FF ($in + @('-c:v','libsvtav1','-preset','4','-crf',$qa,'-g','1','-svtav1-params','tune=0:scd=0') + $TAGS + @("$dir\journey.av1.mp4")) }
+  if (Want $id 'hevc') { Run-FF ($in + @('-c:v','libx265','-preset','slow','-crf',$qh,'-tag:v','hvc1','-x265-params','keyint=1:min-keyint=1:scenecut=0:log-level=error') + $TAGS + @("$dir\journey.hevc.mp4")) }
+  if ($tier -eq 'S' -and (Want $id 'h264')) { Run-FF ($in + @('-c:v','libx264','-preset','slow','-crf',$q4,'-profile:v','high','-g','1','-keyint_min','1','-x264-params','keyint=1:scenecut=0') + $TAGS + @("$dir\journey.h264.mp4")) }
+}
+
 foreach ($t in 'S','M','L') {
+  Enc-Journey $t
   foreach ($c in @('hero:intro','hero:depart','hero:depart-rev','gauge:arrive')) { $p = $c.Split(':'); Enc-Clip $p[0] $p[1] $t }
   foreach ($s in 'hero','gauge') { foreach ($n in $WebpStart.Keys) { Enc-Webp $s $n $t } }
 }

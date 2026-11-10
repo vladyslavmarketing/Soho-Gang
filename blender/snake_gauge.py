@@ -154,7 +154,9 @@ def main():
     P, cum, ss = tr.window(rest, s0)
     log('gauge_arrive frame 0 empty (centre line test): %s' % sp.offscreen(rest, P, cum, margin=sp.OFF_MARGIN_PX))
     sign = float(arg('--nod-sign', 1))
-    look = ([(0, 0.0), (9, 0.0)], [(t, sign * math.radians(v)) for t, v in ((0, 10), (2.5, 10), (3.1, 40), (9, 40))])
+    roll = math.radians(float(arg('--gauge-roll', 40)))        # head tilt: an eye faces the top-down camera
+    look = ([(0, 0.0), (9, 0.0)], [(t, sign * math.radians(v)) for t, v in ((0, 10), (2.5, 10), (3.1, 40), (9, 40))],
+            [(0, 0.0), (2.5, 0.0), (3.1, roll), (9, roll)])
     Ms, extra = sp.bake_clip(rest, 'gauge_arrive', lambda t: (tr, prof(t)), NF, float(arg('--shutter', 0.0)), look=look)
     np.savez(os.path.join(sp.RENDERS_DIR, 'gauge_rest_pose.npz'), **{n: np.array(Ms[-1][n]) for n in rest.chain})
     # nod direction check: snout height and screen position at rest

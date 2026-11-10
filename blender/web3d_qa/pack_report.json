@@ -1,14 +1,14 @@
 {
  "reports": {
   "hero": {
-   "mask_feather_p99_Dmax": 4.462083339691162,
+   "mask_feather_p99_Dmax": 1.2866634130477905,
    "mask_breathW_note": "feather vs breathW < 0.25 not asserted",
    "rangeDeg": [
-    0,
-    4
+    -12,
+    16
    ],
    "rect_gate_max_outside_R": 0.0,
-   "neutral_cell_mean_diff": 0.09558933973312378,
+   "neutral_cell_mean_diff": 0.013279968872666359,
    "tongue_rect": [
     456,
     504,
@@ -34,24 +34,24 @@
    ]
   },
   "gauge": {
-   "mask_feather_p99_Dmax": 2.0548222064971924,
+   "mask_feather_p99_Dmax": 1.9469293355941772,
    "mask_breathW_note": "feather vs breathW < 0.25 not asserted",
    "rangeDeg": [
     -2,
     2
    ],
    "rect_gate_max_outside_R": 0.0,
-   "neutral_cell_mean_diff": 0.4006040096282959,
+   "neutral_cell_mean_diff": 0.33438345789909363,
    "tongue_rect": [
     720,
-    72,
+    24,
     216,
-    144
+    240
    ],
    "breath_qa": {
-    "area_px_H3_minus_H3b": -5795.375,
-    "warped_plus_minus_H3b": -386.3125,
-    "warped_minus_minus_H3b": -11081.4375,
+    "area_px_H3_minus_H3b": -5815.0,
+    "warped_plus_minus_H3b": -457.125,
+    "warped_minus_minus_H3b": -11046.875,
     "amp": 0.8
    },
    "containment": {
@@ -163,14 +163,14 @@
     ],
     "continuity": {
      "S": {
-      "mean_rgb": 0.13,
-      "p99_rgb": 0.73,
+      "mean_rgb": 0.12,
+      "p99_rgb": 0.72,
       "mean_a": 0.05,
       "p99_a": 0.55
      },
      "M": {
-      "mean_rgb": 0.14,
-      "p99_rgb": 0.9,
+      "mean_rgb": 0.13,
+      "p99_rgb": 0.89,
       "mean_a": 0.01,
       "p99_a": 0.37
      }
@@ -195,25 +195,61 @@
     },
     "mb_ok": true
    }
+  },
+  "journey": {
+   "frames": 247,
+   "out_start_vs_loop_start": {
+    "mean_rgb": 5.86,
+    "p99_rgb": 24.92,
+    "mean_a": 1.4,
+    "p99_a": 20.13
+   },
+   "wrap_step": {
+    "mean_rgb": 33.42,
+    "p99_rgb": 196.91,
+    "mean_a": 25.35,
+    "p99_a": 238.02
+   },
+   "ordinary_step": {
+    "mean_rgb": 33.34,
+    "p99_rgb": 198.21,
+    "mean_a": 25.97,
+    "p99_a": 238.46
+   },
+   "empty_frames_maxA_255": {
+    "0": 0.0,
+    "246": 0.0
+   },
+   "empty_ok": true,
+   "stacked": {
+    "S": [
+     240,
+     3168
+    ],
+    "M": [
+     320,
+     4224
+    ]
+   },
+   "macroblocks": {
+    "S": 2970,
+    "M": 5280
+   }
   }
  },
  "log": [
   "clip rects {'intro': [480, 192, 1632, 960], 'depart': [96, 192, 2016, 1056], 'arrive': [0, 0, 1632, 1344]}",
-  "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
-  "hero mask feather p99 Dmax 4.3 > 4: dilating 8 px more",
-  "hero mask feather p99 Dmax 4.4 > 4: dilating 8 px more",
-  "hero mask feather p99 Dmax 4.4 > 4: dilating 8 px more",
-  "hero mask feather p99 Dmax 4.5 > 4: dilating 8 px more",
-  "hero mask rect [432, 168, 744, 768] look rect [432, 168, 744, 768] range [0, 4] neutral diff 0.10, gate 0.0, p99 4.5",
+  "hero mask rect [456, 192, 960, 912] look rect [432, 144, 984, 960] range [-12, 16] neutral diff 0.01, gate 0.0, p99 1.3",
   "hero breath QA (alpha area vs H3b): H3 -5018 px, +flow +128, -flow -10065 -> amp 0.8",
   "hero containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
   "hero stage [96, 96, 2016, 1152] still rect [504, 264, 1608, 840] anchors {'aeBox': [541, 302, 1571, 769], 'eye': [698, 447], 'snout': [552, 486], 'headDir': [-0.943, 0.333]}",
-  "gauge mask rect [480, 0, 960, 792] look rect [480, 0, 960, 792] range [-2, 2] neutral diff 0.40, gate 0.0, p99 2.1",
-  "gauge breath QA (alpha area vs H3b): H3 -5795 px, +flow -386, -flow -11081 -> amp 0.8",
+  "gauge mask rect [336, 0, 1248, 912] look rect [336, 0, 1248, 912] range [-2, 2] neutral diff 0.33, gate 0.0, p99 1.9",
+  "gauge breath QA (alpha area vs H3b): H3 -5815 px, +flow -457, -flow -11047 -> amp 0.8",
   "gauge containment {'mask_in_look': True, 'tongue_in_mask': True, 'look_in_cell': True, 'look_in_stage': True}",
-  "gauge stage [0, 0, 1728, 1344] still rect [72, 24, 1536, 1296] anchors {'eye': [968, 314], 'snout': [888, 167], 'headDir': [-0.891, -0.454], 'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520, 'coilOuterRadius': 598, 'exitRamp': [1344, 1584], 'tipX': 0.85}",
+  "gauge stage [0, 0, 1728, 1344] still rect [72, 24, 1536, 1296] anchors {'eye': [1042, 198], 'snout': [857, 221], 'headDir': [-0.958, -0.286], 'ringCenter': [720, 672], 'ringRadius': 390, 'trackHalfWidth': 41, 'coilRadius': 520, 'coilOuterRadius': 598, 'exitRamp': [1344, 1584], 'tipX': 0.85}",
   "intro {'frames': 84, 'rect': [480, 192, 1632, 960], 'continuity': {'S': {'mean_rgb': 0.17, 'p99_rgb': 0.88, 'mean_a': 0.04, 'p99_a': 0.54}, 'M': {'mean_rgb': 0.17, 'p99_rgb': 1.05, 'mean_a': 0.0, 'p99_a': 0.0}}, 'empty_frames_maxA_255': {'0': 0.0, '1': 0.0, '2': 0.0}, 'empty_ok': True, 'stacked': {'S': [816, 1008], 'M': [1088, 1344]}, 'macroblocks': {'S': 3213, 'M': 5712}, 'mb_ok': True}",
   "depart {'frames': 48, 'rect': [96, 192, 2016, 1056], 'continuity': {'S': {'mean_rgb': 0.17, 'p99_rgb': 0.88, 'mean_a': 0.04, 'p99_a': 0.54}, 'M': {'mean_rgb': 0.17, 'p99_rgb': 1.05, 'mean_a': 0.0, 'p99_a': 0.0}}, 'empty_frames_maxA_255': {'47': 0.0}, 'empty_ok': True, 'stacked': {'S': [1008, 1104], 'M': [1344, 1472]}, 'macroblocks': {'S': 4347, 'M': 7728}, 'mb_ok': True}",
-  "arrive {'frames': 96, 'rect': [0, 0, 1632, 1344], 'continuity': {'S': {'mean_rgb': 0.13, 'p99_rgb': 0.73, 'mean_a': 0.05, 'p99_a': 0.55}, 'M': {'mean_rgb': 0.14, 'p99_rgb': 0.9, 'mean_a': 0.01, 'p99_a': 0.37}}, 'empty_frames_maxA_255': {'0': 0.0}, 'empty_ok': True, 'stacked': {'S': [816, 1392], 'M': [1088, 1856]}, 'macroblocks': {'S': 4437, 'M': 7888}, 'mb_ok': True}"
+  "arrive {'frames': 96, 'rect': [0, 0, 1632, 1344], 'continuity': {'S': {'mean_rgb': 0.12, 'p99_rgb': 0.72, 'mean_a': 0.05, 'p99_a': 0.55}, 'M': {'mean_rgb': 0.13, 'p99_rgb': 0.89, 'mean_a': 0.01, 'p99_a': 0.37}}, 'empty_frames_maxA_255': {'0': 0.0}, 'empty_ok': True, 'stacked': {'S': [816, 1392], 'M': [1088, 1856]}, 'macroblocks': {'S': 4437, 'M': 7888}, 'mb_ok': True}",
+  "journey {'frames': 247, 'out_start_vs_loop_start': {'mean_rgb': 5.86, 'p99_rgb': 24.92, 'mean_a': 1.4, 'p99_a': 20.13}, 'wrap_step': {'mean_rgb': 33.42, 'p99_rgb': 196.91, 'mean_a': 25.35, 'p99_a': 238.02}, 'ordinary_step': {'mean_rgb': 33.34, 'p99_rgb': 198.21, 'mean_a': 25.97, 'p99_a': 238.46}, 'empty_frames_maxA_255': {'0': 0.0, '246': 0.0}, 'empty_ok': True, 'stacked': {'S': [240, 3168], 'M': [320, 4224]}, 'macroblocks': {'S': 2970, 'M': 5280}}"
  ]
 }
