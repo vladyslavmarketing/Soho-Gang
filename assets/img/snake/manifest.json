@@ -60,19 +60,19 @@
  },
  "head": {
   "version": 6,
-  "file": "head.023a5bab.webp",
+  "file": "head.bcadd12f.webp",
   "buckets": 1,
   "cols": 1,
   "ref_R": 64,
   "rh_ref": 76.8,
   "head_scale": 1.2,
   "cell": [
-   307,
-   205
+   346,
+   230
   ],
   "origin": [
-   131.11,
-   102.5
+   147.77,
+   115.0
   ],
   "eyes": true,
   "fade_baked": true,
@@ -182,14 +182,14 @@
    ],
    "centres": [
     [
-     -0.062,
+     -0.07,
      0
     ]
    ]
   },
   "tongue_base_R": [
-   1.622,
-   0.872
+   1.825,
+   0.981
   ],
   "shape": {
    "source": "blender/snake_scene.py head_profile (head v6)",
@@ -212,8 +212,8 @@
  },
  "bytes": {
   "body": 35136,
-  "head": 10004,
+  "head": 12056,
   "cap": 3152,
-  "total": 48292
+  "total": 50344
  }
 }

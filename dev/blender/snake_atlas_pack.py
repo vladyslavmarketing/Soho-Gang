@@ -19,9 +19,9 @@ SS, R = INFO['ss'], 64
 BODY_CELL = 216
 ALONG, FEATHER = 0.62, 0.16
 NECK_FADE = (-1.0, -1.5)   # nominal (manifest); the real cut is the round back below
-HEAD_K = 0.80              # head drawn smaller: its fur edge sits ~1.5 R, just over the body's 1.3 R
-NECK_W = 1.24              # half-width of the head where it meets the neck (the body's fur edge is 1.3 R)
-BACK = (1.45, 1.8, 0.22)    # back of the head = soft half-ellipse about the head point (R along, R across, edge):
+HEAD_K = 0.90              # head drawn smaller: its fur edge sits ~1.5 R, just over the body's 1.3 R
+NECK_W = 1.42              # half-width of the head where it meets the neck (the body's fur edge is 1.3 R)
+BACK = (1.7, 1.9, 0.22)    # back of the head = soft half-ellipse about the head point (R along, R across, edge):
                            # a straight cut left corners poking past the neck when the head turned
 Q = int(os.environ.get('ATLAS_Q', 80))
 
@@ -118,7 +118,7 @@ def main():
     xr = (xx + 0.5 - ox) / R; yr = (yy + 0.5 - oy) / R
     d = np.hypot(np.minimum(xr, 0) / BACK[0], yr / BACK[1])
     # the head narrows to the body's width toward the neck (an egg): no shoulder above the collar ring
-    lim = NECK_W + (1.42 - NECK_W) * sstep(-1.0, 0.3, xr)
+    lim = NECK_W + (1.75 - NECK_W) * sstep(-1.1, -0.2, xr)
     fade = ((1 - sstep(1 - BACK[2], 1, d)) * (1 - sstep(lim - 0.18, lim + 0.06, np.abs(yr))))[..., None]
     for b in range(nh):
         a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])], sym=True)[::-1, ::-1], SS)   # turned by 180 deg
