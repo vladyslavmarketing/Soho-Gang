@@ -85,7 +85,7 @@
   var BLOB = [1.06, 0.92, 0.8, 0.69, 0.59, 0.5, 0.42, 0.35];
   var Z_FREE = 10;            // layer tag for trail laid while chasing / wandering (on top)
   var PERIOD = 1.72;          // band period in body widths: black | cream | black | pink (as on the reference photo)
-  var BAND = [0.14, 0.39, 0.53];   // band edges within a period (body widths): black .14 | cream .25 | black .14
+  var BAND = [0.215, 0.58, 0.795];   // band edges within a period (body widths): black .215 | cream .365 | black .215 (the Blender snake's rings)
   var VARIANTS = [3, 2, 2];   // pink, cream, black
   var WRITE_T = 2.8;          // seconds for the first writing
   var CHASE_IDLE = 2.5;       // seconds without pointer movement before returning
@@ -297,6 +297,7 @@
   // beige-grey and charcoal on the site's backdrop).
   var ATL_GRADE = ['rgba(185,50,45,0.1)', 'rgba(255,250,238,0.32)', 'rgba(6,0,0,0.58)'];
   function atlasGrade(c, kind) {
+    if (ATL.data && ATL.data.m.engine_grade === false) return;   // atlas v2 (Blender snake): colours are final
     var g = c.getContext('2d');
     g.globalCompositeOperation = 'source-atop'; g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = ATL_GRADE[kind]; g.fillRect(0, 0, c.width, c.height);
@@ -639,7 +640,7 @@
     var c = canvasEl(w * s + 2, h * s + 2), g = hqContext(c), ox = (M.origin ? M.origin[0] : w * 0.46) * s + 1, oy = (M.origin ? M.origin[1] : h / 2) * s + 1;
     if (flip) g.setTransform(1, 0, 0, -1, 0, 2 * oy);   // mirror about the head axis (y = oy)
     g.drawImage(A.head, (q % A.hcols) * w, Math.floor(q / A.hcols) * h, w, h, 1, 1, w * s, h * s);
-    if (HEAD_TINT) {   // match the body's fur colour: scale RGB only, so the soft fur edge keeps its own alpha
+    if (HEAD_TINT && A.m.engine_grade !== false) {   // match the body's fur colour: scale RGB only, so the soft fur edge keeps its own alpha
       try {
         var id = g.getImageData(0, 0, c.width, c.height), d = id.data, tr = HEAD_TINT[0], tg = HEAD_TINT[1], tb = HEAD_TINT[2];
         for (var i = 0; i < d.length; i += 4) { if (d[i + 3]) { d[i] *= tr; d[i + 1] *= tg; d[i + 2] *= tb; } }
@@ -1980,7 +1981,10 @@
       // reshaped side-view head: the brow must stay up. Heading right, the cell is mirrored across the head axis and
       // lit from the mirrored heading (the screen key light is not symmetric); near vertical the head narrows (a turn)
       var side = !!(bank.atlas && bank.atlas.m.head.shape && bank.eyesBaked), flip = side && co > 0;
-      var ky = side ? (flip ? -1 : 1) * clamp(Math.abs(co) / 0.3, 0.3, 1) : 1;
+      // atlas v2 (Blender snake): the head is almost symmetric about its axis, so it only narrows a little before
+      // it mirrors (the old profile head had to shrink to a sliver to hide the mirror)
+      var kyMin = bank.atlas && bank.atlas.m.engine_grade === false ? 0.82 : 0.3;
+      var ky = side ? (flip ? -1 : 1) * (kyMin + (1 - kyMin) * clamp((Math.abs(co) / 0.3 - 0.3) / 0.7, 0, 1)) : 1;
       var la = flip ? LIGHT_MIRROR - ang : ang;
       // the 32 lighting cells are cross-faded by the exact heading, so the fur never snaps as the head turns
       var p = ((la / TAU) * HB % HB + HB) % HB, i0 = Math.floor(p), fr = p - i0;
