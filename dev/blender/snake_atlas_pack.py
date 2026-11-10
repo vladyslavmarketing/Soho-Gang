@@ -18,7 +18,7 @@ INFO = json.load(open(os.path.join(CELLS, 'info.json')))
 SS, R = INFO['ss'], 64
 BODY_CELL = 216
 ALONG, FEATHER = 0.62, 0.16
-NECK_FADE = (-1.0, -1.8)
+NECK_FADE = (-1.1, -1.7)   # behind the head's own taper into the neck: size and colour already match the body
 Q = int(os.environ.get('ATLAS_Q', 80))
 
 
@@ -59,10 +59,35 @@ def crop_centre(a, size):
     return a[y0:y0 + size, x0:x0 + size]
 
 
+def blur(a, sig):
+    """~gaussian: three box blurs (edge-padded), per channel"""
+    r = max(int(round(sig * 0.87)), 1)
+    for ax in (0, 1):
+        for _ in range(3):
+            pad = [(0, 0)] * a.ndim; pad[ax] = (r + 1, r)
+            c = np.cumsum(np.pad(a, pad, mode='edge'), axis=ax, dtype=np.float64)
+            n = a.shape[ax]
+            a = ((np.take(c, range(2 * r + 1, 2 * r + 1 + n), axis=ax) - np.take(c, range(0, n), axis=ax)) / (2 * r + 1)).astype(np.float32)
+    return a
+
+
+def even_light(names, sym=False):
+    """one cell whose colour never changes as the snake turns: the fur detail of the first render, its large-scale
+    shading replaced by the mean over every light direction (sym: also mirrored across the body axis)"""
+    ims = [load_premult(os.path.join(CELLS, n)) for n in names]
+    a = ims[0]
+    m = np.mean(ims, 0)
+    if sym:
+        m = (m + m[::-1]) / 2
+    sig = 0.22 * R * SS
+    out = a.copy()
+    out[..., :3] = np.minimum(a[..., :3] * blur(m[..., :3], sig) / np.maximum(blur(a[..., :3], sig), 1e-4), a[..., 3:])
+    return out
+
+
 def body_cell(i, k, n):
-    ang = k / n * math.pi
-    a = crop_centre(rotate(load_premult(os.path.join(CELLS, 'body_%d_%02d.png' % (i, k))), math.degrees(ang)),
-                    BODY_CELL * SS)
+    ang = 0.0
+    a = crop_centre(even_light(['body_%d_%02d.png' % (i, q) for q in range(INFO['body_angles'])], sym=True), BODY_CELL * SS)
     s = BODY_CELL * SS
     y, x = np.mgrid[0:s, 0:s]
     x = (x + 0.5 - s / 2) / (R * SS); y = (y + 0.5 - s / 2) / (R * SS)
@@ -74,7 +99,7 @@ def body_cell(i, k, n):
 
 def main():
     os.makedirs(SITE, exist_ok=True)
-    kinds, nb, nh = INFO['kinds'], INFO['body_angles'], INFO['head_buckets']
+    kinds, nb, nh = INFO['kinds'], 1, 1
     body = np.zeros((len(kinds) * BODY_CELL, nb * BODY_CELL, 4), np.float32)
     for i in range(len(kinds)):
         for k in range(nb):
@@ -82,18 +107,18 @@ def main():
     Image.fromarray(straight(body), 'RGBA').save(os.path.join(SITE, 'body.webp'), quality=Q, method=6)
 
     hw, hh = INFO['head_cell']; ox, oy = INFO['head_origin']
-    cols = 8
+    cols = 1
     head = np.zeros((math.ceil(nh / cols) * hh, cols * hw, 4), np.float32)
     xr = (np.arange(hw) + 0.5 - ox) / R
     fade = sstep(NECK_FADE[1], NECK_FADE[0], xr)[None, :, None]
     for b in range(nh):
-        a = down(load_premult(os.path.join(CELLS, 'head_%02d.png' % b))[::-1, ::-1], SS) * fade   # turned by 180 deg
+        a = down(even_light(['head_%02d.png' % q for q in range(INFO['head_buckets'])])[::-1, ::-1], SS) * fade   # turned by 180 deg
         r, c = divmod(b, cols)
         head[r * hh:(r + 1) * hh, c * hw:(c + 1) * hw] = a
     Image.fromarray(straight(head), 'RGBA').save(os.path.join(SITE, 'head.webp'), quality=Q, method=6)
 
     # tail-tip ball: a round patch of the pink fur, shaded toward its rim
-    src = down(crop_centre(load_premult(os.path.join(CELLS, 'body_0_00.png')), 120 * SS), SS)
+    src = down(crop_centre(even_light(['body_0_%02d.png' % q for q in range(INFO['body_angles'])], sym=True), 120 * SS), SS)
     y, x = np.mgrid[0:120, 0:120]
     rr = np.hypot(x + 0.5 - 60, y + 0.5 - 60)
     cap = src * (1 - sstep(30, 47, rr))[..., None]
@@ -121,7 +146,7 @@ def main():
             'version': 6, 'file': 'head.webp', 'buckets': nh, 'cols': cols, 'ref_R': R, 'rh_ref': R * 1.2,
             'head_scale': 1.2, 'cell': [hw, hh], 'origin': [ox, oy], 'eyes': True, 'fade_baked': True, 'tongue': False,
             'neck_fade_R': list(NECK_FADE),
-            'eye': {'per_bucket': [[1]] * nh,
+            'eye': {'per_bucket': [[1]] * 32,
                     'centres': [[round((INFO['head_s0'] - nose - 0.86) * d2r, 3), round(-0.05 * d2r, 3)]]},
             'tongue_base_R': [round((INFO['head_s0'] - nose - 0.05) * d2r, 3), 1.09],
             'shape': {'source': 'blender/snake_scene.py head_profile (head v6)',

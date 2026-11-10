@@ -66,7 +66,7 @@
   // Neck band (photo: pink head -> cream -> black -> pink, no black on the head side), in body widths of arc
   // length behind the head point (= egg centre): cream from .575 (its front hides under the head's back fur),
   // black from 1.195, pink from 1.345; the regular black | cream | black bands resume at 2.0.
-  var NECK_BAND = [0.575, 1.195, 1.345], NECK_NEXT = 2.0;
+  var NECK_BAND = [0.6, 0.965, 1.18], NECK_NEXT = 2.0;
   // The cream | black collar right behind the head made the head read as a separate piece: off, so pink fur runs
   // from the head into the body and the regular bands start at NECK_NEXT.
   var NECK_COLLAR = false;
@@ -1237,7 +1237,7 @@
       // source, so a late atlas swap never moves a band.
       var uN0 = uAt(NECK_BAND[0] * w), uN1 = uAt(NECK_BAND[1] * w), uN2 = uAt(NECK_BAND[2] * w);
       var uStart = uAt(NECK_NEXT * w), uEnd = uAt(L), tipU = 1.5;
-      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1, neck = NECK_COLLAR && uN2 < uEnd - tipU;
+      var bw = BAND[2], nb = Math.floor((uEnd - tipU - uStart - bw) / PERIOD) + 1, kS = 1, neck = (NECK_COLLAR || !!(atl && atl.m.engine_grade === false)) && uN2 < uEnd - tipU;   // Blender snake: cream | black ring right behind the lighter head
       if (nb < 1) nb = 0; else kS = (uEnd - tipU - uStart) / ((nb - 1) * PERIOD + bw);
       function colorAtU(u) {
         if (u < uN2) return neck && u >= uN0 ? (u < uN1 ? 1 : 2) : 0;
@@ -1980,7 +1980,8 @@
       var co = Math.cos(ang), si = Math.sin(ang), k = (1 + (breath - 1) * 0.5) * bankScale;
       // reshaped side-view head: the brow must stay up. Heading right, the cell is mirrored across the head axis and
       // lit from the mirrored heading (the screen key light is not symmetric); near vertical the head narrows (a turn)
-      var side = !!(bank.atlas && bank.atlas.m.head.shape && bank.eyesBaked), flip = side && co > 0;
+      // atlas v2 (Blender snake): the head simply turns with the heading, never mirrored (a mirror showed as a jump)
+      var side = !!(bank.atlas && bank.atlas.m.head.shape && bank.eyesBaked && bank.atlas.m.engine_grade !== false), flip = side && co > 0;
       // atlas v2 (Blender snake): the head is almost symmetric about its axis, so it only narrows a little before
       // it mirrors (the old profile head had to shrink to a sliver to hide the mirror)
       var kyMin = bank.atlas && bank.atlas.m.engine_grade === false ? 0.82 : 0.3;

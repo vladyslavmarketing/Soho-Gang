@@ -11,7 +11,7 @@
  "engine_grade": false,
  "body": {
   "file": "body.webp",
-  "angles": 16,
+  "angles": 1,
   "cell": [
    216,
    216
@@ -61,25 +61,25 @@
  "head": {
   "version": 6,
   "file": "head.webp",
-  "buckets": 32,
-  "cols": 8,
+  "buckets": 1,
+  "cols": 1,
   "ref_R": 64,
   "rh_ref": 76.8,
   "head_scale": 1.2,
   "cell": [
-   336,
+   384,
    256
   ],
   "origin": [
-   116,
+   164,
    128
   ],
   "eyes": true,
   "fade_baked": true,
   "tongue": false,
   "neck_fade_R": [
-   -1.0,
-   -1.8
+   -1.1,
+   -1.7
   ],
   "eye": {
    "per_bucket": [
@@ -211,9 +211,9 @@
   "notes": "round patch of the pink body fur (scale by rc/rc_ref)."
  },
  "bytes": {
-  "body": 629014,
-  "head": 409338,
-  "cap": 3238,
-  "total": 1041590
+  "body": 35136,
+  "head": 15016,
+  "cap": 3152,
+  "total": 53304
  }
 }
