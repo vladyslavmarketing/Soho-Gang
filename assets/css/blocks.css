@@ -1718,15 +1718,6 @@ html:not(.js) .float-tg { display: none; }
 }
 .alert__plus { margin-right: .18em; color: var(--a-plus); }
 .alert__text { margin-top: 6px; font-size: 15.5px; line-height: 1.45; color: var(--a-dim); }
-/* stream-alert timer along the bottom edge */
-.alert__timer {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 4px;
-  background: var(--snake-body);
-  transform-origin: 0 50%;
-  transform: scaleX(0);
-}
 @media (hover: hover) and (pointer: fine) {
   .alert:hover { translate: 0 -3px; }
   .alert:hover .alert__badge { animation: alert-wiggle .6s var(--ease-soft); }
@@ -1736,14 +1727,12 @@ html:not(.js) .float-tg { display: none; }
 .alert.is-waiting { opacity: 0; transform: translateY(26px) scale(.9); }
 .alert.is-waiting.is-in { animation: alert-pop .75s var(--ease-soft) forwards; }
 .alert.is-in .alert__badge::after { animation: alert-ding 1s var(--ease-out) .25s; }
-.alert__timer { display: none; }   /* the running timer bar on the cards: removed at the owner's request */
 @keyframes alert-pop {
   0% { opacity: 0; transform: translateY(26px) scale(.9); }
   55% { opacity: 1; transform: translateY(-4px) scale(1.02); }
   100% { opacity: 1; transform: none; }
 }
 @keyframes alert-ding { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.7); } }
-@keyframes alert-timer { 0% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
 @keyframes alert-wiggle { 0%, 100% { rotate: 0deg; } 30% { rotate: -12deg; } 60% { rotate: 8deg; } }
 
 @media (min-width: 760px) {
@@ -1760,7 +1749,7 @@ html:not(.js) .float-tg { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .alert.is-waiting { opacity: 1; transform: none; }
-  .alert__badge::after, .alert__timer { animation: none !important; }
+  .alert__badge::after { animation: none !important; }
 }
 html.reduced-motion .alert.is-waiting { opacity: 1; transform: none; }
 .gear__copy { min-width: 0; }

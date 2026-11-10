@@ -498,7 +498,7 @@
      Only `transform` on the tag is written; reduced motion → static labels at their resting tilt. */
   /* ================================================================== ALERTS («Что ты получаешь», ценности)
      Each item pops in like a stream alert when it scrolls into view: spring scale-in, a «ding» ring
-     on the plush badge, a draining timer bar. Items already on screen at load (or reduced motion) stay put. */
+     on the plush badge. Items already on screen at load (or reduced motion) stay put. */
   function initAlerts() {
     var feeds = $$('[data-alerts]');
     if (!feeds.length) return;
