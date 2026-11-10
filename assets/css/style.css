@@ -630,7 +630,7 @@ body.menu-open .nav { background: transparent; box-shadow: none; -webkit-backdro
     radial-gradient(55% 55% at 0% 0%, #E3BCC4 0%, rgba(227, 188, 196, 0) 100%),
     radial-gradient(55% 55% at 100% 0%, #E3BCC4 0%, rgba(227, 188, 196, 0) 100%),
     linear-gradient(180deg, #EDCBD1 0%, var(--paper) 45%, #F3DCDF 100%);
-  /* logo box (mobile formula) — snake3d.js writes these inline (same formula) */
+  /* logo box (mobile formula) — snake.js overwrites these inline */
   --logo-w: calc(100vw - 32px);
   --logo-h: calc(var(--logo-w) / 1.85);
   --logo-x: 16px;
@@ -811,7 +811,7 @@ html:not(.js) .hero__title .line { overflow: visible; }
   z-index: 5;
   display: none;
   left: var(--logo-x);
-  top: var(--hint-y, calc(var(--logo-y) - 44px));   /* snake3d.js lifts it above the head's envelope */
+  top: calc(var(--logo-y) - 44px);                   /* 2 lines, ~12px clear of the snake's head */
   max-width: min(48ch, calc(var(--logo-w) * .62));
   padding-left: 22px;
   font-family: var(--font-mono);
@@ -934,8 +934,8 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 /* 9 ── INCOME (the black stripe): an on-stream «goal» overlay -------------
    The calculator drives a cam-site style goal widget: a plush band-striped
    progress ring with the readout as the stream's «Цель месяца» panel, tip alerts
-   popping at the snake's head. When the plush snake arrives (.gauge.has-snake) the drawn
-   head is gone and she coils around the ring. */
+   popping at the snake's head. When the travelling snake arrives (.gauge.has-snake)
+   the drawn head fades and the real snake coils in the free space around the ring. */
 .income {
   background: var(--ink);
   color: var(--cream);
@@ -943,6 +943,11 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
 }
 .income .eyebrow { color: var(--cream-70); }
 .income .section-lead { color: var(--cream-70); }
+/* the travelling snake can pass under this copy on phones: an ink halo (invisible on the ink band)
+   keeps cream type readable over the pink body */
+.income .eyebrow, .income .section-title, .income .section-lead {
+  text-shadow: 0 0 2px var(--ink), 0 0 6px rgba(30, 22, 24, .9), 0 0 14px rgba(30, 22, 24, .75);
+}
 .income__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2455,6 +2460,13 @@ html.js:not(.is-loaded) .vf-corner--br { translate: 14px 14px; }
     url("../img/fur.jpg") center / cover,
     var(--fur);
 }
+.footer__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
 .footer__inner {
   position: relative;
   z-index: 2;
@@ -2664,7 +2676,7 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
 }
 
 @media (max-width: 959px) {
-  /* hero: snake on top, copy below (CSS formula shared with snake3d.js) */
+  /* hero: snake on top, copy below (CSS formula shared with snake.js) */
   .hero__actions .btn { flex: 1 1 auto; }
   /* the snake writes "ae" right under the nav on phones: keep the REC/timecode row out of its way */
   .vf-top { display: none; }
@@ -2693,7 +2705,7 @@ html.has-hover body:hover .cursor.is-hidden { opacity: 0; }
   .nav__burger { display: none; }
   .mobile-menu { display: none !important; }
 
-  /* desktop logo box (= snake3d.js HERO fit): bw = min(.5W, 1.85*.5H); right edge W - max(48, .05W); centre .4H.
+  /* desktop logo box (= snake.js logoBox): bw = min(.5W, 1.85*.5H); right edge W - max(48, .05W); centre .4H.
      H is the first screen: the hero may grow taller (perks row) without moving the logo. */
   .hero {
     --logo-w: min(50vw, 92.5svh);
@@ -2788,10 +2800,9 @@ html.reduced-motion *, html.reduced-motion *::before, html.reduced-motion *::aft
 }
 html.reduced-motion .marquee__track { animation: none !important; }
 html.reduced-motion [data-reveal].is-pending { opacity: 1; translate: none; }
-/* the snake is a still image: no hover / click hint */
+/* the snake is a still image with reduced motion: no "hover / click and she crawls" hint */
 html.reduced-motion .hero__hint { display: none; }
 @media (prefers-reduced-motion: reduce) { .hero__hint { display: none; } }
-.hero.is-snake-static .hero__hint { display: none; }
 
 /* very short viewports (landscape phones, 400% zoom): the nav scrolls away instead of
    taking a quarter of the screen; it stays put while the menu is open */
@@ -2825,46 +2836,42 @@ html.reduced-motion .hero__hint { display: none; }
 }
 .form__error:empty { display: none; }
 
-/* ── SNAKE 3D (assets/js/snake3d.js) ─────────────────────────────────────
-   Pre-rendered Cycles snake: one layer per scene, inside its section. snake3d.js sets
-   --s3d-x/-y/-w/-h (px, relative to .hero / .gauge). The rest still covers the whole layer. */
-.snake3d { position: absolute; left: var(--s3d-x, 0); top: var(--s3d-y, 0); width: var(--s3d-w, 0); height: var(--s3d-h, 0); pointer-events: none; user-select: none; }
-.snake3d--hero { z-index: 1; }   /* under .hero__studio (z 1, later in the DOM), the vignette (3), the viewfinder (4), the copy (5) */
-/* right-edge journey between the hero and #income (desktop): fixed, above section backgrounds, under content (z ≥ 4) */
-.snake3d--journey { position: fixed; left: var(--s3d-x, 0); top: var(--s3d-y, 0); z-index: 3; }
-@media (max-width: 959px) { .snake3d--journey { display: none; } }
-html:not(.js) .snake3d--hero, .snake3d--hero.is-fallback {   /* stage from the CSS logo box; constants = W5, from the shipped manifest */
-  left: calc(var(--logo-x) + var(--logo-w) * -0.3504);
-  top: calc(var(--logo-y) + var(--logo-w) * -0.1809);
-  width: calc(var(--logo-w) * 1.5376);
-  height: calc(var(--logo-w) * 0.8786);
+/* ── SNAKE LAYER ──────────────────────────────────────────────────────────
+   One fixed, viewport-sized canvas (snake.js 'journey' mode) sits ABOVE section
+   backgrounds and BELOW content, so the snake crawls under the blocks and shows
+   in margins and gaps. Rules that keep this working:
+   - sections in the snake's zone (hero → income) must NOT create a stacking
+     context (no isolation/transform/filter/opacity/z-index on the section itself);
+   - content wrappers sit at z-index ≥ 4. */
+.snake-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
-.snake3d > canvas, .snake3d > img, .snake3d noscript img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.snake3d > img { opacity: 0; transition: opacity .6s var(--ease-out); }
-.snake3d.is-img > img { opacity: 1; }
-.snake3d.is-img > canvas { visibility: hidden; }
-.snake3d-decoders { position: fixed; right: 0; bottom: 0; width: 2px; height: 2px; overflow: hidden; opacity: .01; pointer-events: none; }
-.snake3d-decoders > video { position: absolute; left: 0; top: 0; width: 2px; height: 2px; }
-@media print { .snake3d, .snake3d-decoders { display: none; } }
+/* touch screens (snake.js 'anchored'): a page-space slab that scrolls with the content; JS moves it with translate3d */
+.snake-layer.is-anchored { position: absolute; top: 0; right: auto; bottom: auto; left: 0; will-change: transform; }
 .section > .container { position: relative; z-index: 4; }
 
-/* While the plush coil is loaded, the flat SVG snake on the income ring would read as
-   a second snake: hide its head and bands. The arc stays as a thin glowing progress
-   line inside the coil, so the sliders still move the ring. */
-html.has-plush-ring .gauge__head,
-html.has-plush-ring .gauge__scales { opacity: 0; transition: opacity .3s; }
-html.has-plush-ring .gauge__fill {
+/* With the travelling plush snake on the page, the flat SVG snake on the income
+   ring would read as a second snake: hide its head and bands. The arc stays as a
+   thin glowing progress line inside the coil, so the sliders still move the ring. */
+html.has-journey .gauge__head,
+html.has-journey .gauge__scales { opacity: 0; transition: opacity .3s; }
+html.has-journey .gauge__fill {
   stroke: var(--fur);
   stroke-width: 14;
   filter: drop-shadow(0 0 6px rgba(215, 137, 154, .5));
 }
-html.has-plush-ring .gauge__cam { visibility: hidden; } /* sits under the coil */
+html.has-journey .gauge__cam { visibility: hidden; } /* sits under the coil */
 /* HUD brackets frame the coil instead of hiding under it; no room for them on narrow screens */
-@media (min-width: 960px) { html.has-plush-ring .gauge__hud { inset: -12%; } }
+@media (min-width: 960px) { html.has-journey .gauge__hud { inset: -12%; } }
 @media (max-width: 959px) {
-  html.has-plush-ring .gauge__hud { background: none; }
+  html.has-journey .gauge__hud { background: none; }
   /* keep the thin progress arc clear of the plush head resting at 12 o'clock */
-  html.has-plush-ring .gauge__fill { stroke-width: 10; transform: rotate(-90deg) scale(.9); transform-origin: 200px 200px; }
+  html.has-journey .gauge__fill { stroke-width: 10; transform: rotate(-90deg) scale(.9); transform-origin: 200px 200px; }
 }
 
 /* «Остановить анимацию» (WCAG 2.2.2): main.js sets html.motion-paused and stops JS motion; this freezes the CSS loops too. */

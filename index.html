@@ -11,102 +11,6 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="assets/img/snake-ae.jpg">
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<script>
-/* snake3d boot (consumed by assets/js/snake3d.js as window.__aeSnake3dBoot): still/motion, hero tier + codec,
-   starts manifest + intro during parse. Writes only one class on <html>. */
-(function (w, d) {
-  var B = w.__aeSnake3dBoot = { t0: performance.now() };
-  try {
-    var mm = function (q) { return !!(w.matchMedia && w.matchMedia(q).matches); };
-    var c = navigator.connection || {}, ect = c.effectiveType || '', ss = null, paused = false, y0 = 0, L = location;
-    try { paused = w.localStorage.getItem('ae-studio:motion-paused') === '1'; } catch (e) {}
-    try { ss = w.sessionStorage; y0 = +ss.getItem('ae-s3d:y') || 0; } catch (e) {}
-    var q = function (k) { var f = new RegExp('[?&]' + k + '=([^&#]+)').exec(L.search); return f ? f[1] : ''; };
-    B.force = q('snake3d'); B.ft = q('tier').toUpperCase(); B.fc = q('codec');
-    B.envStill = !!c.saveData || /^(slow-2g|2g)$/.test(ect) || B.force === 'still';
-    B.userStill = mm('(prefers-reduced-motion: reduce)') || paused;
-    B.still = B.envStill || B.userStill; B.slow = ect === '3g';
-    d.documentElement.classList.add(B.still ? 'snake3d-still' : 'snake3d-motion');
-    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-    B.deep = /^#(?!top$|main$)./.test(L.hash) ||
-             !!(nav && /^(reload|back_forward)$/.test(nav.type) && y0 > .3 * w.innerHeight);
-    var ua = navigator.userAgent, ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-    B.wkBlocked = ios && !/Safari\//.test(ua) && !/Instagram|FBAN|FBIOS|FBAV/.test(ua);
-    var touch = B.touch = mm('(pointer: coarse)') && !mm('(any-pointer: fine)'), O = 'SML';
-    B.manifest = fetch('assets/snake3d/manifest.json', { cache: 'no-cache' })
-      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
-      .then(function (m) { if (m.schema !== 'ae-snake3d/1') throw 'schema'; return m; });
-    B.manifest.catch(function () {});
-    function snap(t, a) { for (var i = O.indexOf(t), j = i; j < 3; j++) if (a.indexOf(O[j]) >= 0) return O[j]; for (j = i - 1; j >= 0; j--) if (a.indexOf(O[j]) >= 0) return O[j]; return a[0]; }
-    B.heroTier = function (m) {                                   // = W3/W5, duplicated in snake3d.js on purpose
-      var W = w.innerWidth, H = w.innerHeight, dpr = Math.min(w.devicePixelRatio || 1, 2);
-      var bw = mm('(min-width: 960px)') ? Math.min(.5 * W, 1.85 * .5 * H) : W - 32;
-      var need = 1.085 * (bw / 1.85) / m.scenes.hero.anchors.aeBox[3] * m.pxPerD * dpr / 1.2;
-      var t = need <= 78 ? 'S' : need <= 104 ? 'M' : 'L';
-      t = O.indexOf(B.ft) >= 0 && B.ft ? B.ft : B.slow ? 'S' : touch && t === 'L' ? 'M' : t;
-      return snap(t, Object.keys(m.tiers));                       // the placeholder ships M only
-    };
-    function clipTier(t, m) { var top = m.clipTiers[m.clipTiers.length - 1]; return snap(O.indexOf(t) > O.indexOf(top) ? top : t, m.clipTiers); }
-    B.pick = function (m, key) {                                  // AV1 -> HEVC -> H.264; parallel probes, 300 ms budget
-      var ck = 'ae-s3d:codec:' + m.build + ':' + key, v = d.createElement('video'), mc = navigator.mediaCapabilities;
-      var ks = ['av1', 'hevc', 'h264'], bad = '';
-      if (B.fc) return Promise.resolve(m.files[key + '.' + B.fc + '.mp4'] ? B.fc : null);
-      try { var hit = ss && ss.getItem(ck); if (hit) return Promise.resolve(hit === '-' ? null : hit); bad = (ss && ss.getItem('ae-s3d:bad')) || ''; } catch (e) {}
-      return Promise.all(ks.map(function (k) {
-        var fi = m.files[key + '.' + k + '.mp4'], type = fi && 'video/mp4; codecs="' + fi.codec + '"';
-        var cp = fi && bad.indexOf(k) < 0 ? v.canPlayType(type) : '';
-        if (!cp) return false;
-        if (k === 'h264') return true;
-        var guess = cp === 'probably' && (k !== 'av1' || !touch);
-        if (!mc) return guess;
-        return Promise.race([
-          mc.decodingInfo({ type: 'file', video: { contentType: type, width: fi.size[0], height: fi.size[1],
-                            bitrate: Math.round(fi.bytes * 8 * 30 / fi.frames), framerate: 30 } })
-            .then(function (x) { return x.supported && x.smooth && (x.powerEfficient || (k === 'av1' && !touch)); },
-                  function () { return false; }),
-          new Promise(function (r) { setTimeout(r, 300, guess); })
-        ]);
-      })).then(function (ok) {
-        var k = ks[ok.indexOf(true)] || null;
-        try { ss && ss.setItem(ck, k || '-'); } catch (e) {}
-        return k;
-      });
-    };
-    function grab(u, total) {                                    // streamed, so the deadline can read progress
-      var o = { got: 0, total: total, ctl: w.AbortController ? new AbortController() : null };
-      o.blob = fetch(u, { priority: 'low', cache: 'force-cache', signal: o.ctl && o.ctl.signal }).then(function (r) {
-        if (!r.ok) throw r.status;
-        if (!r.body || !r.body.getReader) { o.got = -1; return r.blob(); }
-        var rd = r.body.getReader(), parts = [];
-        return (function pump() { return rd.read().then(function (x) {
-          if (x.done) return new Blob(parts, { type: 'video/mp4' });
-          parts.push(x.value); o.got += x.value.length; return pump(); }); })();
-      });
-      o.blob.catch(function () {});
-      return o;
-    }
-    if (B.still) {                                               // still mode: the hero still is the LCP candidate
-      B.manifest.then(function (m) {
-        var fi = m.files['hero/' + B.heroTier(m) + '/rest.webp']; if (!fi) return;
-        var i = B.stillImg = new Image(); i.fetchPriority = 'high'; i.src = 'assets/snake3d/' + fi.file;
-      }).catch(function () {});
-    } else if (!B.deep && !B.wkBlocked && B.force !== 'novideo' && B.force !== 'lpm' && B.force !== 'nogl') {
-      B.intro = B.manifest.then(function (m) {
-        var t = clipTier(B.heroTier(m), m), key = 'hero/' + t + '/intro';
-        return B.pick(m, key).then(function (k) {
-          if (!k) return null;
-          var fi = m.files[key + '.' + k + '.mp4'], o = grab('assets/snake3d/' + fi.file, fi.bytes);
-          o.tier = t; o.codec = k; B.abort = function () { if (o.ctl) o.ctl.abort(); };
-          return o;
-        });
-      });
-      B.intro.catch(function () {});
-    }
-  } catch (e) { B.error = e; }
-})(window, document);
-</script>
-<link rel="preload" href="assets/js/main.js" as="script">
-<link rel="preload" href="assets/js/snake3d.js" as="script">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700;800;900&display=swap">
@@ -198,12 +102,14 @@
 
 <main id="main" tabindex="-1">
 
+  <!-- Page-level snake layer: fixed canvas between section backgrounds and content.
+       The snake writes the logo in the hero, then travels down the page with scroll to the income gauge.
+       Sections between the hero and #income must not create a stacking context (see style.css, SNAKE LAYER). -->
+  <canvas class="snake-layer" data-snake-canvas aria-hidden="true"></canvas>
+
   <!-- ============ 1. HERO: snake logo + offer + four perks ============ -->
   <section class="hero" id="top" data-hero aria-labelledby="hero-title">
     <div class="hero__vignette" aria-hidden="true"></div>
-    <div class="snake3d snake3d--hero" data-snake3d-hero aria-hidden="true">
-      <noscript><img src="assets/snake3d/hero/M/rest.webp" alt=""></noscript>
-    </div>
     <p class="hero__studio" aria-hidden="true">studio</p>
 
     <div class="viewfinder" aria-hidden="true">
@@ -258,7 +164,7 @@
       </div>
     </div>
 
-    <p class="hero__hint" data-hero-hint aria-hidden="true">Наведи курсор&nbsp;— она следит. Кликни&nbsp;— покажет язык.</p>
+    <p class="hero__hint" data-hero-hint aria-hidden="true">Наведи курсор&nbsp;— она следит. Кликни&nbsp;— и&nbsp;поползёт за&nbsp;тобой.</p>
   </section>
 
   <!-- ============ 2. FIT: «Кому подойдёт» — ten numbered cards + a polaroid ============ -->
@@ -407,7 +313,7 @@
     </div>
   </section>
 
-  <!-- ============ 6. INCOME CALCULATOR: on-stream «goal» overlay; the plush snake (snake3d.js) arrives and coils around the ring ============ -->
+  <!-- ============ 6. INCOME CALCULATOR: on-stream «goal» overlay; the travelling snake coils around the ring ============ -->
   <section class="section income" id="income" aria-labelledby="income-title">
     <div class="container income__grid">
       <div class="income__copy" data-reveal>
@@ -437,7 +343,7 @@
         </form>
       </div>
 
-      <div class="gauge" data-gauge>
+      <div class="gauge" data-gauge data-reveal style="--i:1">
         <div class="gauge__hud" aria-hidden="true">
           <span class="gauge__live"><span class="rec-dot"></span>Live</span>
           <span class="gauge__cam">Cam 01</span>
@@ -462,7 +368,6 @@
             <circle class="gauge__eye-glint" cx="9.9" cy="-6.9" r="0.9"/>
           </g>
         </svg>
-        <div class="snake3d snake3d--gauge" data-snake3d-gauge aria-hidden="true"></div>
         <div class="gauge__readout" aria-live="polite">
           <span class="gauge__label">Твоя часть · месяц</span>
           <strong class="gauge__value" data-income>$780</strong>
@@ -1130,6 +1035,7 @@
 
 <!-- ============ 16. FOOTER ============ -->
 <footer class="footer" data-footer>
+  <canvas class="footer__canvas" data-footer-snake aria-hidden="true"></canvas>
   <div class="container footer__inner">
     <p class="footer__logo" aria-hidden="true"><span class="footer__ae">ae</span><span class="footer__studio">studio</span></p>
     <div class="footer__cols">
@@ -1164,7 +1070,7 @@
   </div>
 </footer>
 
-<script src="assets/js/snake3d.js" defer></script>
+<script src="assets/js/snake.js" defer></script>
 <script src="assets/js/main.js" defer></script>
 <script src="assets/js/blocks.js" defer></script>
 </body>

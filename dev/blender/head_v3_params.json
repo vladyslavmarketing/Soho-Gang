@@ -1,0 +1,56 @@
+{
+ "knots_x": [
+  -2.6,
+  -1.9,
+  -1.2,
+  -0.85,
+  -0.5,
+  -0.2,
+  0.2,
+  0.45,
+  0.9,
+  1.5,
+  1.9,
+  2.15,
+  2.33
+ ],
+ "reach_brow": [
+  0.3788,
+  0.3788,
+  0.3996,
+  0.4325,
+  0.3514,
+  0.3999,
+  0.3536,
+  0.423,
+  0.4555,
+  0.3642,
+  0.319,
+  0.2484,
+  0.0858
+ ],
+ "reach_jaw": [
+  0.2699,
+  0.2699,
+  0.3435,
+  0.4783,
+  0.4257,
+  0.4362,
+  0.4255,
+  0.3896,
+  0.4044,
+  0.382,
+  0.3389,
+  0.1793,
+  0.05
+ ],
+ "tip_round": 0.16,
+ "brow_shoulder": {
+  "u": 1.4,
+  "x_back0": -1.25,
+  "x_back1": -0.5,
+  "x_front": 0.0,
+  "x_join": 0.6
+ },
+ "_notes": "Calibrated fur reach (outer fur edge - skin, R) at knots_x per edge: head_v3_check.py fit ... update=this file (seed 7, 2x renders at 16 spp; v3.1: 4 steps after adding the shoulder knots -0.85/-0.2/0.45 and the shoulder grooming, 2 more after tip_round 0.22 -> 0.16). tip_round = fillet length of the snout-tip corner of the outline. brow_shoulder = head_v3_spec.BROW_SHOULDER (null = the traced brow unchanged; the reach knots are calibrated with it on)."
+}
