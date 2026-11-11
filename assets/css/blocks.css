@@ -1452,8 +1452,7 @@ html:not(.js) .float-tg { display: none; }
 }
 @media (min-width: 1100px) {
   .notes__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .note:nth-child(odd) { rotate: -.8deg; }
-  .note:nth-child(even) { rotate: .7deg; translate: 0 14px; }
+  .note:nth-child(even) { translate: 0 14px; }   /* no tilt: the 2px band lines stair-stepped on a rotated card */
 }
 
 /* ---------- 11 · SAFETY: three pledges above the console ---------- */
