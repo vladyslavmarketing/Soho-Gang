@@ -1633,30 +1633,6 @@ html:not(.js) .float-tg { display: none; }
 /* ---------- 8 · ALERTS: «Что ты получаешь» + ценности as on-stream notifications ---------- */
 .benefits { background: var(--paper-2); }
 .feed { position: relative; }
-.feed__bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-}
-.feed__bar::after { content: ""; flex: 1; height: 1px; background: repeating-linear-gradient(90deg, rgba(30, 22, 24, .35) 0 6px, transparent 6px 12px); order: 1; }
-.feed__bar > span:last-child { order: 2; }
-.feed__live {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  color: var(--cream);
-  background: var(--ink);
-}
-.feed__live .rec-dot { width: 7px; height: 7px; }
 .feed__list { display: grid; gap: 14px; }
 
 .alert {
