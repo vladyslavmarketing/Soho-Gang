@@ -1732,6 +1732,11 @@ html.reduced-motion .alert.is-waiting { opacity: 1; transform: none; }
 .gear .section-title--sub { font-size: clamp(1.9rem, 7.4vw, 2.2rem); overflow-wrap: break-word; hyphens: auto; }
 @media (min-width: 960px) { .gear .section-title--sub { font-size: clamp(2.2rem, 2.9vw, 2.9rem); } }
 @media (min-width: 1180px) { .feed__list--values { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; } }
+/* five in a row: every title starts on one line and every text on another (titles take one or two lines) */
+@media (min-width: 1180px) {
+  .feed__list--values .alert { align-content: start; }
+  .feed__list--values .alert__title { min-height: 2.2em; }
+}
 
 /* platforms: name (fallback) or logo, monochrome cream on the ink band */
 .plat { display: inline-flex; align-items: center; height: 32px; }
