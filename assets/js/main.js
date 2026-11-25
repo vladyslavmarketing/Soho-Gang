@@ -1728,19 +1728,19 @@
     try { touch = win.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { /* old browser */ }
     if (!touch) return;
     var canVibrate = typeof navigator.vibrate === 'function';
-    var label = null;
-    if (!canVibrate) {
+    /* iOS: a fresh hidden switch per tick, clicked through its label inside the tap, then removed */
+    function iosTick() {
+      var label = doc.createElement('label');
+      label.setAttribute('aria-hidden', 'true');
+      label.setAttribute('data-haptic', '');
+      label.style.display = 'none';
       var input = doc.createElement('input');
       input.type = 'checkbox';
       input.setAttribute('switch', '');
-      input.id = 'ae-haptic';
-      input.tabIndex = -1;
-      label = doc.createElement('label');
-      label.htmlFor = 'ae-haptic';
-      label.setAttribute('aria-hidden', 'true');
-      label.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
       label.appendChild(input);
-      (doc.body || doc.documentElement).appendChild(label);
+      doc.head.appendChild(label);
+      label.click();
+      doc.head.removeChild(label);
     }
     var last = 0;
     function tick(ms) {
@@ -1750,13 +1750,13 @@
       last = t;
       try {
         if (canVibrate) navigator.vibrate(ms || 10);
-        else if (label) label.click();
+        else iosTick();
       } catch (e) { /* blocked: stay silent */ }
     }
     var SEL = 'a.btn, button, .btn, summary, [role="button"], [role="tab"], input[type="checkbox"], input[type="radio"], label.chip, .float-tg, .nav__tg';
     doc.addEventListener('click', function (e) {
       var el = e.target && e.target.closest ? e.target.closest(SEL) : null;
-      if (!el || (label && label.contains(el))) return;
+      if (!el || (el.closest && el.closest('[data-haptic]'))) return;
       tick(el.classList && el.classList.contains('btn--light') ? 16 : 10);
     }, true);
     doc.addEventListener('input', function (e) {
