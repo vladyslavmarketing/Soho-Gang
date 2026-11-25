@@ -1718,6 +1718,52 @@
     });
   }
 
+  /* ================================================================== HAPTICS (touch devices)
+     A short tick on taps of buttons, links-as-buttons, chips, accordion heads and on each slider step.
+     Android: navigator.vibrate. iOS Safari has no Vibration API; from iOS 17.4 a click on the label of a
+     hidden <input type="checkbox" switch> plays the system switch tick, which is used instead. Silent
+     everywhere else, with reduced motion, and while animation is paused. */
+  function initHaptics() {
+    var touch = false;
+    try { touch = win.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) { /* old browser */ }
+    if (!touch) return;
+    var canVibrate = typeof navigator.vibrate === 'function';
+    var label = null;
+    if (!canVibrate) {
+      var input = doc.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      input.id = 'ae-haptic';
+      input.tabIndex = -1;
+      label = doc.createElement('label');
+      label.htmlFor = 'ae-haptic';
+      label.setAttribute('aria-hidden', 'true');
+      label.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';
+      label.appendChild(input);
+      (doc.body || doc.documentElement).appendChild(label);
+    }
+    var last = 0;
+    function tick(ms) {
+      if (state.reduced || state.paused) return;
+      var t = Date.now();
+      if (t - last < 45) return;
+      last = t;
+      try {
+        if (canVibrate) navigator.vibrate(ms || 10);
+        else if (label) label.click();
+      } catch (e) { /* blocked: stay silent */ }
+    }
+    var SEL = 'a.btn, button, .btn, summary, [role="button"], [role="tab"], input[type="checkbox"], input[type="radio"], label.chip, .float-tg, .nav__tg';
+    doc.addEventListener('click', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest(SEL) : null;
+      if (!el || (label && label.contains(el))) return;
+      tick(el.classList && el.classList.contains('btn--light') ? 16 : 10);
+    }, true);
+    doc.addEventListener('input', function (e) {
+      if (e.target && e.target.type === 'range') tick(6);
+    }, true);
+  }
+
   /* ================================================================== PAUSE ANIMATION (WCAG 2.2.2)
      A skip-link style button, first in the tab order (shown on keyboard focus only). The choice is remembered. Hidden while the OS already asks for reduced motion. */
   function initMotionToggle() {
@@ -1785,7 +1831,7 @@
     ['magnetic', initMagnetic], ['reveal', initReveal], ['spotlight', initSpotlightTilt], ['alerts', initAlerts],
     ['hero', initHero], ['calculator', initCalculator], ['path', initPath],
     ['privacy', initPrivacy], ['faq', initFAQ], ['form', initForm], ['reviews', initReviews], ['platformLogos', initPlatformLogos], ['floatTg', initFloatTg], ['footer', initFooter], ['copy', initCopy], ['rangeFill', initRangeFill],
-    ['motionToggle', initMotionToggle], ['offscreen', initOffscreen]
+    ['motionToggle', initMotionToggle], ['haptics', initHaptics], ['offscreen', initOffscreen]
   ];
   function boot() {
     for (var i = 0; i < inits.length; i++) {
