@@ -1719,8 +1719,7 @@
   }
 
   /* ================================================================== PAUSE ANIMATION (WCAG 2.2.2)
-     Two buttons drive one setting: a skip-link style one first in the tab order (shown on focus) and one
-     in the footer bar. The choice is remembered. Hidden while the OS already asks for reduced motion. */
+     A skip-link style button, first in the tab order (shown on keyboard focus only). The choice is remembered. Hidden while the OS already asks for reduced motion. */
   function initMotionToggle() {
     var btns = [];
     function label() { return state.paused ? 'Включить анимацию' : 'Остановить анимацию'; }
@@ -1749,15 +1748,6 @@
     }
     var skip = $('.skip-link');
     if (skip && skip.parentNode) skip.parentNode.insertBefore(make('skip-link motion-toggle motion-toggle--skip'), skip.nextSibling);
-    /* footer: under the «Важно» note, styled like the other small footer buttons */
-    var cols = $$('.footer__cols > .footer__col');
-    var col = cols[cols.length - 1];
-    if (col) {
-      var p = doc.createElement('p');
-      p.className = 'footer__motion';
-      p.appendChild(make('btn btn--ghost btn--small motion-toggle motion-toggle--footer'));
-      col.appendChild(p);
-    }
     onStillChange(sync);
     sync();
   }
