@@ -887,9 +887,8 @@ html.reduced-motion .pass { transform: none !important; }
   box-shadow:
     inset 0 -5px 9px rgba(160, 70, 92, .25),
     inset 0 4px 6px rgba(255, 255, 255, .5),
-    0 0 0 2px var(--cream),
-    0 0 0 3.5px var(--ink),
-    0 10px 16px -10px rgba(110, 36, 56, .55);
+    0 0 0 2px var(--badge-gap, var(--cream)),
+    0 0 0 3.5px var(--fur);
 }
 .cta-row {
   display: flex;
@@ -1292,8 +1291,6 @@ html:not(.js) .float-tg { display: none; }
 }
 @media (min-width: 960px) {
   .terms { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; align-items: stretch; }
-  .term:first-child { rotate: -.6deg; }
-  .term--pink { rotate: .5deg; }
 }
 
 /* ---------- 4 · PLATFORMS: label + the ink marquee ---------- */
@@ -1398,8 +1395,8 @@ html:not(.js) .float-tg { display: none; }
   background: #FBF6EE;
   box-shadow: 0 0 0 1px rgba(30, 22, 24, .07), 0 24px 40px -30px rgba(90, 30, 45, .6);
 }
-.format-card--pink { background: #F9DDE4; }
-.format-card--ink { background: var(--ink); color: var(--cream); }
+.format-card--pink { background: #F9DDE4; --badge-gap: #F9DDE4; }
+.format-card--ink { background: var(--ink); color: var(--cream); --badge-gap: var(--ink); }
 .format-card--ink .format-card__text { color: var(--cream-70); }
 .format-card__title {
   margin-top: 18px;
@@ -1413,7 +1410,6 @@ html:not(.js) .float-tg { display: none; }
 .section-title--sub { font-size: clamp(1.85rem, 9.2vw, 2.2rem); }
 @media (min-width: 760px) {
   .formats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .format-card:nth-child(2) { translate: 0 18px; }
 }
 @media (min-width: 960px) {
   .section-title--sub { font-size: clamp(2.1rem, 3.8vw, 3.6rem); }
@@ -1429,7 +1425,7 @@ html:not(.js) .float-tg { display: none; }
   background: #FBF6EE;
   box-shadow: 0 26px 40px -30px rgba(90, 30, 45, .65), 0 2px 4px rgba(90, 30, 45, .1);
 }
-.note--pink { background: #FBE1E7; }
+.note--pink { background: #FBE1E7; --badge-gap: #FBE1E7; }
 .note::before {   /* snake band hem */
   content: "";
   position: absolute;
@@ -1452,7 +1448,6 @@ html:not(.js) .float-tg { display: none; }
 }
 @media (min-width: 1100px) {
   .notes__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .note:nth-child(even) { translate: 0 14px; }   /* no tilt: the 2px band lines stair-stepped on a rotated card */
 }
 
 /* ---------- 11 · SAFETY: three pledges above the console ---------- */
@@ -1606,7 +1601,8 @@ html:not(.js) .float-tg { display: none; }
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 16px;
-  align-items: center;
+  align-items: start;
+  align-content: start;
   padding: 16px 18px;
   border-radius: 18px;
   background: rgba(244, 234, 219, .06);
@@ -1619,8 +1615,11 @@ html:not(.js) .float-tg { display: none; }
   width: 46px; height: 46px;
   border-radius: 50%;
   color: var(--ink);
-  background: var(--plush-ball);
-  box-shadow: 0 0 0 2px var(--ink), 0 0 0 3.5px rgba(244, 234, 219, .5);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 247, 249, .8) 0, rgba(253, 228, 234, .5) 42%, rgba(230, 163, 179, .4) 100%),
+    url("../img/fur-small.jpg") center / 180px auto,
+    var(--fur);
+  box-shadow: inset 0 -5px 9px rgba(160, 70, 92, .25), inset 0 4px 6px rgba(255, 255, 255, .5), 0 0 0 2px var(--ink), 0 0 0 3.5px var(--fur);
 }
 .gear__list b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
 .gear__list span:last-child { font-size: 15px; line-height: 1.4; color: var(--cream-70); }
@@ -1712,14 +1711,11 @@ html:not(.js) .float-tg { display: none; }
 
 @media (min-width: 760px) {
   .feed__list--benefits { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
-  .feed__list--benefits .alert:nth-child(even) { translate: 0 28px; }
-  .feed__list--benefits { padding-bottom: 28px; }
   .feed__list--values { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 }
 @media (min-width: 1180px) {
   .feed__list--benefits { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .feed__list--benefits .alert { grid-template-columns: 1fr; }
-  .feed__list--benefits .alert:nth-child(even) { translate: 0 28px; }
   .feed__list--values .alert { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
