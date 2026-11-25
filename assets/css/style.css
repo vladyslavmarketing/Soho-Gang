@@ -290,27 +290,27 @@ a, button, input, textarea, select, summary, [tabindex] { scroll-margin-bottom: 
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: translate .5s var(--ease-out), scale .4s var(--ease-soft), box-shadow .45s var(--ease-out),
+  transition: translate .5s var(--ease-out), scale .4s var(--ease-soft), box-shadow .45s var(--ease-out), outline-offset .35s var(--ease-out),
               background-color .3s ease, color .3s ease, border-color .3s ease;
 }
 .btn:active { scale: .97; transition-duration: .5s, .12s, .45s, .3s, .3s, .3s; }
 .btn--small { min-height: 44px; padding: 0 20px; font-size: 14px; }
 
-/* primary = the black stripe */
+/* primary = a plush pill: the snake's pink fur, lit from above, with the badges' pink ring */
 .btn--light {
-  background: var(--ink);
-  color: var(--cream);
-  box-shadow: 0 12px 26px -16px rgba(30, 22, 24, .7);
-}
-/* tiny plush pom-pom inside the primary pill */
-.btn--light::before {
-  content: "";
-  flex: none;
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  background: var(--plush-ball);
-  box-shadow: 0 0 0 2px var(--cream);
-  transition: scale .45s var(--ease-soft);
+  color: var(--ink);
+  font-weight: 700;
+  background:
+    linear-gradient(180deg, rgba(255, 240, 244, .34) 0, rgba(255, 240, 244, 0) 48%, rgba(150, 60, 85, .22) 100%),
+    url("../img/fur-small.jpg") center / 150px auto,
+    var(--fur);
+  box-shadow:
+    inset 0 -6px 10px rgba(150, 60, 85, .3),
+    inset 0 3px 5px rgba(255, 255, 255, .4),
+    0 14px 26px -16px rgba(120, 40, 60, .75);
+  outline: 1.5px solid var(--fur);
+  outline-offset: 2.5px;
+  text-shadow: 0 1px 0 rgba(255, 236, 241, .5);
 }
 .btn--ghost {
   background: transparent;
@@ -320,9 +320,12 @@ a, button, input, textarea, select, summary, [tabindex] { scroll-margin-bottom: 
 @media (hover: hover) and (pointer: fine) {
   .btn--light:hover {
     translate: 0 -2px;
-    box-shadow: 0 0 0 6px rgba(215, 137, 154, .42), 0 20px 36px -18px rgba(30, 22, 24, .7);
+    outline-offset: 4px;
+    box-shadow:
+      inset 0 -6px 10px rgba(150, 60, 85, .24),
+      inset 0 3px 7px rgba(255, 255, 255, .55),
+      0 22px 36px -18px rgba(120, 40, 60, .8);
   }
-  .btn--light:hover::before { scale: 1.35; }
   .btn--ghost:hover { background: var(--cream); translate: 0 -2px; box-shadow: 0 14px 26px -18px rgba(30, 22, 24, .55); }
 }
 
