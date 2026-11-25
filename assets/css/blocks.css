@@ -987,8 +987,12 @@ html:not(.js) .float-tg { display: none; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   border-radius: 18px;
-  background: rgba(251, 246, 238, .94);
-  box-shadow: 0 0 0 1px rgba(30, 22, 24, .08), 0 24px 40px -30px rgba(90, 30, 45, .6);
+  /* plush: the pink fur, washed light enough for the ink text */
+  background:
+    linear-gradient(180deg, rgba(255, 244, 247, .5) 0, rgba(255, 240, 244, .36) 60%, rgba(240, 190, 203, .3) 100%),
+    url("../img/fur.jpg") center / cover,
+    var(--fur);
+  box-shadow: inset 0 -8px 14px rgba(150, 60, 85, .16), inset 0 3px 6px rgba(255, 255, 255, .45), 0 24px 40px -30px rgba(90, 30, 45, .6);
   overflow: hidden;
 }
 /* the snake band as the panel's top edge */
@@ -1024,7 +1028,7 @@ html:not(.js) .float-tg { display: none; }
   margin-top: 4px;
   font-size: 14px;
   line-height: 1.45;
-  color: var(--ink-2);
+  color: var(--ink);
 }
 .hero__trust {
   display: flex;
